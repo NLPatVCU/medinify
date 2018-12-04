@@ -1,3 +1,9 @@
+# macOS
+.DS_Store
+
+# Project
+*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
