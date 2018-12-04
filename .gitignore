@@ -3,6 +3,8 @@
 
 # Project
 *.csv
+!citalopram_train.csv
+*.bin
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
