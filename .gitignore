@@ -1,3 +1,11 @@
+# macOS
+.DS_Store
+
+# Project
+*.csv
+!citalopram_train.csv
+*.bin
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
