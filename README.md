@@ -1,12 +1,15 @@
 # Medical Text Classifier
+
 Text classification with a focus on medical text.
 
 ## Requirements
+
 * Python 3.6
 * Cannot use Python 3.7 until TensorFlow supports it (12/2/18)
 
 ## Installation
-```
+
+```python
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
@@ -14,9 +17,10 @@ pip install -r requirements.txt
 ```
 
 ## text_classifier.py
+
 Train and test either a Naive Bayes Classifier (text_classifier), a Decision Tree classifier (dt_text_classifier), or a Neural Network (nn_text_classifier) to classify drug reviews.
 
-### Options
+### Text Classifier Options
 
 **-i**  Required. Input CSV file that includes training and testing data. Must be in the format of "review text","5", where the second entry is the rating.  See the "citalopram_effectiveness.csv" file for an example.  The program divides this data up into 3/4 used for training, and 1/4 used for testing to calculate the accuracy.
 
@@ -34,9 +38,9 @@ Train and test either a Naive Bayes Classifier (text_classifier), a Decision Tre
 
 **-m** Required for Neural Network, not used for other NB or DT, defines the Word2Vec model to use.
 
-
 ### Examples
-```
+
+```python
 # Naive Bayes Example
 python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10 -cl nb
 
@@ -47,9 +51,11 @@ python nn_text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral
  ```
 
 ## drug_review_scraper.py
+
 Scrape WebMD for drug reviews.
 
-### Options
+### Drug Review Scraper Options
+
 **-o** Required. Output file.
 
 **-p** Optional, default=1. Number of pages to scrape.
@@ -57,6 +63,7 @@ Scrape WebMD for drug reviews.
 **-i** Required. Input URL.
 
 ### Example
-```
+
+```python
 python WebScraper.py -o citalopram_train.csv -p 10 -i https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral
 ```
