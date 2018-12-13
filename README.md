@@ -37,9 +37,11 @@ Train and test either a Naive Bayes Classifier (text_classifier), a Decision Tre
 
 ### Examples
 ```
-python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10
+# Naive Bayes Example
+python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10 -cl nb
 
-python dt_text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10
+# Decision Tree Example
+python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10 -cl dt
 
 python nn_text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -d citalopram_effectivness.csv -p 4.0 -n 2.0 -z 10 -m GoogleNews-vectors-negative300.bin
  ```

@@ -7,6 +7,7 @@ Based on work by Amy Olex 11/13/17.
 import string
 import numpy
 from nltk.classify import NaiveBayesClassifier
+from nltk.classify import DecisionTreeClassifier
 import nltk.classify.util
 import nltk
 import math
@@ -89,14 +90,15 @@ def parse_comments(comment_file):
 if __name__ == "__main__":
     
     ## Parse input arguments
-    parser = argparse.ArgumentParser(description='Train a NB Sentiment Classifier')
+    parser = argparse.ArgumentParser(description='Train a Sentiment Classifier')
     parser.add_argument('-i', metavar='inputfile', type=str, help='path to the input csv file for training and testing.', required=True)
     parser.add_argument('-c', metavar='toclassify', type=str, help='path to file with entries to classify.', required=False, default=None)
     parser.add_argument('-s', metavar='stopwords', type=str, help='path to stopwords file', required=True)
     parser.add_argument('-p', metavar='posratings', type=str, help='a list of positive ratings as strings', required=False, default=4.0)
     parser.add_argument('-n', metavar='negratings', type=str, help='a list of negative ratings as strings', required=False, default=2.0)
     parser.add_argument('-z', metavar='iterations', type=str, help='the number of times to repeat the classifier training', required=False, default=1)   
-    parser.add_argument('-d', metavar='domain', type=str, help='a file with text from a different domain.', required=False, default = None)   
+    parser.add_argument('-d', metavar='domain', type=str, help='a file with text from a different domain.', required=False, default = None)
+    parser.add_argument('-cl', metavar='classifier', type=str, help='classifer to use', required=False, default='nb')
     args = parser.parse_args()
     
     ## Parse data from files
@@ -147,12 +149,19 @@ if __name__ == "__main__":
         test_data = []
         for i in range(len(test)):
             test_data.append(dataset[test[i]])
-        model = NaiveBayesClassifier.train(train_data)
+
+        if (args.cl == 'nb'):
+            model = NaiveBayesClassifier.train(train_data)
+        elif (args.cl == 'dt'):
+            model = DecisionTreeClassifier.train(train_data)
+
         scores = nltk.classify.util.accuracy(model, test_data)
         print("{}%".format(scores * 100))
         cvscores.append(scores * 100)
         # plot_model(model, to_file='model.png')
-        model.show_most_informative_features()
+
+        if (args.cl == 'nb'):
+            model.show_most_informative_features()
 
     print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
     
@@ -179,9 +188,9 @@ if __name__ == "__main__":
             tmp_r = domain_list[c]['rating']
 
             if tmp_r in args.n:
-                d_list.append((format_text(tmp_c, stopwords), 'neg'))
+                d_list.append((format_text(tmp_c, stop_words), 'neg'))
             if tmp_r in args.p:
-                d_list.append((format_text(tmp_c, stopwords), 'pos'))
+                d_list.append((format_text(tmp_c, stop_words), 'pos'))
 
         # classifier2 = NaiveBayesClassifier.train(domain_list)
         model = NaiveBayesClassifier.train(dataset)
