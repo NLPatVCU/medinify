@@ -1,12 +1,10 @@
-### NBSentiment
-### Author: Amy Olex
-### 11/13/17
-### This program takes in two csv files containing text to be classified as positive or negative sentiment.
-### The first file contains data for training and testing, the second contains data to be classified.
-### 
+"""
+Text Classifier primarily for medical text. Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment analysis.
+
+Based on work by Amy Olex 11/13/17.
+"""
 
 import string
-
 import numpy
 from nltk.classify import NaiveBayesClassifier
 import nltk.classify.util
@@ -19,30 +17,73 @@ from collections import Counter
 from sklearn.model_selection import StratifiedKFold
 
 
-## Formats a string for input in the NB Classifier by converting all to lowercase and removing al punctuation.
-# @author Amy Olex
-# @param sent The string to be formatted.
-# @param stopwords A list of stopwords to be removed. Default is None.
-# @return A dictionary of each word as the key and True as the value.
-def format_sentence(sent, stopwords=None):
-    # convert to lowercase
-    sent = sent.translate(str.maketrans("", "", string.punctuation)).lower()
-    #remove stopwords
-    if stopwords is not None:
-        com_list = sent.split()
-        filtered_words = []
-        for word in com_list:
-            if word not in stopwords:
-                filtered_words.append(word)
-        sent = ' '.join(filtered_words)
+def format_text(text, stop_words=None):
+    """ Takes a string, converts to lowercase, and removes all punctuation & stop words.
+
+    Args:
+      sent: String to be converted.
+      stop_words: Stop words to be removed. Defaults to None.
+    Returns:
+      The formatted text.
+    """
+
+
+    text = clean_text(text)
+
+    if stop_words is not None:
+        text = remove_stop_words(text, stop_words)
     
-    return({word: True for word in nltk.word_tokenize(sent)})
+    return ({word: True for word in nltk.word_tokenize(text)})
 
-#####
-## End Function
-#####
+def remove_stop_words(text, stop_words):
+    """ Removes all stop words from text.
 
+    Args:
+        text: Text to be stripped of stop words.
+        stop_words: Stop words to strip from text.
+    Returns:
+        Stripped text.
+    """
 
+    word_list = text.split()
+    filtered_words = [word for word in word_list if word not in stop_words]
+    text = ' '.join(filtered_words)
+
+    return text
+
+def clean_text(text):
+    """ Takes a string, converts to lowercase, and removes all punctuation.
+
+    Args:
+      sent: String to be converted.
+      stop_words: Stop words to be removed. Defaults to None.
+    Returns:
+      The cleaned text.
+    """
+
+    translator = str.maketrans('', '', string.punctuation)
+    text = text.translate(translator).lower()
+
+    return text
+
+def parse_comments(comment_file):
+    """ Parses a CSV of comments into a list of comments with rating.
+
+    Args:
+        comment_file: Comment file to be parsed.
+    Returns:
+        The list of comments.
+    """
+
+    comments = []
+
+    with open(comment_file, newline='') as cf:
+        reader = csv.DictReader(cf)
+
+        for row in reader:
+            comments.append({'comment': row['comment'], 'rating': row['rating']})
+
+    return comments
 
 
 if __name__ == "__main__":
@@ -56,37 +97,33 @@ if __name__ == "__main__":
     parser.add_argument('-n', metavar='negratings', type=str, help='a list of negative ratings as strings', required=False, default=2.0)
     parser.add_argument('-z', metavar='iterations', type=str, help='the number of times to repeat the classifier training', required=False, default=1)   
     parser.add_argument('-d', metavar='domain', type=str, help='a file with text from a different domain.', required=False, default = None)   
-    
     args = parser.parse_args()
     
-    
-    
-    ## Import csv file
-    my_list = []
-    with open(args.i) as commentfile:
-        reader = csv.DictReader(commentfile)
-        for row in reader:
-            my_list.append({'comment': row['comment'], 'rating': row['rating']})
+    ## Parse data from files
+    comments = parse_comments(args.i)
+
+    with open('stopwords.txt') as f:
+        text = clean_text(f.read())
+        stop_words = text.splitlines()
     
     ## Parse and convert positive and negative examples.
     pos_list=[]
     neg_list=[]
-    for c in my_list:
-        tmp_com = c['comment']
-        tmp_rating = c['rating']
 
-        #remove stop words
-        with open(args.s) as raw:
-            stopwords = raw.read().translate(str.maketrans("", "", string.punctuation)).splitlines()
- 
-            if float(tmp_rating) <= float(args.n):
-                neg_list.append((format_sentence(tmp_com, stopwords), 'neg'))
-            if float(tmp_rating) >= float(args.p):
-                pos_list.append((format_sentence(tmp_com, stopwords), 'pos'))
+    for comment in comments:
+        body = comment['comment']
+        rating = comment['rating']
+
+        body = format_text(body, stop_words)
+
+        if float(rating) <= float(args.n):
+            neg_list.append((body, 'neg'))
+        if float(rating) >= float(args.p):
+            pos_list.append((body, 'pos'))
 
     seed = 123
     numpy.random.seed(seed)
-    print("Total Negative Instances:"+str(len(neg_list))+"\nTotal Positive Instances:"+str(len(pos_list)))
+    print("Total Negative Instances:" + str(len(neg_list)) + "\nTotal Positive Instances:" + str(len(pos_list)))
 
     negcutoff = math.floor(len(neg_list) * 1)
     poscutoff = math.floor(len(pos_list) * 1)
@@ -118,59 +155,17 @@ if __name__ == "__main__":
         model.show_most_informative_features()
 
     print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
-
-    ### create training and test sets
-    ## set the cutoffs
-    # negcutoff = math.floor(len(neg_list)*3/4)
-    # poscutoff = math.floor(len(pos_list)*3/4)
-    #
-    # top10list = []
-    # avgAccuracy = 0
-    # for z in range(int(args.z)):
-    #     #train = neg_list[:negcutoff] + pos_list[:poscutoff]
-    #     #test = neg_list[negcutoff:] + pos_list[poscutoff:]
-    #     neg_idx_train = sorted(random.sample(range(len(neg_list)), negcutoff))
-    #     neg_train = [neg_list[i] for i in neg_idx_train]
-    #
-    #     neg_idx_test = set(range(len(neg_list))) - set(neg_idx_train)
-    #     neg_test = [neg_list[i] for i in neg_idx_test]
-    #
-    #
-    #     pos_idx_train = sorted(random.sample(range(len(pos_list)), poscutoff))
-    #     pos_train = [pos_list[i] for i in pos_idx_train]
-    #
-    #     pos_idx_test = set(range(len(pos_list))) - set(pos_idx_train)
-    #     pos_test = [pos_list[i] for i in pos_idx_test]
-    #
-    #     train = neg_train + pos_train
-    #     test = neg_test + pos_test
-    #     print('Training on %d instances, testing on %d instances' % (len(train), len(test)))
-    #
-    #     classifier = NaiveBayesClassifier.train(train)
-    #     accuracy = nltk.classify.util.accuracy(classifier, test)
-    #     avgAccuracy = avgAccuracy + accuracy
-    #     print('Classifier accuracy:', accuracy)
-    #     classifier.show_most_informative_features()
-    #
-    #     t10 = classifier.most_informative_features(10)
-    #     tlist = [i[0] for i in t10]
-    #     top10list = top10list + tlist
     
-        ### Import the file needing classification.
+    ### Import the file needing classification.
     if args.c is not None:
         with open(args.c) as file:
             toclass = file.readlines()
 
         for sent in toclass:
-            print(str(model.classify(format_sentence(sent))) + " :: " + sent)
-    
-    ### Count the occurences of each word that appeared in the top 10 over the 20 runs.
-    # print("Average Accuracy: "+ str(avgAccuracy/int(args.z)))
-    # my_counts = Counter(top10list)
-    # print(my_counts)
-
+            print(str(model.classify(format_text(sent))) + " :: " + sent)
 
     if args.d is not None:
+        print("ARGS D")
         domain_list = []
         with open(args.d) as domainfile:
             reader = csv.DictReader(domainfile)
@@ -184,9 +179,9 @@ if __name__ == "__main__":
             tmp_r = domain_list[c]['rating']
 
             if tmp_r in args.n:
-                d_list.append((format_sentence(tmp_c, stopwords), 'neg'))
+                d_list.append((format_text(tmp_c, stopwords), 'neg'))
             if tmp_r in args.p:
-                d_list.append((format_sentence(tmp_c, stopwords), 'pos'))
+                d_list.append((format_text(tmp_c, stopwords), 'pos'))
 
         # classifier2 = NaiveBayesClassifier.train(domain_list)
         model = NaiveBayesClassifier.train(dataset)
