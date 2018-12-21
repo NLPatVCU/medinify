@@ -56,5 +56,5 @@ Scrape WebMD for drug reviews.
 
 ### Example
 ```
-python WebScraper.py -o citalopram_train.csv -p 10 -i https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral
+python drug_review_scraper.py -i "https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral" -o citalopram_train.csv -p 10
 ```
