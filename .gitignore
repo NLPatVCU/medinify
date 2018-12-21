@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# IDEs
+.vscode/
+
 # Project
 *.csv
 !citalopram_train.csv
