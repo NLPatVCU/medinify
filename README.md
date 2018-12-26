@@ -63,7 +63,12 @@ Scrape WebMD for drug reviews.
 **-i** Required. Input URL.
 
 ### Example
+fix-scraper-ending
+```
+python drug_review_scraper.py -i "https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral" -o citalopram_train.csv -p 10
+
 
 ```python
 python WebScraper.py -o citalopram_train.csv -p 10 -i https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral
+
 ```
