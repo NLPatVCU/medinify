@@ -9,7 +9,7 @@ Text classification with a focus on medical text.
 
 ## Installation
 
-```python
+```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
@@ -40,7 +40,7 @@ Train and test either a Naive Bayes Classifier (text_classifier), a Decision Tre
 
 ### Examples
 
-```python
+```bash
 # Naive Bayes Example
 python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10 -cl nb
 
@@ -63,12 +63,6 @@ Scrape WebMD for drug reviews.
 **-i** Required. Input URL.
 
 ### Example
-fix-scraper-ending
-```
+```bash
 python drug_review_scraper.py -i "https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral" -o citalopram_train.csv -p 10
-
-
-```python
-python WebScraper.py -o citalopram_train.csv -p 10 -i https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral
-
 ```

@@ -10,6 +10,18 @@ import argparse
 import requests
 from bs4 import BeautifulSoup
 
+def clean_comment(comment):
+    """Cleans comment for proper CSV usage.
+
+    Args:
+        comment: Comment to be cleaned.
+    Returns:
+        The cleaned comment.
+    """
+    comment = comment.replace('Comment:', '').replace('Hide Full Comment', '')
+    comment = ' '.join(comment.splitlines())
+    return comment
+
 def main():
     """Main method.
     """
@@ -35,10 +47,9 @@ def main():
         reviews = soup.find_all('div', attrs={'class': 'userPost'})
 
         for review in reviews:
-            comment = review.find('p', id=re.compile("^comFull*"))
-            if comment is not None:
-                comment = comment.text.replace('Comment:', '').replace('Hide Full Comment', '')
-
+            comment = review.find('p', id=re.compile("^comFull*")).text
+            comment = clean_comment(comment)
+            if comment:
                 ratings = review.find_all('span', attrs={'class': 'current-rating'})
                 calculated_rating = 0.0
 
@@ -48,13 +59,16 @@ def main():
                 calculated_rating = calculated_rating / 3.0
                 review_list.append({'comment': comment, 'rating': calculated_rating})
 
-    print('Reviews scraped: ' + str(len(review_list)))
-    print(review_list[0])
 
     with open(args.o, 'w') as output_file:
         dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
         dict_writer.writeheader()
         dict_writer.writerows(review_list)
+
+    for review in review_list:
+        print(review)
+
+    print('Reviews scraped: ' + str(len(review_list)))
 
 if __name__ == "__main__":
     main()
