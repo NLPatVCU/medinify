@@ -61,7 +61,6 @@ def main():
 
 
     with open(args.o, 'w') as output_file:
-        dict_writer = csv.writer(output_file)
         dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
         dict_writer.writeheader()
         dict_writer.writerows(review_list)
