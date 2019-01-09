@@ -98,7 +98,7 @@ parser.add_argument('-z', metavar='iterations', type=str,
 parser.add_argument('-d', metavar='domain', type=str, help='a file with text from a different domain.',
                     required=False, default=None)
 parser.add_argument('-m', metavar='model', type=str, help='location of word2vec model to be used',
-                    required=False, default='/media/sf_Grad_School/GoogleNews-vectors-negative300.bin')
+                    required=False, default='GoogleNews-vectors-negative300.bin')
 
 args = parser.parse_args()
 
@@ -219,7 +219,7 @@ if args.c is not None:
         predict_this.append(format_sentence(phrase))
         sentences.append(phrase)
     answers = []
-    predictions = model.predict(predict_this)
+    predictions = model.predict(np.array(predict_this))
     for i in range(len(predictions)):
         answers.append([predictions[i], sentences[i]])
         print("{} :: {}".format(predictions[i], sentences[i]))
@@ -261,6 +261,7 @@ if args.d is not None:
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     model.fit(X, Y, epochs=50, batch_size=20, verbose=0)
 
-    domain_accuracy = model.evaluate(d_data, d_labels)
+    # d_data = np.array(d.data)
+    domain_accuracy = model.evaluate(np.array(d_data), d_labels)
     print("Classifier domain shift accuracy: {}".format(domain_accuracy[1]*100))
     # print("\n{}: {}".format(model.metrics_names[1], domain_accuracy[1]*100))
