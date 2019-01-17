@@ -3,7 +3,6 @@ Examples for how to use the Medinify package
 """
 
 from medinify.sentiment.review_classifier import ReviewClassifier
-from medinify.scrapers.webmd_scraper import
 
 def main():
     """ Main function.
@@ -11,8 +10,6 @@ def main():
     review_classifier = ReviewClassifier('nb', 'stopwords.txt')
     review_classifier.train('citalopram_train.csv')
     review_classifier.classify('neutral.txt')
-
-
 
 if __name__ == "__main__":
     main()
