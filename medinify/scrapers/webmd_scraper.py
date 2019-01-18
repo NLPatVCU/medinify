@@ -33,6 +33,7 @@ class WebMDScraper():
         Returns:
             The cleaned comment.
         """
+        print(comment)
         comment = comment.replace('Comment:', '').replace('Hide Full Comment', '')
         comment = ' '.join(comment.splitlines())
         return comment
@@ -48,7 +49,7 @@ class WebMDScraper():
         """
 
         quote_page1 = input_url + '&pageIndex='
-        quote_page2 = '&sortby=3&conditionFilter=-500'
+        quote_page2 = '&sortby=3&conditionFilter=-1'
     
         num_pages = pages
         review_list = []
