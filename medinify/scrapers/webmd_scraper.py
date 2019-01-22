@@ -39,12 +39,11 @@ class WebMDScraper():
 
 
     def scrape(self, input_url, pages):
-        """ 
-        Scraps the reviews from WebMD
+        """Scrapes the reviews from WebMD
 
         Args:
-            input_url : WebMD URL to scrap
-            pages (int) : number of pages to scrap
+            input_url : WebMD URL to scrape
+            pages (int) : number of pages to scrape
         """
 
         quote_page1 = input_url + '&pageIndex='

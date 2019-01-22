@@ -1,7 +1,7 @@
 from medinify.scrapers.webmd_scraper import WebMDScraper
-from medinify.scrapers.rxlist_scraper import RXListScraper
+from medinify.scrapers.drugs_scraper import DrugsScraper
 
 __all__ = (
     'WebMDScraper',
-    'RXListScraper',
+    'DrugsScraper',
 )
