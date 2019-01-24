@@ -194,30 +194,3 @@ class ReviewClassifier():
             # Classify each comment and print
             for comment in comments:
                 print(str(self.model.classify(self.format_text(comment))) + " :: " + comment)
-
-        # TODO: Decide if we can delete the following
-        # parser.add_argument('-d', metavar='domain', type=str,
-        #   help='a file with text from a different domain.', required=False, default = None)
-        # if args.d is not None:
-        #     print("ARGS D")
-        #     domain_list = []
-        #     with open(args.d) as domainfile:
-        #         reader = csv.DictReader(domainfile)
-        #         for row in reader:
-        #             domain_list.append({'comment': row['comment'], 'rating': row['rating']})
-        #     print(str(len(domain_list)))
-
-        #     d_list = []
-        #     for c in range(len(domain_list)):
-        #         tmp_c = domain_list[c]['comment']
-        #         tmp_r = domain_list[c]['rating']
-
-        #         if tmp_r in args.n:
-        #             d_list.append((format_text(tmp_c, stop_words), 'neg'))
-        #         if tmp_r in args.p:
-        #             d_list.append((format_text(tmp_c, stop_words), 'pos'))
-
-        #     # classifier2 = NaiveBayesClassifier.train(domain_list)
-        #     model = NaiveBayesClassifier.train(dataset)
-        #     domain_accuracy = nltk.classify.util.accuracy(model, d_list)
-        #     print('Classifier domain shift accuracy:', domain_accuracy)
