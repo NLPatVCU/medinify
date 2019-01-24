@@ -1,14 +1,12 @@
 """
 Drug review scraper for Medinify.
 
-This module scrapes comments from WebMD along with their rating. 
+This module scrapes comments from WebMD along with their rating.
 Based on work by Amy Olex 11/13/17.
 """
 
 import re
-import time
 import csv
-import argparse
 import requests
 from bs4 import BeautifulSoup
 
@@ -17,7 +15,7 @@ class WebMDScraper():
     Class to scrap drug reviews from WebMD
 
     Attributes:
-        output_path (str) : CSV file to output scraped information        
+        output_path (str) : CSV file to output scraped information.
     """
 
     all_pages = True
