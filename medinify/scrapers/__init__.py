@@ -2,8 +2,10 @@
 """
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
+from medinify.scrapers.drugratingz_scraper import DrugratingzScraper
 
 __all__ = (
     'WebMDScraper',
     'DrugsScraper',
+    'DrugratingzScraper',
 )
