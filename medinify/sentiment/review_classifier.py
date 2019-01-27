@@ -8,13 +8,23 @@ Based on work by Amy Olex 11/13/17.
 import string
 import math
 import csv
+import ast
 import random
-import numpy
+import nltk
+# import keras
+import numpy as np
+import pandas as pd
+from sklearn import svm
+import nltk.classify.util
+from medinify.sentiment.nn_review_classifier import NeuralNetReviewClassifier
+# from keras.models import Sequential
+# from keras.layers import Dense, Dropout
 from nltk.classify import NaiveBayesClassifier
 from nltk.classify import DecisionTreeClassifier
-import nltk.classify.util
-import nltk
+import sklearn.preprocessing as process
 from sklearn.model_selection import StratifiedKFold
+from sklearn.feature_extraction import DictVectorizer
+from imblearn.ensemble import BalancedBaggingClassifier
 
 
 class ReviewClassifier():
@@ -30,10 +40,11 @@ class ReviewClassifier():
     iterations = 3
     negative_threshold = 2.0
     positive_threshold = 4.0
+    seed = 123
 
     model = None
 
-    def __init__(self, classifier_type, stop_words_path):
+    def __init__(self, classifier_type=None, stop_words_path=None):
         self.classifier_type = classifier_type
         self.stop_words_path = stop_words_path
 
@@ -105,20 +116,8 @@ class ReviewClassifier():
 
         return reviews
 
-    def train(self, reviews_file):
-        """ Trains a classifier based on drug reviews with ratings
-
-        Args:
-            reviews_file: Reviews file to use for training.
-        """
-        ## Parse data from files
-        reviews = self.parse_reviews(reviews_file)
-
-        with open('stopwords.txt') as stop_words_file:
-            text = self.clean_text(stop_words_file.read())
-            stop_words = text.splitlines()
-
-        ## Parse and convert positive and negative examples
+    def build_dataset(self, reviews, stop_words):
+         ## Parse and convert positive and negative examples
         positive_comments = []
         negative_comments = []
 
@@ -133,8 +132,7 @@ class ReviewClassifier():
             if float(rating) >= self.positive_threshold:
                 positive_comments.append((comment, 'pos'))
 
-        seed = 123
-        numpy.random.seed(seed)
+        np.random.seed(self.seed)
 
         print("Total Negative Instances:" + str(len(negative_comments)))
         print("Total Positive Instances:" + str(len(positive_comments)))
@@ -149,19 +147,70 @@ class ReviewClassifier():
         pos_train = [positive_comments[i] for i in pos_idx_train]
 
         dataset = neg_train + pos_train
+        return dataset  
+            
+
+    def train(self, reviews_file):
+        """ Trains a classifier based on drug reviews with ratings
+
+        Args:
+            reviews_file: Reviews file to use for training.
+        """
+        ## Parse data from files
+        reviews = self.parse_reviews(reviews_file)
+
+        with open('stopwords.txt') as stop_words_file:
+            text = self.clean_text(stop_words_file.read())
+            stop_words = text.splitlines()
+
+        # ## Parse and convert positive and negative examples
+        # positive_comments = []
+        # negative_comments = []
+
+        # for review in reviews:
+        #     comment = review['comment']
+        #     rating = review['rating']
+
+        #     comment = self.format_text(comment, stop_words)
+
+        #     if float(rating) <= self.negative_threshold:
+        #         negative_comments.append((comment, 'neg'))
+        #     if float(rating) >= self.positive_threshold:
+        #         positive_comments.append((comment, 'pos'))
+
+        # seed = 123
+        # np.random.seed(seed)
+
+        # print("Total Negative Instances:" + str(len(negative_comments)))
+        # print("Total Positive Instances:" + str(len(positive_comments)))
+
+        # negcutoff = math.floor(len(negative_comments) * 1)
+        # poscutoff = math.floor(len(positive_comments) * 1)
+
+        # neg_idx_train = sorted(random.sample(range(len(negative_comments)), negcutoff))
+        # neg_train = [negative_comments[i] for i in neg_idx_train]
+
+        # pos_idx_train = sorted(random.sample(range(len(positive_comments)), poscutoff))
+        # pos_train = [positive_comments[i] for i in pos_idx_train]
+
+        # dataset = neg_train + pos_train
+
+        dataset = self.build_dataset(reviews, stop_words)
 
         comments = [x[0] for x in dataset]
         ratings = [x[1] for x in dataset]
-        kfold = StratifiedKFold(n_splits=self.iterations, shuffle=True, random_state=seed)
+        kfold = StratifiedKFold(n_splits=self.iterations, shuffle=True, random_state=self.seed)
         cvscores = []
+
         for train, test in kfold.split(comments, ratings):
             train_data = []
             for item in train:
                 train_data.append(dataset[item])
+
             test_data = []
             for item in test:
                 test_data.append(dataset[item])
-
+       
             if self.classifier_type == 'nb':
                 self.model = NaiveBayesClassifier.train(train_data)
             elif self.classifier_type == 'dt':
@@ -175,7 +224,8 @@ class ReviewClassifier():
             if self.classifier_type == 'nb':
                 self.model.show_most_informative_features()
 
-        print("%.2f%% (+/- %.2f%%)" % (numpy.mean(cvscores), numpy.std(cvscores)))
+            print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
+
 
     def classify(self, comments_file):
         """ Classifies comments as positive or negative based on training.

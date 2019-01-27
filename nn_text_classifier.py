@@ -219,6 +219,8 @@ if args.c is not None:
         predict_this.append(format_sentence(phrase))
         sentences.append(phrase)
     answers = []
+    print(predict_this)
+    exit()
     predictions = model.predict(np.array(predict_this))
     for i in range(len(predictions)):
         answers.append([predictions[i], sentences[i]])
