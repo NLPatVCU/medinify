@@ -5,7 +5,7 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 
-class DrugratingzScraper():
+class DrugRatingzScraper():
     """Scrapes drugratingz.com for drug reviews.
     """
 
