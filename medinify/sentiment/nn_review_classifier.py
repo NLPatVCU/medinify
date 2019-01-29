@@ -141,8 +141,12 @@ class NeuralNetReviewClassifier():
         dataset = neg_train + pos_train
         return dataset
 
-    def nn_train(self, reviews_file):
-        
+    def train(self, reviews_file):
+        """ Trains a neural network classifier based on drug reviews with ratings
+
+        Args:
+            reviews_file: Reviews file to use for training.
+        """
         reviews = self.parse_reviews(reviews_file)
         with open('stopwords.txt') as stop_words_file:
             text = self.clean_text(stop_words_file.read())
@@ -164,7 +168,6 @@ class NeuralNetReviewClassifier():
         count = 0
         model_scores = []
         input_dimension = len(train_data[0])
-        print(train_data)
         class_weights = {0: 3, 1: 1}
 
         clf = svm.SVC(gamma='scale')
@@ -177,7 +180,6 @@ class NeuralNetReviewClassifier():
         for train, test in skfold.split(train_data, train_target):
             
             count += 1
-            # model = Sequential()
             self.model.add(Dense(20, input_dim=input_dimension, activation='relu'))
             self.model.add(Dropout(0.5))
             self.model.add(Dense(30, activation='relu'))
@@ -188,13 +190,6 @@ class NeuralNetReviewClassifier():
 
             self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
             bbc.fit(train_data[train], train_target[train])
-            # print(len(train_data[train]))
-            # print(len(train_target[train]))
-            # # exit()
-            # print(train_target[train])
-            # y = np_utils.to_categorical(train_target[train], num_classes=2)
-            # print(len(y[0]))
-            # print(y)
             self.model.fit(train_data[train], train_target[train], epochs=50,
                 batch_size=20, class_weight=class_weights,
                 verbose=0)
@@ -207,15 +202,17 @@ class NeuralNetReviewClassifier():
         print("Average accuracy (train set) - %.2f%%\n" % (np.mean(model_scores)))
 
 
-    def nn_classify(self, comments_file):
+    def classify(self, comments_file):
+        """ Classifies comments as positive or negative based on training.
+
+        Args:
+            comments_file: Comments file to classify
+        """
         with open(comments_file) as comments_file:
             comments = comments_file.readlines()
 
         print(comments)
-        # reviews = self.format_text(comments)
-        
-        # y = np_utils.to_categorical(reviews, num_classes=2)
-        # print(y)
+
 
 
 

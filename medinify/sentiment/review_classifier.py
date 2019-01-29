@@ -5,9 +5,6 @@ Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment an
 Based on work by Amy Olex 11/13/17.
 """
 
-import string
-import math
-import csv
 import ast
 import random
 import nltk
@@ -162,38 +159,6 @@ class ReviewClassifier():
         with open('stopwords.txt') as stop_words_file:
             text = self.clean_text(stop_words_file.read())
             stop_words = text.splitlines()
-
-        # ## Parse and convert positive and negative examples
-        # positive_comments = []
-        # negative_comments = []
-
-        # for review in reviews:
-        #     comment = review['comment']
-        #     rating = review['rating']
-
-        #     comment = self.format_text(comment, stop_words)
-
-        #     if float(rating) <= self.negative_threshold:
-        #         negative_comments.append((comment, 'neg'))
-        #     if float(rating) >= self.positive_threshold:
-        #         positive_comments.append((comment, 'pos'))
-
-        # seed = 123
-        # np.random.seed(seed)
-
-        # print("Total Negative Instances:" + str(len(negative_comments)))
-        # print("Total Positive Instances:" + str(len(positive_comments)))
-
-        # negcutoff = math.floor(len(negative_comments) * 1)
-        # poscutoff = math.floor(len(positive_comments) * 1)
-
-        # neg_idx_train = sorted(random.sample(range(len(negative_comments)), negcutoff))
-        # neg_train = [negative_comments[i] for i in neg_idx_train]
-
-        # pos_idx_train = sorted(random.sample(range(len(positive_comments)), poscutoff))
-        # pos_train = [positive_comments[i] for i in pos_idx_train]
-
-        # dataset = neg_train + pos_train
 
         dataset = self.build_dataset(reviews, stop_words)
 

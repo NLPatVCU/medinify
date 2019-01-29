@@ -21,9 +21,7 @@ def main():
 
     # Neural Network classifier
     # review_classifier = NeuralNetReviewClassifier('stopwords.txt')
-    # review_classifier.nn_train('citalopram_train.csv')
-
-    # Still working on the classification piece
+    # review_classifier.train('citalopram_train.csv')
     # review_classifier.nn_classify('neutral.txt')
 
 
