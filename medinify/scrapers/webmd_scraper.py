@@ -77,12 +77,11 @@ class WebMDScraper():
                 calculated_rating = calculated_rating / 3.0
                 self.review_list.append({'comment': comment, 'rating': calculated_rating})
 
-    def scrape(self, input_url, output_path):
+    def scrape(self, input_url):
         """Scrapes the reviews from WebMD
 
         Args:
             input_url : WebMD URL to scrape
-            pages (int) : number of pages to scrape
         """
 
         self.review_list = []
@@ -104,9 +103,11 @@ class WebMDScraper():
             if page % 10 == 0:
                 print('Scraped ' + str(page) + ' pages...')
 
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
-            dict_writer.writeheader()
-            dict_writer.writerows(self.review_list)
+        # with open(output_path, 'w') as output_file:
+        #     dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
+        #     dict_writer.writeheader()
+        #     dict_writer.writerows(self.review_list)
 
         print('Reviews scraped: ' + str(len(self.review_list)))
+
+        return self.review_list
