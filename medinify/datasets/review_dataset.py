@@ -78,7 +78,7 @@ class ReviewDataset():
     def remove_empty_comments(self):
         """Remove reviews with empty comments
         """
-        updated_reviews = self.reviews
+        updated_reviews = []
         empty_comments_removed = 0
 
         print('Removing empty comments...')
@@ -95,7 +95,7 @@ class ReviewDataset():
     def combine_ratings(self):
         """Take 3 WebMD ratings, save the average, and remove the original scores
         """
-        updated_reviews = self.reviews
+        updated_reviews = []
 
         print('Combining ratings...')
 
