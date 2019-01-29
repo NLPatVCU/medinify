@@ -72,26 +72,34 @@ class ReviewDataset():
         elif filetype == 'json':
             with open(filename, 'w') as output_file:
                 json.dump(self.reviews, output_file, indent=4)
-        
+
         print('Done!')
 
-    def remove_empty_comments(self, reviews):
-        updated_reviews = []
+    def remove_empty_comments(self):
+        """Remove reviews with empty comments
+        """
+        updated_reviews = self.reviews
         empty_comments_removed = 0
 
-        for review in reviews:
+        print('Removing empty comments...')
+
+        for review in self.reviews:
             if review['comment']:
                 updated_reviews.append(review)
             else:
                 empty_comments_removed += 1
-        
+
         print(f'{empty_comments_removed} empty comments removed.')
-        return updated_reviews
+        self.reviews = updated_reviews
 
-    def combine_ratings(self, reviews):
-        updated_reviews = []
+    def combine_ratings(self):
+        """Take 3 WebMD ratings, save the average, and remove the original scores
+        """
+        updated_reviews = self.reviews
 
-        for review in reviews:
+        print('Combining ratings...')
+
+        for review in self.reviews:
             rating_sum = 0
 
             rating_sum += review['effectiveness']
@@ -105,12 +113,10 @@ class ReviewDataset():
             review['rating'] = rating_sum / 3.0
             updated_reviews.append(review)
 
-        return updated_reviews
-    
+        self.reviews = updated_reviews
+
     def cleanse(self):
-        cleansed_reviews = self.reviews
-
-        cleansed_reviews = self.remove_empty_comments(cleansed_reviews)
-        cleansed_reviews = self.combine_ratings(cleansed_reviews)
-
-        self.reviews = cleansed_reviews
+        """Run all cleansing functions
+        """
+        self.remove_empty_comments()
+        self.combine_ratings()

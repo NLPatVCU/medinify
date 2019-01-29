@@ -6,7 +6,6 @@ Based on work by Amy Olex 11/13/17.
 """
 
 import re
-import csv
 import requests
 from bs4 import BeautifulSoup
 
@@ -64,9 +63,9 @@ class WebMDScraper():
             satisfaction = int(ratings[2].text.replace('Current Rating:', '').strip())
 
             self.review_list.append({'comment': comment,
-                                        'effectiveness': effectiveness,
-                                        'ease of use': ease,
-                                        'satisfaction': satisfaction})
+                                     'effectiveness': effectiveness,
+                                     'ease of use': ease,
+                                     'satisfaction': satisfaction})
 
     def scrape(self, input_url):
         """Scrapes the reviews from WebMD
