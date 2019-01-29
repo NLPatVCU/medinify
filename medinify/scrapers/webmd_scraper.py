@@ -26,17 +26,6 @@ class WebMDScraper():
         self.all_pages = all_pages
         self.pages = pages
 
-    def clean_comment(self, comment):
-        """Cleans comment for proper CSV usage.
-        Args:
-            comment: Comment to be cleaned.
-        Returns:
-            The cleaned comment.
-        """
-        comment = comment.replace('Comment:', '').replace('Hide Full Comment', '')
-        comment = ' '.join(comment.splitlines())
-        return comment
-
     def max_pages(self, input_url):
         """Finds number of review pages for this drug.
 
@@ -66,16 +55,18 @@ class WebMDScraper():
 
         for review in reviews:
             comment = review.find('p', id=re.compile("^comFull*")).text
-            comment = self.clean_comment(comment)
-            if comment:
-                ratings = review.find_all('span', attrs={'class': 'current-rating'})
-                calculated_rating = 0.0
+            comment = comment.replace('Comment:', '').replace('Hide Full Comment', '')
+            comment = ' '.join(comment.splitlines())
 
-                for rating in ratings:
-                    calculated_rating += int(rating.text.replace('Current Rating:', '').strip())
+            ratings = review.find_all('span', attrs={'class': 'current-rating'})
+            effectiveness = int(ratings[0].text.replace('Current Rating:', '').strip())
+            ease = int(ratings[1].text.replace('Current Rating:', '').strip())
+            satisfaction = int(ratings[2].text.replace('Current Rating:', '').strip())
 
-                calculated_rating = calculated_rating / 3.0
-                self.review_list.append({'comment': comment, 'rating': calculated_rating})
+            self.review_list.append({'comment': comment,
+                                        'effectiveness': effectiveness,
+                                        'ease of use': ease,
+                                        'satisfaction': satisfaction})
 
     def scrape(self, input_url):
         """Scrapes the reviews from WebMD
@@ -95,6 +86,8 @@ class WebMDScraper():
         else:
             num_pages = self.pages
 
+        print('Scraping WebMD...')
+
         for i in range(num_pages):
             page_url = quote_page1 + str(i) + quote_page2
             self.scrape_page(page_url)
@@ -102,11 +95,6 @@ class WebMDScraper():
             page = i + 1
             if page % 10 == 0:
                 print('Scraped ' + str(page) + ' pages...')
-
-        # with open(output_path, 'w') as output_file:
-        #     dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
-        #     dict_writer.writeheader()
-        #     dict_writer.writerows(self.review_list)
 
         print('Reviews scraped: ' + str(len(self.review_list)))
 
