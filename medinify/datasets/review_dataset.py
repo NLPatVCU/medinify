@@ -3,6 +3,8 @@ Dataset for collection, storing, and cleansing of drug reviews.
 """
 
 import pickle
+import csv
+import json
 from medinify.scrapers import WebMDScraper
 
 class ReviewDataset():
@@ -49,3 +51,28 @@ class ReviewDataset():
         with open(filename, 'rb') as pickle_file:
             data = pickle.load(pickle_file)
             self.reviews = data
+
+    def write_file(self, filetype, filename=None):
+        """Creates CSV file of review data
+
+        Args:
+            filetype: Type of file to save data as
+            filename: Name of file to save CSV as
+        """
+        # TODO: Error checking for filetype that isn't csv or json
+
+        if filename is None:
+            filename = self.drug_name + '-reviews.' + filetype
+
+        print(f'Writing {filename}...')
+
+        if filetype == 'csv':
+            with open(filename, 'w') as output_file:
+                dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
+                # TODO: Set the header based on dictionary keys
+                dict_writer.writeheader()
+                dict_writer.writerows(self.reviews)
+                print('Done!')
+        elif filetype == 'json':
+            with open(filename, 'w') as output_file:
+                json.dump(self.reviews, output_file)
