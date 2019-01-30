@@ -8,6 +8,7 @@ import json
 import pprint
 from medinify.scrapers import WebMDScraper
 
+
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
 
@@ -42,13 +43,13 @@ class ReviewDataset():
         scraper = WebMDScraper(False, 10)
         self.reviews = scraper.scrape(url)
 
-
     def save(self):
         """Saves current reviews as a pickle file
         """
         filename = self.drug_name + '-dataset.pickle'
         with open(filename, 'wb') as pickle_file:
-            pickle.dump(self.reviews, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(
+                self.reviews, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load(self):
         """Loads set of reviews from a pickle file
@@ -78,7 +79,8 @@ class ReviewDataset():
 
         if filetype == 'csv':
             with open(filename, 'w') as output_file:
-                dict_writer = csv.DictWriter(output_file, self.reviews[0].keys())
+                dict_writer = csv.DictWriter(output_file,
+                                             self.reviews[0].keys())
                 dict_writer.writeheader()
                 dict_writer.writerows(self.reviews)
         elif filetype == 'json':
