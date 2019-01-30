@@ -10,8 +10,12 @@ from medinify.scrapers import WebMDScraper
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
+
+    Attributes:
+        reviews: List of dictionaries with all review data
+        drug_name: Name of drug this dataset was created for
     """
-    reviews = {}
+    reviews = []
     drug_name = ''
 
     def __init__(self, drug_name):
@@ -29,8 +33,12 @@ class ReviewDataset():
 
     def collect(self, url):
         """Scrapes drug reviews and saves them as dictionary property
+
+        Args:
+            url: WebMD URL where all the reviews are
         """
-        # TODO: Remove need for url variable by pulling urls from stored file
+        # TODO(Jorge): Remove need for url variable by pulling urls from stored file
+        # TODO(Jorge): Add parameter for selecting which source or all
         scraper = WebMDScraper(False, 10)
         self.reviews = scraper.scrape(url)
 
@@ -54,10 +62,14 @@ class ReviewDataset():
         """Creates CSV file of review data
 
         Args:
-            filetype: Type of file to save data as
+            filetype: Type of file to save data as (csv, json)
             filename: Name of file to save CSV as
         """
-        # TODO: Error checking for filetype that isn't csv or json
+
+        filetype = filetype.lower()
+
+        if filetype not in ('csv', 'json'):
+            raise ValueError('Filetype needs to be "csv" or "json"')
 
         if filename is None:
             filename = self.drug_name + '-reviews.' + filetype
