@@ -6,7 +6,6 @@ Based on work by Amy Olex 11/13/17.
 """
 
 import re
-import csv
 import requests
 from bs4 import BeautifulSoup
 
@@ -15,7 +14,9 @@ class WebMDScraper():
     Class to scrap drug reviews from WebMD
 
     Attributes:
-        output_path (str) : CSV file to output scraped information.
+        all_pages: Boolean for whether or not to scrape all pages
+        pages: int for # of pages to scrape if all_pages is 0
+        review_list: List of review dictionary items
     """
 
     all_pages = True
@@ -25,17 +26,6 @@ class WebMDScraper():
     def __init__(self, all_pages=True, pages=1):
         self.all_pages = all_pages
         self.pages = pages
-
-    def clean_comment(self, comment):
-        """Cleans comment for proper CSV usage.
-        Args:
-            comment: Comment to be cleaned.
-        Returns:
-            The cleaned comment.
-        """
-        comment = comment.replace('Comment:', '').replace('Hide Full Comment', '')
-        comment = ' '.join(comment.splitlines())
-        return comment
 
     def max_pages(self, input_url):
         """Finds number of review pages for this drug.
@@ -66,29 +56,32 @@ class WebMDScraper():
 
         for review in reviews:
             comment = review.find('p', id=re.compile("^comFull*")).text
-            comment = self.clean_comment(comment)
-            if comment:
-                ratings = review.find_all('span', attrs={'class': 'current-rating'})
-                calculated_rating = 0.0
+            comment = comment.replace('Comment:', '').replace('Hide Full Comment', '')
+            comment = ' '.join(comment.splitlines())
 
-                for rating in ratings:
-                    calculated_rating += int(rating.text.replace('Current Rating:', '').strip())
+            ratings = review.find_all('span', attrs={'class': 'current-rating'})
+            effectiveness = int(ratings[0].text.replace('Current Rating:', '').strip())
+            ease = int(ratings[1].text.replace('Current Rating:', '').strip())
+            satisfaction = int(ratings[2].text.replace('Current Rating:', '').strip())
 
-                calculated_rating = calculated_rating / 3.0
-                self.review_list.append({'comment': comment, 'rating': calculated_rating})
+            self.review_list.append({'comment': comment,
+                                     'effectiveness': effectiveness,
+                                     'ease of use': ease,
+                                     'satisfaction': satisfaction})
 
-    def scrape(self, input_url, output_path):
+    def scrape(self, input_url):
         """Scrapes the reviews from WebMD
 
         Args:
             input_url : WebMD URL to scrape
-            pages (int) : number of pages to scrape
         """
+
+        print('Scraping WebMD...')
 
         self.review_list = []
 
         quote_page1 = input_url + '&pageIndex='
-        quote_page2 = '&sortby=3&conditionFilter=-500'
+        quote_page2 = '&sortby=3&conditionFilter=-1'
         num_pages = 0
 
         if self.all_pages:
@@ -104,9 +97,6 @@ class WebMDScraper():
             if page % 10 == 0:
                 print('Scraped ' + str(page) + ' pages...')
 
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, ['comment', 'rating'])
-            dict_writer.writeheader()
-            dict_writer.writerows(self.review_list)
-
         print('Reviews scraped: ' + str(len(self.review_list)))
+
+        return self.review_list
