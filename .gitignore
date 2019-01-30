@@ -6,8 +6,9 @@
 
 # Project
 *.csv
-!citalopram_train.csv
+*.json
 *.bin
+*.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

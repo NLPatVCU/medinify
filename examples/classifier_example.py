@@ -2,14 +2,14 @@
 Examples for how to use the Medinify package
 """
 
-from medinify.sentiment.review_classifier import ReviewClassifier
-from medinify.sentiment.nn_review_classifier import NeuralNetReviewClassifier
+from medinify.sentiment import ReviewClassifier
+from medinify.sentiment import NeuralNetReviewClassifier
 
 def main():
     """ Main function.
     """
 
-    #Naive bayes classifier
+    # Naive bayes classifier
     review_classifier = ReviewClassifier('nb', 'stopwords.txt')
     review_classifier.train('citalopram_train.csv')
     review_classifier.classify('neutral.txt')
@@ -22,7 +22,7 @@ def main():
     # Neural Network classifier
     # review_classifier = NeuralNetReviewClassifier('stopwords.txt')
     # review_classifier.train('citalopram_train.csv')
-    # review_classifier.nn_classify('neutral.txt')
+    # review_classifier.classify('neutral.txt')
 
 
 if __name__ == "__main__":
