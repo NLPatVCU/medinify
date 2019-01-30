@@ -14,7 +14,9 @@ class WebMDScraper():
     Class to scrap drug reviews from WebMD
 
     Attributes:
-        output_path (str) : CSV file to output scraped information.
+        all_pages: Boolean for whether or not to scrape all pages
+        pages: int for # of pages to scrape if all_pages is 0
+        review_list: List of review dictionary items
     """
 
     all_pages = True
@@ -74,6 +76,8 @@ class WebMDScraper():
             input_url : WebMD URL to scrape
         """
 
+        print('Scraping WebMD...')
+
         self.review_list = []
 
         quote_page1 = input_url + '&pageIndex='
@@ -84,8 +88,6 @@ class WebMDScraper():
             num_pages = self.max_pages(input_url)
         else:
             num_pages = self.pages
-
-        print('Scraping WebMD...')
 
         for i in range(num_pages):
             page_url = quote_page1 + str(i) + quote_page2

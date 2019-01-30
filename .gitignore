@@ -6,7 +6,6 @@
 
 # Project
 *.csv
-!citalopram_train.csv
 *.bin
 *.pickle
 

@@ -32,7 +32,7 @@ class ReviewDataset():
         pprint.pprint(self.reviews)
         print(f'\n"{self.drug_name}" Reviews: {len(self.reviews)}')
 
-    def collect(self, url):
+    def collect(self, url, testing=False):
         """Scrapes drug reviews and saves them as dictionary property
 
         Args:
@@ -40,7 +40,11 @@ class ReviewDataset():
         """
         # TODO(Jorge): Remove need for url variable by pulling urls from stored file
         # TODO(Jorge): Add parameter for selecting which source or all
-        scraper = WebMDScraper(False, 10)
+        scraper = WebMDScraper()
+
+        if testing:
+            scraper = WebMDScraper(False, 2)
+
         self.reviews = scraper.scrape(url)
 
     def save(self):
