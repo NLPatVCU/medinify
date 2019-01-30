@@ -81,7 +81,7 @@ class WebMDScraper():
         self.review_list = []
 
         quote_page1 = input_url + '&pageIndex='
-        quote_page2 = '&sortby=3&conditionFilter=-500'
+        quote_page2 = '&sortby=3&conditionFilter=-1'
         num_pages = 0
 
         if self.all_pages:

@@ -138,3 +138,4 @@ class ReviewDataset():
         """
         self.remove_empty_comments()
         self.combine_ratings()
+        print('Done!')

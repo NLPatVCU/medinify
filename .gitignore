@@ -6,6 +6,7 @@
 
 # Project
 *.csv
+*.json
 *.bin
 *.pickle
 
