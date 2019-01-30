@@ -10,7 +10,7 @@ def main():
     """
     input_url = 'https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral'
     webmd_scraper = WebMDScraper()
-    webmd_scraper.scrape(input_url, 'test.csv')
+    webmd_scraper.scrape(input_url)
 
     # drugs_url = 'https://www.drugs.com/comments/dabigatran/'
     # drugs_scraper = DrugsScraper()

@@ -2,7 +2,8 @@
 Examples for how to use the Medinify package
 """
 
-from medinify.sentiment.review_classifier import ReviewClassifier
+from medinify.sentiment import ReviewClassifier
+from medinify.sentiment import NeuralNetReviewClassifier
 
 def main():
     """ Main function.
@@ -17,6 +18,12 @@ def main():
     # review_classifier = ReviewClassifier('dt', 'stopwords.txt')
     # review_classifier.train('citalopram_train.csv')
     # review_classifier.classify('neutral.txt')
+
+    # Neural Network classifier
+    # review_classifier = NeuralNetReviewClassifier('stopwords.txt')
+    # review_classifier.train('citalopram_train.csv')
+    # review_classifier.classify('neutral.txt')
+
 
 if __name__ == "__main__":
     main()
