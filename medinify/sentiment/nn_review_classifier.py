@@ -212,8 +212,3 @@ class NeuralNetReviewClassifier():
             comments = comments_file.readlines()
 
         print(comments)
-
-
-
-
-
