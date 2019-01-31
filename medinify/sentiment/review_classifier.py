@@ -5,23 +5,16 @@ Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment an
 Based on work by Amy Olex 11/13/17.
 """
 
-import ast
+import string
+import math
+import csv
 import random
-import nltk
-# import keras
 import numpy as np
-import pandas as pd
-from sklearn import svm
-import nltk.classify.util
-from medinify.sentiment.nn_review_classifier import NeuralNetReviewClassifier
-# from keras.models import Sequential
-# from keras.layers import Dense, Dropout
 from nltk.classify import NaiveBayesClassifier
 from nltk.classify import DecisionTreeClassifier
-import sklearn.preprocessing as process
+import nltk.classify.util
+import nltk
 from sklearn.model_selection import StratifiedKFold
-from sklearn.feature_extraction import DictVectorizer
-from imblearn.ensemble import BalancedBaggingClassifier
 
 
 class ReviewClassifier():
@@ -144,8 +137,8 @@ class ReviewClassifier():
         pos_train = [positive_comments[i] for i in pos_idx_train]
 
         dataset = neg_train + pos_train
-        return dataset  
-            
+        return dataset
+
 
     def train(self, reviews_file):
         """ Trains a classifier based on drug reviews with ratings
@@ -175,7 +168,7 @@ class ReviewClassifier():
             test_data = []
             for item in test:
                 test_data.append(dataset[item])
-       
+
             if self.classifier_type == 'nb':
                 self.model = NaiveBayesClassifier.train(train_data)
             elif self.classifier_type == 'dt':
