@@ -110,25 +110,26 @@ class ReviewDataset():
         print(f'{empty_comments_removed} empty comments removed.')
         self.reviews = updated_reviews
 
-    def combine_ratings(self):
+    def combine_ratings(self, effectiveness=True, ease=True, satisfaction=True):
         """Take 3 WebMD ratings, save the average, and remove the original scores
         """
         updated_reviews = []
+        types_of_ratings = sum([effectiveness, ease, satisfaction])
 
         print('Combining ratings...')
 
         for review in self.reviews:
             rating_sum = 0
 
-            rating_sum += review['effectiveness']
-            rating_sum += review['ease of use']
-            rating_sum += review['satisfaction']
+            rating_sum += review['effectiveness'] if effectiveness else 0
+            rating_sum += review['ease of use'] if ease else 0
+            rating_sum += review['satisfaction'] if satisfaction else 0
 
             del review['effectiveness']
             del review['ease of use']
             del review['satisfaction']
 
-            review['rating'] = rating_sum / 3.0
+            review['rating'] = float(rating_sum) / float(types_of_ratings)
             updated_reviews.append(review)
 
         self.reviews = updated_reviews
@@ -139,3 +140,22 @@ class ReviewDataset():
         self.remove_empty_comments()
         self.combine_ratings()
         print('Done!')
+
+    def print_stats(self):
+        """Print relevant stats about the dataset
+        """
+        reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+
+        for review in self.reviews:
+            rating = int(review['rating'])
+            reviews_ratings[rating] += 1
+
+        print(f'\nTotal reviews: {len(self.reviews)}')
+        for key, val in reviews_ratings.items():
+            print(f'{key} star ratings: {val}')
+
+        positive_ratings = reviews_ratings[4] + reviews_ratings[5]
+        negative_ratings = reviews_ratings[1] + reviews_ratings[2]
+        print(f'Positive ratings: {positive_ratings}')
+        print(f'Negative ratings: {negative_ratings}')
+        print(f'Pos:Neg ratio: {positive_ratings / negative_ratings}')
