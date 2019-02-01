@@ -58,15 +58,6 @@ clone the repo:
 git clone https://github.com/NanoNLP/medinify.git
 # Navigate to the newly cloned directory
 cd medinify
-# Assign the original repo to a remote called "upstream"
-git remote add upstream https://github.com/NanoNLP/medinify.git
-```
-
-2. If already cloned, update from the master:
-
-```bash
-git checkout master
-git pull upstream master
 ```
 
 3. Create a branch (off the main project development branch) to
@@ -76,10 +67,10 @@ contain your changes:
 git checkout -b <new-branch-name>
 ```
 
-4. After making changes to files or adding new files to the project, add the changes to your local repository
+4. After making changes to files or adding new files to the project, stage your changes
 
 ```bash
-git add -A
+git add <filename>
 ```
 
 5. Next, we record the changes made and provide a message describing the changes made so others can understand
@@ -88,14 +79,7 @@ git add -A
 git commit -m "Description of changes made"
 ```
 
-If many changes were made and the commit message is extensive, instead run 
-
-```bash
-git commit
-```
-and the deafault text editor will open for you to record a longer commit message.
-
-6. After saving and exiting your commit message text file, verify what git will commit using the command:
+6. After committitng, verify what git will commit using the command:
 
 ```bash
 git status
@@ -110,19 +94,23 @@ Your branch is ahead of 'origin/<new-branch-name>' by 1 commit.
 nothing to commit, working directory clean
 ```
 
-7. Finally, push the changes to the current branch of your forked repository:
+7. Finally, push the changes to the master branch:
 
 ```bash
-git push --set-upstream origin <new-branch-name>
+git push
 ```
 
 ### Making Pull Requests
 
-After following the steps above, you can make a pull request to the original repository by navigating to your forked repository on github, and press the “New pull request” button on your left-hand side of the page.
+After following the steps above, you can make a pull request to the original repository by navigating to the medinify-master repository on github, and press the “New pull request” button on your left-hand side of the page.
 
-Select the master branch from the left-hand side, and the desired branch of your forked repo from the right-hand side.
+Select the master branch from the left-hand side, and the desired branch commited from the right-hand side.
 
-Then add a title, a comment, and then press the “Create pull request” button.
+Then add a title, a comment, and then press the “Create pull request” button. If you are closing an issue, put "closes #14," if you had issue 14.
+
+Navigate to the reviewers tab and request Jorge Vargas to review the PR.
+
+
 
 ## More Info
 
