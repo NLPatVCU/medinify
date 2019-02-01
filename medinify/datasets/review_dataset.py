@@ -47,6 +47,35 @@ class ReviewDataset():
 
         self.reviews = scraper.scrape(url)
 
+    def collect_all_common_reviews(self, start=0):
+        scraper = WebMDScraper()
+        common_drugs = scraper.get_common_drugs()
+        print(f'Found {len(common_drugs)} common drugs.')
+
+        drugs_left = len(common_drugs) - start
+        common_drugs = common_drugs[start:]
+
+        for drug in common_drugs:
+            print(f'\n{drugs_left} drugs left to scrape.')
+            print(f'Scraping {drug["name"]}...')
+            reviews = scraper.scrape(drug['url'])
+
+            if drug['name'] == 'Actos':
+                self.reviews = reviews
+            else:
+                self.reviews += reviews
+
+            self.save()
+            drugs_left -= 1
+            print(f'{drug["name"]} reviews saved. Safe to quit.')
+
+            next_start_index = len(common_drugs) - drugs_left
+
+            if next_start_index < len(common_drugs):
+                print(f'To continue run with parameter start={len(common_drugs) - drugs_left}')
+
+        print('\nAll common drug review scraping complete!')
+
     def save(self):
         """Saves current reviews as a pickle file
         """
@@ -138,7 +167,8 @@ class ReviewDataset():
         """Run all cleansing functions
         """
         self.remove_empty_comments()
-        self.combine_ratings()
+        self.combine_ratings(True, False, True)
+        # self.balance()
         print('Done!')
 
     def print_stats(self):
