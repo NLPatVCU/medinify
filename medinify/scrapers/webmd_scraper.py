@@ -100,3 +100,17 @@ class WebMDScraper():
         print('Reviews scraped: ' + str(len(self.review_list)))
 
         return self.review_list
+
+    def scrape_all_common_drugs(self):
+        url = 'https://www.webmd.com/drugs/2/index?show=drugs'
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        drug_names = soup.find_all('a', {'class': 'common-result-name'})
+        drug_review_links = soup.find_all('a', {'class': 'common-result-review'})
+
+        for i in range(1, len(drug_names)):
+            name = drug_names[i].text
+
+            print(name)
+            print(drug_review_links[i])
+            print()
