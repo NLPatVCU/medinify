@@ -47,7 +47,6 @@ input_url = "https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?dr
 scraper = WebMDScraper("citalopram_train.csv")
 scraper.scrape(input_url, 10)
 
-
 ```
 
 ## Contributions
@@ -112,11 +111,7 @@ Your branch is ahead of 'origin/<new-branch-name>' by 1 commit.
 nothing to commit, working directory clean
 ```
 
-7. Finally, use the 
-```bash
-git push
-``` 
-command to push the changes to the current branch of your forked repository:
+7. Finally, push the changes to the current branch of your forked repository:
 
 ```bash
 git push --set-upstream origin <new-branch-name>
