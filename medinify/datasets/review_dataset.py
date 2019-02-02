@@ -48,15 +48,14 @@ class ReviewDataset():
         self.reviews = scraper.scrape(url)
 
     def collect_all_common_reviews(self, start=0):
+        self.load()
         scraper = WebMDScraper()
         common_drugs = scraper.get_common_drugs()
         print(f'Found {len(common_drugs)} common drugs.')
 
-        drugs_left = len(common_drugs) - start
-        common_drugs = common_drugs[start:]
-
-        for drug in common_drugs:
-            print(f'\n{drugs_left} drugs left to scrape.')
+        for i in range(start, len(common_drugs)):
+            drug = common_drugs[i]
+            print(f'\n{len(common_drugs) - i} drugs left to scrape.')
             print(f'Scraping {drug["name"]}...')
             reviews = scraper.scrape(drug['url'])
 
@@ -66,13 +65,10 @@ class ReviewDataset():
                 self.reviews += reviews
 
             self.save()
-            drugs_left -= 1
             print(f'{drug["name"]} reviews saved. Safe to quit.')
 
-            next_start_index = len(common_drugs) - drugs_left
-
-            if next_start_index < len(common_drugs):
-                print(f'To continue run with parameter start={len(common_drugs) - drugs_left}')
+            if i < len(common_drugs) - 1:
+                print(f'To continue run with parameter start={i + 1}')
 
         print('\nAll common drug review scraping complete!')
 
