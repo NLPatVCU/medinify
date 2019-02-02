@@ -6,6 +6,7 @@ import pickle
 import csv
 import json
 import pprint
+from random import shuffle
 from medinify.scrapers import WebMDScraper
 
 
@@ -159,12 +160,37 @@ class ReviewDataset():
 
         self.reviews = updated_reviews
 
+    def balance(self):
+        """Remove ratings so there's even number of positive and negative
+        """
+        positive_reviews = []
+        negative_reviews = []
+
+        for review in self.reviews:
+            if int(review['rating']) > 3:
+                positive_reviews.append(review)
+            elif int(review['rating']) < 3:
+                negative_reviews.append(review)
+
+        positives = len(positive_reviews)
+        negatives = len(negative_reviews)
+
+        if positives > negatives:
+            shuffle(positive_reviews)
+            positive_reviews = positive_reviews[0:negatives]
+        if negatives > positives:
+            shuffle(negative_reviews)
+            negative_reviews = negative_reviews[0:positives]
+
+        self.reviews = positive_reviews + negative_reviews
+
+
     def cleanse(self):
         """Run all cleansing functions
         """
         self.remove_empty_comments()
         self.combine_ratings(True, False, True)
-        # self.balance()
+        self.balance()
         print('Done!')
 
     def print_stats(self):

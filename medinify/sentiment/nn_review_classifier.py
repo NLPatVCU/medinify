@@ -108,7 +108,14 @@ class NeuralNetReviewClassifier():
         return reviews
     
     def build_dataset(self, reviews, stop_words):
-         ## Parse and convert positive and negative examples
+        """ Parse and convert positive and negative examples
+
+        Args: 
+            reviews: List of reviews with comments and ratings
+            stop_words: List of stop words to remove from comments
+        Returns:
+            A list of important keywords per comment with a positive or negative rating
+        """
         positive_comments = []
         negative_comments = []
 
