@@ -25,7 +25,7 @@ pip install -e .
 
 Scrape for reviews from WebMD, save them, load them, print statistics, cleanse data, and export to CSV or JSON.
 
-#### Examples
+#### Review Dataset Examples
 
 ```python
 from medinify.datasets import ReviewDataset
@@ -53,7 +53,7 @@ review_dataset.print_stats()
 
 Train and test a model for running sentiment analysis on drug reviews. Models can currently use Naive Bayes, Decision Tree, or a Tensorflow Neural Network.
 
-#### Examples
+#### Review Classifier Examples
 
 ```python
 from medinify.sentiment import ReviewClassifier
@@ -68,57 +68,55 @@ review_classifier.classify('neutral.txt')
 
 ### Checklist
 
-- Changes made/comitted/pushed in new branch
-- Changes not far behind master
-- Added comments and documentation to code
-- Made sure styling matches Google style guide: http://google.github.io/styleguide/pyguide.html
-- README updated if relevant changes made
+* Changes made/comitted/pushed in new branch
+* Changes not far behind master
+* Added comments and documentation to code
+* Made sure styling matches Google style guide: <http://google.github.io/styleguide/pyguide.html>
+* README updated if relevant changes made
 
 ### Making changes locally
 
-1. Copy the URL from the Medinify repository and use Git to
-clone the repo:
+1. Copy the URL from the Medinify repository and use Git to clone the repo:
 
-```bash
-# Clone the repo into current directory
-git clone https://github.com/NanoNLP/medinify.git
-# Navigate to the newly cloned directory
-cd medinify
-```
+    ```bash
+    # Clone the repo into current directory
+    git clone https://github.com/NanoNLP/medinify.git
+    # Navigate to the newly cloned directory
+    cd medinify
+    ```
 
-2. Create a branch (off the main project development branch) to
-contain your changes:
+2. Create a branch (off the main project development branch) to contain your changes:
 
-```bash 
-git checkout -b <new-branch-name>
-```
+    ```bash
+    git checkout -b <new-branch-name>
+    ```
 
 3. After making changes to files or adding new files to the project, stage your changes
 
-```bash
-git add <filename>
-```
+    ```bash
+    git add <filename>
+    ```
 
 4. Next, we record the changes made and provide a message describing the changes made so others can understand
 
-```bash
-git commit -m "Description of changes made"
-```
+    ```bash
+    git commit -m "Description of changes made"
+    ```
 
 5. After committitng, make sure everything looks good with:
 
-```bash
-git status
-```
+    ```bash
+    git status
+    ```
 
-and you will recieve an output similar to this:
+    and you will recieve an output similar to this:
 
-```bash
-On branch <new-branch-name>
-Your branch is ahead of 'origin/<new-branch-name>' by 1 commit.
-  (use "git push" to publish your local commits)
-nothing to commit, working directory clean
-```
+    ```bash
+    On branch <new-branch-name>
+    Your branch is ahead of 'origin/<new-branch-name>' by 1 commit.
+    (use "git push" to publish your local commits)
+    nothing to commit, working directory clean
+    ```
 
 6. Finally, push the changes to the new branch origin:
 
@@ -138,8 +136,7 @@ Add a title, a description, and then press the “Create pull request” button.
 
 Navigate to the reviewers tab and request Jorge Vargas to review the PR.
 
-
 ## More Info
 
-- [VCU Natural Language Processing Lab](https://nlp.cs.vcu.edu/)     ![alt text](https://nlp.cs.vcu.edu/images/vcu_head_logo "VCU")
-- [Nanoinformatics Vertically Integrated Projects](https://rampages.us/nanoinformatics/)
+* [VCU Natural Language Processing Lab](https://nlp.cs.vcu.edu/)     ![alt text](https://nlp.cs.vcu.edu/images/vcu_head_logo "VCU")
+* [Nanoinformatics Vertically Integrated Projects](https://rampages.us/nanoinformatics/)
