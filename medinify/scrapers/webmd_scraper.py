@@ -8,6 +8,7 @@ Based on work by Amy Olex 11/13/17.
 import re
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 class WebMDScraper():
     """
@@ -100,3 +101,19 @@ class WebMDScraper():
         print('Reviews scraped: ' + str(len(self.review_list)))
 
         return self.review_list
+
+    def get_common_drugs(self):
+        url = 'https://www.webmd.com/drugs/2/index?show=drugs'
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        drug_names = soup.find_all('a', {'class': 'common-result-name'})
+        drug_review_links = soup.find_all('a', {'class': 'common-result-review'})
+        drug_review_pages = []
+
+        for i in range(1, len(drug_names)):
+            name = drug_names[i].text
+            relative_link = drug_review_links[i]['href']
+            absolute_link = urljoin(url, relative_link)
+            drug_review_pages.append({'name': name, 'url': absolute_link})
+
+        return drug_review_pages
