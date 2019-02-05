@@ -6,7 +6,7 @@ Based on work by Amy Olex 11/13/17.
 """
 
 import re
-import requests
+#import requests
 from bs4 import BeautifulSoup
 
 class WebMDScraper():

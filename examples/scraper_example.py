@@ -17,7 +17,7 @@ def main():
     # drugs_scraper = DrugsScraper()
     # drugs_scraper.scrape(drugs_url, 'dabigatran.csv', 4)
 
-    iodine_url = "https://www.iodine.com/drug/celebrex"
+    iodine_url = "https://www.iodine.com/drug/adderall/reviews"
     iodine_scraper = IodineScraper()
     iodine_scraper.scraper(iodine_url, 'test.csv')
 
