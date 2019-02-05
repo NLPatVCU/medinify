@@ -26,13 +26,6 @@ class ReviewDataset():
         self.drug_name = drug_name
         print(f'Created object for "{self.drug_name}"')
 
-    def print(self):
-        """Prints out current dataset in human readable format
-        """
-        print(f'\n-----"{self.drug_name}" Review Dataset-----')
-        pprint.pprint(self.reviews)
-        print(f'\n"{self.drug_name}" Reviews: {len(self.reviews)}')
-
     def collect(self, url, testing=False):
         """Scrapes drug reviews and saves them as dictionary property
 
@@ -44,7 +37,7 @@ class ReviewDataset():
         scraper = WebMDScraper()
 
         if testing:
-            scraper = WebMDScraper(False, 2)
+            scraper = WebMDScraper(False, 1)
 
         self.reviews = scraper.scrape(url)
 
@@ -223,3 +216,10 @@ class ReviewDataset():
         print(f'Positive ratings: {positive_ratings}')
         print(f'Negative ratings: {negative_ratings}')
         print(f'Pos:Neg ratio: {positive_ratings / negative_ratings}')
+
+    def print_reviews(self):
+        """Prints out current dataset in human readable format
+        """
+        print(f'\n-----"{self.drug_name}" Review Dataset-----')
+        pprint.pprint(self.reviews)
+        print(f'\n"{self.drug_name}" Reviews: {len(self.reviews)}')
