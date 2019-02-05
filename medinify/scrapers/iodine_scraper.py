@@ -27,13 +27,12 @@ class IodineScraper():
         soup = BeautifulSoup(page.text, 'html.parser')
         reviews = soup.find_all('div', {'class': 'tri bg-white relative depth-1 p-3 col mo-m-t-2'})
         for review in reviews: 
-            #print(review)
             if(len(review) >= 2):
                 find_span = review.find_all('span')[1]
                 #print ('find span:')
                 
                 comment = review.find_all('span')[1].text
-                print (comment)
+                #print (comment)
 
                 if review.find('div', {'class': "purple"}):
                     worth_it +=1 
