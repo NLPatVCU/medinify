@@ -179,13 +179,13 @@ class ReviewDataset():
 
         positives = len(positive_reviews)
         negatives = len(negative_reviews)
+        
+        least_reviews = min([positives, negatives])
 
-        if positives > negatives:
-            shuffle(positive_reviews)
-            positive_reviews = positive_reviews[0:negatives]
-        if negatives > positives:
-            shuffle(negative_reviews)
-            negative_reviews = negative_reviews[0:positives]
+        shuffle(positive_reviews)
+        positive_reviews = positive_reviews[:least_reviews]
+        shuffle(negative_reviews)
+        negative_reviews = negative_reviews[:least_reviews]
 
         self.reviews = positive_reviews + negative_reviews
 

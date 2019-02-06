@@ -85,9 +85,9 @@ def test_balance(dataset):
     negative_reviews = 0
 
     for review in dataset.reviews:
-        if review['rating'] > 3:
+        if int(review['rating']) > 3:
             positive_reviews += 1
-        elif review['rating'] < 3:
+        elif int(review['rating']) < 3:
             negative_reviews += 1
 
     least_reviews = min([positive_reviews, negative_reviews])
@@ -98,9 +98,9 @@ def test_balance(dataset):
     negative_reviews = 0
 
     for review in dataset.reviews:
-        if review['rating'] > 3:
+        if int(review['rating']) > 3:
             positive_reviews += 1
-        elif review['rating'] < 3:
+        elif int(review['rating']) < 3:
             negative_reviews += 1
 
     assert positive_reviews == least_reviews
