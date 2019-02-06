@@ -1,6 +1,6 @@
-''' Drug review scraper for Medinify 
+"""Drug review scraper for Medinify 
     Iodine.com
-    Last modified: 1/31/2018 ''' 
+    Last modified: 2/5/2019"""
 
 import csv 
 import requests 
