@@ -27,7 +27,6 @@ Keras-Preprocessing==1.0.5
 lazy-object-proxy==1.3.1
 Markdown==3.0.1
 mccabe==0.6.1
--e git+git@github.com:NanoNLP/medinify.git@091b4121db4652ffde881731fb213c2f23da068b#egg=medinify
 more-itertools==5.0.0
 nltk==3.4
 numpy==1.15.4
