@@ -26,13 +26,6 @@ class ReviewDataset():
         self.drug_name = drug_name
         print(f'Created object for "{self.drug_name}"')
 
-    def print(self):
-        """Prints out current dataset in human readable format
-        """
-        print(f'\n-----"{self.drug_name}" Review Dataset-----')
-        pprint.pprint(self.reviews)
-        print(f'\n"{self.drug_name}" Reviews: {len(self.reviews)}')
-
     def collect(self, url, testing=False):
         """Scrapes drug reviews and saves them as dictionary property
 
@@ -40,13 +33,50 @@ class ReviewDataset():
             url: WebMD URL where all the reviews are
         """
         # TODO(Jorge): Remove need for url variable by pulling urls from stored file
-        # TODO(Jorge): Add parameter for selecting which source or all
+        # TODO(Jorge): Add parameter for selecting which source
         scraper = WebMDScraper()
 
         if testing:
-            scraper = WebMDScraper(False, 2)
+            scraper = WebMDScraper(False, 1)
 
         self.reviews = scraper.scrape(url)
+
+    def collect_all_common_reviews(self, start=0):
+        """Scrape all reviews for all "common" drugs on main WebMD drugs page
+
+        Args:
+            start: index to start at if continuing from previous run
+        """
+        # Load in case we have pre-exisiting progress
+        self.load()
+        scraper = WebMDScraper()
+
+        # Get common drugs names and urls
+        common_drugs = scraper.get_common_drugs()
+        print(f'Found {len(common_drugs)} common drugs.')
+
+        # Loop through common drugs starting at start index
+        for i in range(start, len(common_drugs)):
+            drug = common_drugs[i]
+            print(f'\n{len(common_drugs) - i} drugs left to scrape.')
+            print(f'Scraping {drug["name"]}...')
+            reviews = scraper.scrape(drug['url'])
+
+            # If it's the first drug then replace self.reviews instead of appending
+            if drug['name'] == 'Actos':
+                self.reviews = reviews
+            else:
+                self.reviews += reviews
+
+            # Save our progress and let the user know the data is safe
+            self.save()
+            print(f'{drug["name"]} reviews saved. Safe to quit.')
+
+            # Let the user know what start index to use to continue later
+            if i < len(common_drugs) - 1:
+                print(f'To continue run with parameter start={i + 1}')
+
+        print('\nAll common drug review scraping complete!')
 
     def save(self):
         """Saves current reviews as a pickle file
@@ -149,13 +179,13 @@ class ReviewDataset():
 
         positives = len(positive_reviews)
         negatives = len(negative_reviews)
+        
+        least_reviews = min([positives, negatives])
 
-        if positives > negatives:
-            shuffle(positive_reviews)
-            positive_reviews = positive_reviews[0:negatives]
-        if negatives > positives:
-            shuffle(negative_reviews)
-            negative_reviews = negative_reviews[0:positives]
+        shuffle(positive_reviews)
+        positive_reviews = positive_reviews[:least_reviews]
+        shuffle(negative_reviews)
+        negative_reviews = negative_reviews[:least_reviews]
 
         self.reviews = positive_reviews + negative_reviews
 
@@ -186,3 +216,10 @@ class ReviewDataset():
         print(f'Positive ratings: {positive_ratings}')
         print(f'Negative ratings: {negative_ratings}')
         print(f'Pos:Neg ratio: {positive_ratings / negative_ratings}')
+
+    def print_reviews(self):
+        """Prints out current dataset in human readable format
+        """
+        print(f'\n-----"{self.drug_name}" Review Dataset-----')
+        pprint.pprint(self.reviews)
+        print(f'\n"{self.drug_name}" Reviews: {len(self.reviews)}')

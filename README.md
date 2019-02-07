@@ -1,68 +1,142 @@
-# Medical Text Classifier
+# Medinify
 
-Text classification with a focus on medical text.
+Medical text extraction and classification.
 
 ## Requirements
 
 * Python 3.6
 * Cannot use Python 3.7 until TensorFlow supports it (12/2/18)
 
-## Installation
+## Getting Started
+
+To install medinify and requirements in a virtual environment, run:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install -e .
 ```
 
-## text_classifier.py
+## Datasets
 
-Train and test either a Naive Bayes Classifier (text_classifier), a Decision Tree classifier (dt_text_classifier), or a Neural Network (nn_text_classifier) to classify drug reviews.
+### Review Datasets
 
-### Text Classifier Options
+Scrape for reviews from WebMD, save them, load them, print statistics, cleanse data, and export to CSV or JSON.
 
-**-i**  Required. Input CSV file that includes training and testing data. Must be in the format of "review text","5", where the second entry is the rating.  See the "citalopram_effectiveness.csv" file for an example.  The program divides this data up into 3/4 used for training, and 1/4 used for testing to calculate the accuracy.
+#### Review Dataset Examples
 
-**-s**  Required. Stopwords text file with a list of stopwords to remove before training the classifier or predicting sentiment class.  See the "stopwords_long.txt" file for an example.
+```python
+from medinify.datasets import ReviewDataset
 
-**-c**  Optional, default = None. Input text file with one review per line that needs classification. Use this option to predict semtiment class on reviews that do not yet have a rating, or to polarize neutral reviews.  See the "neutral.txt" file for an example format.
-
-**-d**  Optional, default = None. Input CSV file in the same format as the -i option.  This file contains additional ratings to classify and calculate accuracy.  This option is meant to analyze ratings from a different domain than the one being trained on.
-
-**-p**  Optional, default = ['4','5']. A list of ratings that count as positive ratings for training the classifier.  These must be strings, and must match the ratings in the input files.
-
-**-n** Optional, default = ['1','2']. A list of ratings that count as negative ratings for training the classifier.  These must be strings, and must match the ratings in the input files.
-
-**-z**  Optional, default = 1.  The number of time to repeat training the classifier to get an average accuracy when choosing different training sets of data.
-
-**-m** Required for Neural Network, not used for other NB or DT, defines the Word2Vec model to use.
-
-### Examples
-
-```bash
-# Naive Bayes Example
-python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10 -cl nb
-
-# Decision Tree Example
-python text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -z 10 -cl dt
-
-python nn_text_classifier.py -i citalopram_train.csv -s stopwords.txt -c neutral.txt -d citalopram_effectivness.csv -p 4.0 -n 2.0 -z 10 -m GoogleNews-vectors-negative300.bin
- ```
-
-## drug_review_scraper.py
-
-Scrape WebMD for drug reviews.
-
-### Drug Review Scraper Options
-
-**-o** Required. Output file.
-
-**-p** Optional, default=1. Number of pages to scrape.
-
-**-i** Required. Input URL.
-
-### Example
-```bash
-python drug_review_scraper.py -i "https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral" -o citalopram_train.csv -p 10
+# For saving a Citalopram reviews dataset
+review_dataset = ReviewDataset('Citalopram')
+review_dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
+review_dataset.save()
 ```
+
+```python
+from medinify.datasets import ReviewDataset
+
+# Load a saved citalopram dataset, cleanse the data, write CSV, and print stats
+review_dataset = ReviewDataset('Citalopram')
+review_dataset.load()
+review_dataset.cleanse()
+review_dataset.write_file('csv')
+review_dataset.print_stats()
+```
+
+## Classifiers
+
+### Review Classifier
+
+Train and test a model for running sentiment analysis on drug reviews. Models can currently use Naive Bayes, Decision Tree, or a Tensorflow Neural Network.
+
+#### Review Classifier Examples
+
+```python
+from medinify.sentiment import ReviewClassifier
+
+# Train a use a classifier if you already have a Citalopram dataset
+review_classifier = ReviewClassifier('nb', 'stopwords.txt')
+review_classifier.train('citalopram-reviews.csv')
+review_classifier.classify('neutral.txt')
+```
+
+## Contributions
+
+### Checklist
+
+* Changes made/comitted/pushed in new branch
+* Changes not far behind master
+* Added comments and documentation to code
+* Made sure styling matches Google style guide: <http://google.github.io/styleguide/pyguide.html>
+* README updated if relevant changes made
+
+### Making changes locally
+
+1. Copy the URL from the Medinify repository and use Git to clone the repo:
+
+    ```bash
+    # Clone the repo into current directory
+    git clone https://github.com/NanoNLP/medinify.git
+    # Navigate to the newly cloned directory
+    cd medinify
+    ```
+
+2. Create a branch (off the main project development branch) to contain your changes:
+
+    ```bash
+    git checkout -b <new-branch-name>
+    ```
+
+3. After making changes to files or adding new files to the project, stage your changes
+
+    ```bash
+    git add <filename>
+    ```
+
+4. Next, we record the changes made and provide a message describing the changes made so others can understand
+
+    ```bash
+    git commit -m "Description of changes made"
+    ```
+
+5. After committitng, make sure everything looks good with:
+
+    ```bash
+    git status
+    ```
+
+    and you will recieve an output similar to this:
+
+    ```bash
+    On branch <new-branch-name>
+    Your branch is ahead of 'origin/<new-branch-name>' by 1 commit.
+    (use "git push" to publish your local commits)
+    nothing to commit, working directory clean
+    ```
+
+6. Finally, push the changes to the new branch origin:
+
+```bash
+# If the branch doesn't exist on GitHub yet
+git push --set-upstream origin test
+
+# If the branch already exists
+git push
+```
+
+### Making Pull Requests
+
+After following the steps above, you can make a pull request directly on the Medinify GitHub.
+
+Add a title, a description, and then press the “Create pull request” button. If you are closing an issue, put "closes #14," if you had issue 14.
+
+Navigate to the reviewers tab and request Jorge Vargas to review the PR.
+
+## More Info
+
+* [VCU Natural Language Processing Lab](https://nlp.cs.vcu.edu/)     ![alt text](https://nlp.cs.vcu.edu/images/vcu_head_logo "VCU")
+* [Nanoinformatics Vertically Integrated Projects](https://rampages.us/nanoinformatics/)

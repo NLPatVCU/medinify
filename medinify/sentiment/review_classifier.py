@@ -27,7 +27,7 @@ class ReviewClassifier():
     """
     classifier_type = None # 'nb', 'dt'
     stop_words_path = None
-    iterations = 3
+    iterations = 10
     negative_threshold = 2.0
     positive_threshold = 4.0
     seed = 123
