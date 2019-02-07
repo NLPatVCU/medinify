@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup 
 
 class IodineScraper():
-    '''objective of script is to scrape iodine.com for drug reviews ''' 
+    """objective of script is to scrape iodine.com for drug reviews """
 
     def scraper(self, drug_url, output_path):
         """
