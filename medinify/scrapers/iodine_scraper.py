@@ -10,10 +10,10 @@ class IodineScraper():
     '''objective of script is to scrape iodine.com for drug reviews ''' 
 
     def scraper(self, drug_url, output_path):
-        ''' 
+        """
         Args: drug_url: iodine.com page 
         output_path: file path for output 
-        pages (int): number of pages to scrape from arg '''
+        pages (int): number of pages to scrape from arg """
         
         #initialize 
         review_list = [] 
@@ -42,7 +42,7 @@ class IodineScraper():
                     big_hassle +=1
 
                 #list of individual reviews 
-                review_list.append({
+                review_list.append({'review': review
                                     'worth it': worth_it,
                                     'worked well': worked_well, 
                                     'big hassle': big_hassle})
