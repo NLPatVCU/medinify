@@ -194,12 +194,15 @@ class ReviewDataset():
         
         least_reviews = min([positives, negatives])
 
-        shuffle(positive_reviews)
-        positive_reviews = positive_reviews[:least_reviews]
-        shuffle(negative_reviews)
-        negative_reviews = negative_reviews[:least_reviews]
+        if positives == least_reviews:
+            shuffle(negative_reviews)
+            negative_reviews = negative_reviews[:least_reviews]
+        elif negatives == least_reviews:
+            shuffle(positive_reviews)
+            positive_reviews = positive_reviews[:least_reviews]
 
         self.reviews = positive_reviews + negative_reviews
+        shuffle(self.reviews)
 
     def print_stats(self):
         """Print relevant stats about the dataset
@@ -207,14 +210,14 @@ class ReviewDataset():
         reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 
         for review in self.reviews:
-            rating = review['effectiveness']
+            rating = review['rating']
             reviews_ratings[rating] += 1
 
         print(f'\nTotal reviews: {len(self.reviews)}')
         for key, val in reviews_ratings.items():
             print(f'{key} star ratings: {val}')
 
-        positive_ratings = reviews_ratings[5]
+        positive_ratings = reviews_ratings[4] + reviews_ratings[5]
         negative_ratings = reviews_ratings[1] + reviews_ratings[2]
         print(f'Positive ratings: {positive_ratings}')
         print(f'Negative ratings: {negative_ratings}')
