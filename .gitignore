@@ -9,6 +9,7 @@
 *.json
 *.bin
 *.pickle
+!test-dataset.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

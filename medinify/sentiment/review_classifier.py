@@ -177,7 +177,6 @@ class ReviewClassifier():
             scores = nltk.classify.util.accuracy(self.model, test_data)
             print("{}%".format(scores * 100))
             cvscores.append(scores * 100)
-            # plot_model(model, to_file='model.png')
 
             if self.classifier_type == 'nb':
                 self.model.show_most_informative_features()
