@@ -64,30 +64,16 @@ def test_remove_empty_comments(dataset):
 
     assert empty_comments == 0
 
-def test_combine_ratings_ttt(dataset):
-    """Test combine ratings True True True"""
-    review = {'effectiveness': 2, 'ease of use': 3, 'satisfaction': 4}
-    dataset.reviews.append(review)
-    dataset.combine_ratings()
-    assert dataset.reviews[-1]['rating'] == 3
-
-def test_combine_ratings_tft(dataset):
-    """Test combine ratings True False True"""
-    review = {'effectiveness': 3, 'ease of use': 1, 'satisfaction': 5}
-    dataset.reviews.append(review)
-    dataset.combine_ratings(True, False, True)
-    assert dataset.reviews[-1]['rating'] == 4
-
 def test_balance(dataset):
     """Test balance"""
-    dataset.combine_ratings()
+    dataset.generate_rating()
     positive_reviews = 0
     negative_reviews = 0
 
     for review in dataset.reviews:
-        if int(review['rating']) > 3:
+        if review['rating'] == 5:
             positive_reviews += 1
-        elif int(review['rating']) < 3:
+        elif review['rating'] <= 2:
             negative_reviews += 1
 
     least_reviews = min([positive_reviews, negative_reviews])
@@ -98,9 +84,9 @@ def test_balance(dataset):
     negative_reviews = 0
 
     for review in dataset.reviews:
-        if int(review['rating']) > 3:
+        if review['rating'] == 5:
             positive_reviews += 1
-        elif int(review['rating']) < 3:
+        elif review['rating'] <= 2:
             negative_reviews += 1
 
     assert positive_reviews == least_reviews
