@@ -1,8 +1,6 @@
 """
 Text Classifier primarily for medical text.
 Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment analysis.
-
-Based on work by Amy Olex 11/13/17.
 """
 
 import string

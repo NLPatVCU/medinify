@@ -1,40 +1,33 @@
-'''
-Written by Nathan West
-VIP Nanoinformatics - Sentiment Classification using Neural Network
-10/08/18
+"""
+Uses a Keras Tensorflow neural network to do sentiment analysis on drug reviews
+"""
 
-This file builds a neural network to analyze reviews of
-of clinical drugs, such as citalopram.
-'''
-
-import ast
 import csv
 import string
+import math
+import random
 import numpy as np
 import pandas as pd
 import nltk
-import math
-import random
-from keras.utils import np_utils
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
-from keras.callbacks import CSVLogger
 import sklearn.preprocessing as process
-from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import KFold
 from sklearn.feature_extraction import DictVectorizer
-from imblearn.ensemble import BalancedBaggingClassifier
-from sklearn import svm
-
 
 class NeuralNetReviewClassifier():
+    """Uses a Keras Tensorflow neural network to do sentiment analysis on drug reviews
 
-    iterations = 3
+    Attributes:
+        negative_threshold (float): Rating cutoff for negative reviews
+        positive_threshold (float): Rating cutoff for positive reviews
+        stopwords_filename (string): Name of file to be used for stopwords
+        model (Sequential): Keras model
+    """
     negative_threshold = 2.0
     positive_threshold = 4.0
     stopwords_filename = ''
-    model = Sequential()
+    model = None
 
     def __init__(self, stopwords_filename='stopwords.txt'):
         self.stopwords_filename = stopwords_filename
@@ -106,11 +99,11 @@ class NeuralNetReviewClassifier():
                 reviews.append({'comment': row['comment'], 'rating': row['rating']})
 
         return reviews
-    
+
     def build_dataset(self, reviews, stop_words):
         """ Parse and convert positive and negative examples
 
-        Args: 
+        Args:
             reviews: List of reviews with comments and ratings
             stop_words: List of stop words to remove from comments
         Returns:
@@ -156,7 +149,7 @@ class NeuralNetReviewClassifier():
         Returns:
             Vector maps of training data and target
         """
-        
+
         # Open reviews file and put all comments and ratings into a list of dictionaries
         reviews = []
         with open(reviews_filename, newline='') as reviews_file:
@@ -212,7 +205,7 @@ class NeuralNetReviewClassifier():
 
     def create_trained_model(self, train_data, train_target):
         """ Creates and trains new Sequential model
-       
+
         Args:
             train_data: vector map of comments
             train_target: vector map of sentiment based on reviews
@@ -246,7 +239,7 @@ class NeuralNetReviewClassifier():
             reviews_filename: CSV file of reviews with ratings
         """
         train_data, train_target = self.vectorize(reviews_filename)
-        
+
         self.model = self.create_trained_model(train_data, train_target)
 
     def evaluate_average_accuracy(self, reviews_filename):
@@ -258,21 +251,19 @@ class NeuralNetReviewClassifier():
         train_data, train_target = self.vectorize(reviews_filename)
 
         model_scores = []
-        input_dimension = len(train_data[0])
+        fold = 0
 
         skfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=None)
 
-        fold = 0
-        
         # create a linear stack of layers with an activation function rectified linear unit (relu)
         for train, test in skfold.split(train_data, train_target):
             fold += 1
 
             model = self.create_trained_model(train_data[train], train_target[train])
-        
+
             raw_score = model.evaluate(train_data[test], np.array(train_target[test]), verbose=0)
             print("[err, acc] of fold {} : {}".format(fold, raw_score))
 
             model_scores.append(raw_score[1]*100)
-        
+
         print(f'Average Accuracy: {np.mean(model_scores)}')
