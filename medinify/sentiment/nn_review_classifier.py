@@ -33,11 +33,11 @@ class NeuralNetReviewClassifier():
     iterations = 3
     negative_threshold = 2.0
     positive_threshold = 4.0
-
+    stopwords_filename = ''
     model = Sequential()
 
-    def __init__(self, stop_words_path):
-        self.stop_words_path = stop_words_path
+    def __init__(self, stopwords_filename='stopwords.txt'):
+        self.stopwords_filename = stopwords_filename
 
     def remove_stop_words(self, text, stop_words):
         """ Removes all stop words from text.
@@ -148,30 +148,96 @@ class NeuralNetReviewClassifier():
         dataset = neg_train + pos_train
         return dataset
 
-    def train(self, reviews_file):
-        """ Trains a neural network classifier based on drug reviews with ratings
+    def vectorize(self, reviews_filename):
+        """ Create a vector map from a CSV file of reviews
 
         Args:
-            reviews_file: Reviews file to use for training.
+            reviews_filename: Name of CSV file with reviews and ratings
+        Returns:
+            Vector maps of training data and target
         """
-        reviews = self.parse_reviews(reviews_file)
-        with open('stopwords.txt') as stop_words_file:
-            text = self.clean_text(stop_words_file.read())
-            stop_words = text.splitlines()
+        
+        # Open reviews file and put all comments and ratings into a list of dictionaries
+        reviews = []
+        with open(reviews_filename, newline='') as reviews_file:
+            reader = csv.DictReader(reviews_file)
 
-        dataset = self.build_dataset(reviews, stop_words)
+            for row in reader:
+                reviews.append({'comment': row['comment'], 'rating': row['rating']})
 
-        dv = DictVectorizer(sparse=False)
+        # Create list of stopwords from stopwords file
+        stopwords = []
+        with open(self.stopwords_filename) as stopwords_file:
+            text = self.clean_text(stopwords_file.read())
+            stopwords = text.splitlines()
+
+        dataset = self.build_dataset(reviews, stopwords)
+
+        # Turn reviews into BOW representation with sentiment rating
+        positive_comments = []
+        negative_comments = []
+
+        for review in reviews:
+            comment = review['comment']
+            rating = review['rating']
+
+            comment = self.format_text(comment, stopwords)
+
+            if float(rating) <= self.negative_threshold:
+                negative_comments.append((comment, 'neg'))
+            if float(rating) >= self.positive_threshold:
+                positive_comments.append((comment, 'pos'))
+
+        seed = 123
+        np.random.seed(seed)
+
+        print("Total Negative Instances:" + str(len(negative_comments)))
+        print("Total Positive Instances:" + str(len(positive_comments)))
+
+        dataset = positive_comments + negative_comments
+
+        # Vectorize the BOW with sentiment reviews
+        vectorizer = DictVectorizer(sparse=False)
         data_frame = pd.DataFrame(dataset)
         data_frame.columns = ['data', 'target']
 
         data = np.array(data_frame['data'])
-        train_data = dv.fit_transform(data)
+        train_data = vectorizer.fit_transform(data)
 
         target = np.array(data_frame['target'])
-        enc = process.LabelEncoder()
-        train_target = enc.fit_transform(target)
+        encoder = process.LabelEncoder()
+        train_target = encoder.fit_transform(target)
 
+        return train_data, train_target
+
+    def train(self, reviews_filename):
+        """ Trains a new neural network model with Keras
+
+        Args:
+            reviews_filename: CSV file of reviews with ratings
+        """
+        train_data, train_target = self.vectorize(reviews_filename)
+
+        input_dimension = len(train_data[0])
+
+        self.model = Sequential()
+        self.model.add(Dense(20, input_dim=input_dimension, activation='relu'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(30, activation='relu'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(20, activation='relu'))
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(1, activation='sigmoid'))
+
+        print('Compiling model...')
+        self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+        print('Training model...')
+        self.model.fit(train_data, train_target, epochs=50, verbose=2, class_weight={0: 3, 1: 1})
+
+        print('Model trained!')
+
+    def average_training_accuracy(self, reviews_file):
         count = 0
         model_scores = []
         input_dimension = len(train_data[0])
@@ -207,15 +273,3 @@ class NeuralNetReviewClassifier():
             model_scores.append(raw_score[1]*100)
         
         print("Average accuracy (train set) - %.2f%%\n" % (np.mean(model_scores)))
-
-
-    def classify(self, comments_file):
-        """ Classifies comments as positive or negative based on training.
-
-        Args:
-            comments_file: Comments file to classify
-        """
-        with open(comments_file) as comments_file:
-            comments = comments_file.readlines()
-
-        print(comments)
