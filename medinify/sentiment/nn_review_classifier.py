@@ -237,39 +237,39 @@ class NeuralNetReviewClassifier():
 
         print('Model trained!')
 
-    def average_training_accuracy(self, reviews_file):
-        count = 0
+    def evaluate_average_accuracy(self, reviews_filename):
+        """ Use stratified k fold to calculate average accuracy of models
+
+        Args:
+            reviews_filename: Filename of CSV with reviews to train on
+        """
+        train_data, train_target = self.vectorize(reviews_filename)
+
         model_scores = []
         input_dimension = len(train_data[0])
-        class_weights = {0: 3, 1: 1}
 
-        clf = svm.SVC(gamma='scale')
-        bbc = BalancedBaggingClassifier(base_estimator=clf, 
-            random_state=20, sampling_strategy='not majority')
         skfold = StratifiedKFold(n_splits=10, shuffle=True, random_state=None)
-        count = tot_tn = tot_fn = tot_tp = tot_fp = 0
+
+        fold = 0
         
         # create a linear stack of layers with an activation function rectified linear unit (relu)
         for train, test in skfold.split(train_data, train_target):
-            
-            count += 1
-            self.model.add(Dense(20, input_dim=input_dimension, activation='relu'))
-            self.model.add(Dropout(0.5))
-            self.model.add(Dense(30, activation='relu'))
-            self.model.add(Dropout(0.5))
-            self.model.add(Dense(20, activation='relu'))
-            self.model.add(Dropout(0.5))
-            self.model.add(Dense(1, activation='sigmoid'))
+            fold += 1
+            model = Sequential()
+            model.add(Dense(20, input_dim=input_dimension, activation='relu'))
+            model.add(Dropout(0.5))
+            model.add(Dense(30, activation='relu'))
+            model.add(Dropout(0.5))
+            model.add(Dense(20, activation='relu'))
+            model.add(Dropout(0.5))
+            model.add(Dense(1, activation='sigmoid'))
 
-            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-            bbc.fit(train_data[train], train_target[train])
-            self.model.fit(train_data[train], train_target[train], epochs=50,
-                batch_size=20, class_weight=class_weights,
-                verbose=0)
+            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+            model.fit(train_data[train], train_target[train], epochs=50, batch_size=20, class_weight={0: 3, 1: 1}, verbose=0)
         
-            raw_score = self.model.evaluate(train_data[test], np.array(train_target[test]), verbose=0)
-            print("[err, acc] of fold {} : {}".format(count, raw_score))
+            raw_score = model.evaluate(train_data[test], np.array(train_target[test]), verbose=0)
+            print("[err, acc] of fold {} : {}".format(fold, raw_score))
 
             model_scores.append(raw_score[1]*100)
         
-        print("Average accuracy (train set) - %.2f%%\n" % (np.mean(model_scores)))
+        print(f'Average Accuracy: {np.mean(model_scores)}')
