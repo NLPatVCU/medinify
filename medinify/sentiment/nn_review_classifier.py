@@ -210,6 +210,35 @@ class NeuralNetReviewClassifier():
 
         return train_data, train_target
 
+    def create_trained_model(self, train_data, train_target):
+        """ Creates and trains new Sequential model
+       
+        Args:
+            train_data: vector map of comments
+            train_target: vector map of sentiment based on reviews
+        Returns:
+            A trained model
+        """
+        input_dimension = len(train_data[0])
+
+        model = Sequential()
+        model.add(Dense(20, input_dim=input_dimension, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(30, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(20, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(1, activation='sigmoid'))
+
+        print('Compiling model...')
+        model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+        print('Training model...')
+        model.fit(train_data, train_target, epochs=50, verbose=0, class_weight={0: 3, 1: 1})
+
+        print('Model trained!')
+        return model
+
     def train(self, reviews_filename):
         """ Trains a new neural network model with Keras
 
@@ -217,25 +246,8 @@ class NeuralNetReviewClassifier():
             reviews_filename: CSV file of reviews with ratings
         """
         train_data, train_target = self.vectorize(reviews_filename)
-
-        input_dimension = len(train_data[0])
-
-        self.model = Sequential()
-        self.model.add(Dense(20, input_dim=input_dimension, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(30, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(20, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(1, activation='sigmoid'))
-
-        print('Compiling model...')
-        self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-        print('Training model...')
-        self.model.fit(train_data, train_target, epochs=50, verbose=2, class_weight={0: 3, 1: 1})
-
-        print('Model trained!')
+        
+        self.model = self.create_trained_model(train_data, train_target)
 
     def evaluate_average_accuracy(self, reviews_filename):
         """ Use stratified k fold to calculate average accuracy of models
@@ -255,17 +267,8 @@ class NeuralNetReviewClassifier():
         # create a linear stack of layers with an activation function rectified linear unit (relu)
         for train, test in skfold.split(train_data, train_target):
             fold += 1
-            model = Sequential()
-            model.add(Dense(20, input_dim=input_dimension, activation='relu'))
-            model.add(Dropout(0.5))
-            model.add(Dense(30, activation='relu'))
-            model.add(Dropout(0.5))
-            model.add(Dense(20, activation='relu'))
-            model.add(Dropout(0.5))
-            model.add(Dense(1, activation='sigmoid'))
 
-            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-            model.fit(train_data[train], train_target[train], epochs=50, batch_size=20, class_weight={0: 3, 1: 1}, verbose=0)
+            model = self.create_trained_model(train_data[train], train_target[train])
         
             raw_score = model.evaluate(train_data[test], np.array(train_target[test]), verbose=0)
             print("[err, acc] of fold {} : {}".format(fold, raw_score))
