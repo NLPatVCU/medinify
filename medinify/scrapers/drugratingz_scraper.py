@@ -5,6 +5,7 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 
+
 class DrugRatingzScraper():
     """Scrapes drugratingz.com for drug reviews.
     """
@@ -19,10 +20,18 @@ class DrugRatingzScraper():
 
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        comments = soup.find_all('span', {'class' : 'description'})
-        ratings = soup.find_all('td', {'align' : 'center'})
-        ratings = [rating for rating in ratings if "height" not in rating.attrs and 'rowspan' not in rating.attrs
-                   and not rating.find('a') and not rating.find('img')]
+        comments = soup.find_all('span', {'class': 'description'})
+        ratings = soup.find_all('td', {'align': 'center'})
+
+        for rating in ratings:
+            if 'height' in rating.attrs:
+                ratings.remove(rating)
+            elif 'rowspan' in rating.attrs:
+                ratings.remove(rating)
+            elif rating.find('a'):
+                ratings.remove(rating)
+            elif rating.find('img'):
+                ratings.remove(rating)
 
         review_list = []
         ratings_index = 0
@@ -34,13 +43,22 @@ class DrugRatingzScraper():
             convenience = ratings[ratings_index + 2].text.strip()
             value = ratings[ratings_index + 3].text.strip()
 
-            review_list.append({'comment' : comments[comment_index].text.strip(), 'effectiveness' : effectiveness,
-                                'no side effects' : nosideeffects, 'convenience' : convenience, 'value' : value})
+            review_list.append({
+                'comment': comments[comment_index].text.strip(),
+                'effectiveness': effectiveness,
+                'no side effects': nosideeffects,
+                'convenience': convenience,
+                'value': value
+            })
+
             ratings_index = ratings_index + 4
             comment_index = comment_index + 1
 
         with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, ['comment', 'effectiveness', 'no side effects', 'convenience', 'value'])
+            dict_writer = csv.DictWriter(output_file, [
+                'comment', 'effectiveness', 'no side effects', 'convenience',
+                'value'
+            ])
             dict_writer.writeheader()
             dict_writer.writerows(review_list)
 

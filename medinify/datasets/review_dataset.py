@@ -9,7 +9,6 @@ import pprint
 from random import shuffle
 from medinify.scrapers import WebMDScraper
 
-
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
 
@@ -32,8 +31,6 @@ class ReviewDataset():
         Args:
             url: WebMD URL where all the reviews are
         """
-        # TODO(Jorge): Remove need for url variable by pulling urls from stored file
-        # TODO(Jorge): Add parameter for selecting which source
         scraper = WebMDScraper()
 
         if testing:
@@ -191,7 +188,7 @@ class ReviewDataset():
 
         positives = len(positive_reviews)
         negatives = len(negative_reviews)
-        
+
         least_reviews = min([positives, negatives])
 
         if positives == least_reviews:

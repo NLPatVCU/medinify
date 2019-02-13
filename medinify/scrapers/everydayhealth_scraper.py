@@ -1,6 +1,9 @@
+"""
+EverydayHealth.com drug review scraper
+"""
 import csv
-import requests
 import re
+import requests
 from bs4 import BeautifulSoup
 
 class EverydayHealthScraper():
@@ -42,4 +45,4 @@ class EverydayHealthScraper():
             dict_writer.writeheader()
             dict_writer.writerows(review_list)
 
-        print("Number of reviews scraped: " + str(len(review_list))) 
+        print("Number of reviews scraped: " + str(len(review_list)))
