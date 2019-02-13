@@ -31,8 +31,6 @@ class ReviewDataset():
         Args:
             url: WebMD URL where all the reviews are
         """
-        # TODO(Jorge): Remove need for url variable by pulling urls from stored file
-        # TODO(Jorge): Add parameter for selecting which source
         scraper = WebMDScraper()
 
         if testing:

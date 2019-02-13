@@ -105,6 +105,8 @@ class ReviewClassifier():
         return reviews
 
     def build_dataset(self, reviews, stop_words):
+        """This method is being refactored soon.
+        """
          ## Parse and convert positive and negative examples
         positive_comments = []
         negative_comments = []
@@ -182,7 +184,7 @@ class ReviewClassifier():
             print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
 
-    def classify(self, comments_file):
+    def classify(self, comments_filename):
         """ Classifies comments as positive or negative based on training.
 
         Args:
@@ -193,7 +195,7 @@ class ReviewClassifier():
         if self.model is not None:
 
             # Import the file needing classification.
-            with open(comments_file) as comments_file:
+            with open(comments_filename) as comments_file:
                 comments = comments_file.readlines()
 
             # Classify each comment and print

@@ -6,9 +6,9 @@ Based on work by Amy Olex 11/13/17.
 """
 
 import re
+from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 
 class WebMDScraper():
     """
@@ -103,6 +103,11 @@ class WebMDScraper():
         return self.review_list
 
     def get_common_drugs(self):
+        """ Get all urls for 'common' drug review pages
+
+        Returns:
+            List of urls for each drug's review page
+        """
         url = 'https://www.webmd.com/drugs/2/index?show=drugs'
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
