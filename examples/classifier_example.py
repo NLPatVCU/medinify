@@ -20,7 +20,7 @@ def main():
     # review_classifier.classify('neutral.txt')
 
     # Neural Network classifier
-    # review_classifier = NeuralNetReviewClassifier('stopwords.txt')
+    # review_classifier = NeuralNetReviewClassifier()
     # review_classifier.train('citalopram_train.csv')
     # review_classifier.classify('neutral.txt')
 

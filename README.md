@@ -42,7 +42,6 @@ from medinify.datasets import ReviewDataset
 # Load a saved citalopram dataset, cleanse the data, write CSV, and print stats
 review_dataset = ReviewDataset('Citalopram')
 review_dataset.load()
-review_dataset.cleanse()
 review_dataset.write_file('csv')
 review_dataset.print_stats()
 ```
@@ -57,11 +56,17 @@ Train and test a model for running sentiment analysis on drug reviews. Models ca
 
 ```python
 from medinify.sentiment import ReviewClassifier
+from medinify.sentiment import NeuralNetReviewClassifier
 
 # Train a use a classifier if you already have a Citalopram dataset
 review_classifier = ReviewClassifier('nb', 'stopwords.txt')
 review_classifier.train('citalopram-reviews.csv')
 review_classifier.classify('neutral.txt')
+
+# For Neural Network
+review_classifier = NeuralNetReviewClassifier()
+review_classifier.train('citalopram-reviews.csv')
+review_classifier.classify('neutral.txt)
 ```
 
 ## Contributions
