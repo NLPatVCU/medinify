@@ -151,3 +151,4 @@ class NeuralNetReviewClassifier():
             model_scores.append(raw_score[1]*100)
 
         print(f'Average Accuracy: {np.mean(model_scores)}')
+        return np.mean(model_scores)

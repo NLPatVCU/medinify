@@ -44,14 +44,15 @@ def test_load(dataset):
 
 def test_write_file_json(dataset):
     """Test write json file"""
+    dataset.drug_name = 'doxil'
     dataset.write_file('json')
-    
-    assert os.path.exists('test-reviews.json')
+    assert os.path.exists('doxil-reviews.json')
     
 def test_write_file_csv(dataset):
     """Test write csv file"""
+    dataset.drug_name = 'doxil'
     dataset.write_file('csv')
-    assert os.path.exists('test-reviews.csv')
+    assert os.path.exists('doxil-reviews.csv')
 
 def test_remove_empty_comments(dataset):
     """Test remove empty comments"""
