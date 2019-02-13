@@ -20,7 +20,6 @@ def test_create_trained_model():
     train_data, train_target = classifier.vectorize('test-reviews.csv')
     model = classifier.create_trained_model(train_data, train_target)
     assert model
-    assert model.evaluate(train_data, train_target)
 
 def test_train():
     """Test train"""
