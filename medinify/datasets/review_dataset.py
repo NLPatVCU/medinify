@@ -23,7 +23,7 @@ class ReviewDataset():
         drug_name = ''.join(drug_name.lower().split())
         drug_name = ''.join(char for char in drug_name if char.isalnum())
         self.drug_name = drug_name
-        print(f'Created object for "{self.drug_name}"')
+        print('Created object for {}'.format(self.drug_name))
 
     def collect(self, url, testing=False):
         """Scrapes drug reviews and saves them as dictionary property
@@ -50,13 +50,13 @@ class ReviewDataset():
 
         # Get common drugs names and urls
         common_drugs = scraper.get_common_drugs()
-        print(f'Found {len(common_drugs)} common drugs.')
+        print('Found {} common drugs.'.format(len(common_drugs)))
 
         # Loop through common drugs starting at start index
         for i in range(start, len(common_drugs)):
             drug = common_drugs[i]
-            print(f'\n{len(common_drugs) - i} drugs left to scrape.')
-            print(f'Scraping {drug["name"]}...')
+            print('\n{} drugs left to scrape.'.format(len(common_drugs) - i))
+            print('Scraping {}...'.format(drug['name']))
             reviews = scraper.scrape(drug['url'])
 
             # If it's the first drug then replace self.reviews instead of appending
@@ -67,11 +67,11 @@ class ReviewDataset():
 
             # Save our progress and let the user know the data is safe
             self.save()
-            print(f'{drug["name"]} reviews saved. Safe to quit.')
+            print('{} reviews saved. Safe to quit.'.format(drug['name']))
 
             # Let the user know what start index to use to continue later
             if i < len(common_drugs) - 1:
-                print(f'To continue run with parameter start={i + 1}')
+                print('To continue run with parameter start={}'.format(i+1))
 
         print('\nAll common drug review scraping complete!')
 
@@ -107,7 +107,7 @@ class ReviewDataset():
         if filename is None:
             filename = self.drug_name + '-reviews.' + filetype
 
-        print(f'Writing {filename}...')
+        print('Writing {}...'.format(filename))
 
         if filetype == 'csv':
             with open(filename, 'w') as output_file:
@@ -135,7 +135,7 @@ class ReviewDataset():
             else:
                 empty_comments_removed += 1
 
-        print(f'{empty_comments_removed} empty comments removed.')
+        print('{} empty comments removed.'.format(empty_comments_removed))
         self.reviews = updated_reviews
 
     # def combine_ratings(self, effectiveness=True, ease=True, satisfaction=True):
@@ -210,19 +210,19 @@ class ReviewDataset():
             rating = review['rating']
             reviews_ratings[rating] += 1
 
-        print(f'\nTotal reviews: {len(self.reviews)}')
+        print('\nTotal reviews: {}'.format(len(self.reviews)))
         for key, val in reviews_ratings.items():
-            print(f'{key} star ratings: {val}')
+            print('{} star ratings: {}'.format(key, val))
 
         positive_ratings = reviews_ratings[4] + reviews_ratings[5]
         negative_ratings = reviews_ratings[1] + reviews_ratings[2]
-        print(f'Positive ratings: {positive_ratings}')
-        print(f'Negative ratings: {negative_ratings}')
-        print(f'Pos:Neg ratio: {positive_ratings / negative_ratings}')
+        print('Positive ratings: {}'.format(positive_ratings))
+        print('Negative ratings: {}'.format(negative_ratings))
+        print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
 
     def print_reviews(self):
         """Prints out current dataset in human readable format
         """
-        print(f'\n-----"{self.drug_name}" Review Dataset-----')
+        print('\n-----"{}" Review Dataset-----'.format(self.drug_name))
         pprint.pprint(self.reviews)
-        print(f'\n"{self.drug_name}" Reviews: {len(self.reviews)}')
+        print('\n"{}" Reviews: {}'.format(self.drug_name, len(self.reviews)))
