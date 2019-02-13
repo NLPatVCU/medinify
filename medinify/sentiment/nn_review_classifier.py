@@ -3,12 +3,10 @@ Uses a Keras Tensorflow neural network to do sentiment analysis on drug reviews
 """
 
 import csv
-import string
-import math
-import random
 import numpy as np
 import pandas as pd
-import nltk
+from nltk import RegexpTokenizer
+from nltk.corpus import stopwords
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
 import sklearn.preprocessing as process
@@ -57,11 +55,11 @@ class NeuralNetReviewClassifier():
             comment = comment.lower()
 
             # Remove punctuation and tokenize
-            tokenizer = nltk.RegexpTokenizer(r'\w+')
+            tokenizer = RegexpTokenizer(r'\w+')
             word_tokens = tokenizer.tokenize(comment)
 
             # Remove stopwords and transform into BOW representation
-            stop_words = set(nltk.corpus.stopwords.words('english'))
+            stop_words = set(stopwords.words('english'))
             filtered_tokens = {word: True for word in word_tokens if word not in stop_words}
 
             if float(rating) <= self.negative_threshold:

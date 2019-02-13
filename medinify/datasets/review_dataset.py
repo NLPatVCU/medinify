@@ -190,7 +190,7 @@ class ReviewDataset():
 
         positives = len(positive_reviews)
         negatives = len(negative_reviews)
-        
+
         least_reviews = min([positives, negatives])
 
         if positives == least_reviews:
