@@ -12,7 +12,6 @@ def main():
     # review_dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
     # review_dataset.save()
     review_dataset.load()
-    review_dataset.cleanse()
     # review_dataset.print()
     # review_dataset.collect_all_common_reviews()
     # review_dataset.write_file('JSON')
