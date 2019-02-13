@@ -26,120 +26,7 @@ class NeuralNetReviewClassifier():
     """
     negative_threshold = 2.0
     positive_threshold = 4.0
-    stopwords_filename = ''
     model = None
-
-    def __init__(self, stopwords_filename='stopwords.txt'):
-        self.stopwords_filename = stopwords_filename
-
-    def remove_stop_words(self, text, stop_words):
-        """ Removes all stop words from text.
-
-        Args:
-            text: Text to be stripped of stop words.
-            stop_words: Stop words to strip from text.
-        Returns:
-            Stripped text.
-        """
-
-        word_list = text.split()
-        filtered_words = [word for word in word_list if word not in stop_words]
-        text = ' '.join(filtered_words)
-
-        return text
-
-    def clean_text(self, text):
-        """ Takes a string, converts to lowercase, and removes all punctuation.
-
-        Args:
-            sent: String to be converted.
-            stop_words: Stop words to be removed. Defaults to None.
-        Returns:
-            The cleaned text.
-        """
-
-        translator = str.maketrans('', '', string.punctuation)
-        text = text.translate(translator).lower()
-
-        return text
-
-    def format_text(self, text, stop_words=None):
-        """ Takes a string, converts to lowercase, and removes all punctuation & stop words.
-
-        Args:
-            sent: String to be converted.
-            stop_words: Stop words to be removed. Defaults to None.
-        Returns:
-            The formatted text.
-        """
-
-
-        text = self.clean_text(text)
-
-        if stop_words is not None:
-            text = self.remove_stop_words(text, stop_words)
-
-        return ({word: True for word in nltk.word_tokenize(text)})
-
-    def parse_reviews(self, reviews_path):
-        """ Parses a CSV of reviews into a list of comments with rating.
-
-        Args:
-            reviews_file: Reviews file to be parsed.
-        Returns:
-            The list of comments.
-        """
-
-        reviews = []
-
-        with open(reviews_path, newline='') as reviews_file:
-            reader = csv.DictReader(reviews_file)
-
-            for row in reader:
-                reviews.append({'comment': row['comment'], 'rating': row['rating']})
-
-        return reviews
-
-    def build_dataset(self, reviews, stop_words):
-        """ Parse and convert positive and negative examples
-
-        Args:
-            reviews: List of reviews with comments and ratings
-            stop_words: List of stop words to remove from comments
-        Returns:
-            A list of important keywords per comment with a positive or negative rating
-        """
-        positive_comments = []
-        negative_comments = []
-
-        for review in reviews:
-            comment = review['comment']
-            rating = review['rating']
-
-            comment = self.format_text(comment, stop_words)
-
-            if float(rating) <= self.negative_threshold:
-                negative_comments.append((comment, 'neg'))
-            if float(rating) >= self.positive_threshold:
-                positive_comments.append((comment, 'pos'))
-
-        seed = 123
-        np.random.seed(seed)
-
-        print("Total Negative Instances:" + str(len(negative_comments)))
-        print("Total Positive Instances:" + str(len(positive_comments)))
-
-        negcutoff = math.floor(len(negative_comments) * 1)
-        poscutoff = math.floor(len(positive_comments) * 1)
-
-        neg_idx_train = sorted(random.sample(range(len(negative_comments)), negcutoff))
-        neg_train = [negative_comments[i] for i in neg_idx_train]
-
-        pos_idx_train = sorted(random.sample(range(len(positive_comments)), poscutoff))
-        pos_train = [positive_comments[i] for i in pos_idx_train]
-
-        dataset = neg_train + pos_train
-        return dataset
 
     def vectorize(self, reviews_filename):
         """ Create a vector map from a CSV file of reviews
@@ -158,15 +45,7 @@ class NeuralNetReviewClassifier():
             for row in reader:
                 reviews.append({'comment': row['comment'], 'rating': row['rating']})
 
-        # Create list of stopwords from stopwords file
-        stopwords = []
-        with open(self.stopwords_filename) as stopwords_file:
-            text = self.clean_text(stopwords_file.read())
-            stopwords = text.splitlines()
-
-        dataset = self.build_dataset(reviews, stopwords)
-
-        # Turn reviews into BOW representation with sentiment rating
+        # Separate reviews based on rating
         positive_comments = []
         negative_comments = []
 
@@ -174,15 +53,21 @@ class NeuralNetReviewClassifier():
             comment = review['comment']
             rating = review['rating']
 
-            comment = self.format_text(comment, stopwords)
+            # Make lowercase
+            comment = comment.lower()
+
+            # Remove punctuation and tokenize
+            tokenizer = nltk.RegexpTokenizer(r'\w+')
+            word_tokens = tokenizer.tokenize(comment)
+
+            # Remove stopwords and transform into BOW representation
+            stop_words = set(nltk.corpus.stopwords.words('english'))
+            filtered_tokens = {word: True for word in word_tokens if word not in stop_words}
 
             if float(rating) <= self.negative_threshold:
-                negative_comments.append((comment, 'neg'))
+                negative_comments.append((filtered_tokens, 'neg'))
             if float(rating) >= self.positive_threshold:
-                positive_comments.append((comment, 'pos'))
-
-        seed = 123
-        np.random.seed(seed)
+                positive_comments.append((filtered_tokens, 'pos'))
 
         print("Total Negative Instances:" + str(len(negative_comments)))
         print("Total Positive Instances:" + str(len(positive_comments)))
@@ -203,7 +88,8 @@ class NeuralNetReviewClassifier():
 
         return train_data, train_target
 
-    def create_trained_model(self, train_data, train_target):
+    @staticmethod # This method is a good candidate for a universal set of functions
+    def create_trained_model(train_data, train_target):
         """ Creates and trains new Sequential model
 
         Args:

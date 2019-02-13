@@ -9,7 +9,6 @@ import pprint
 from random import shuffle
 from medinify.scrapers import WebMDScraper
 
-
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
 
