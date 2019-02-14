@@ -6,7 +6,7 @@ from medinify.scrapers import WebMDScraper
 #from medinify.scrapers import DrugsScraper
 #from medinify.scrapers import IodineScraper 
 #from medinify.scrapers import EverydayHealthScraper
-
+#from medinify.scrapers import DrugRatingzScraper
 
 def main():
     """ Main function.
@@ -26,6 +26,12 @@ def main():
     # input_url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
     # everydayhealth_scraper = EverydayHealthScraper()
     # everydayhealth_scraper.scrape(input_url, 'citalopram.csv', 4)
+
+    #input_url = 'https://www.drugratingz.com/reviews/75/Drug-Adderall-XR.html'
+    #drugratingz_scraper = DrugRatingzScraper()
+    #drugratingz_scraper.scrape(input_url, 'adderallxr.csv')
+
+
 
 if __name__ == "__main__":
     main()
