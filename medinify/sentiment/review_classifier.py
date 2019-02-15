@@ -7,6 +7,7 @@ import string
 import math
 import csv
 import random
+import pickle
 import numpy as np
 from nltk.classify import NaiveBayesClassifier
 from nltk.classify import DecisionTreeClassifier
@@ -201,3 +202,34 @@ class ReviewClassifier():
             # Classify each comment and print
             for comment in comments:
                 print(str(self.model.classify(self.format_text(comment))) + " :: " + comment)
+
+    def save_model(self):
+        """ Saves a trained NLTK Model to a Pickle file
+        """
+
+        if self.classifier_type == 'nb':
+            file_name = 'trained_nb_model.pickle'
+        elif self.classifier_type == 'dt':
+            file_name = 'trained_dt_model.pickle'
+
+        with open(file_name, 'wb') as pickle_file:
+            pickle.dump(
+                self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        print("Model has been saved!")
+    
+    def load_model(self, classifier_type ,file_name):
+        """ Loads a trained NLTK model from a pickle file
+        """
+
+        if classifier_type == 'nb':
+            with open(file_name, 'rb') as pickle_file:
+                pickle.load(self.model, pickle_file)
+            
+        elif classifier_type == 'dt':
+            with open(file_name, 'rb') as pickle_file:
+                pickle.load(self.model, pickle_file)
+        
+        if self.model is not None:
+            print("Model has been loaded!")
+        

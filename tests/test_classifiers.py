@@ -33,3 +33,20 @@ def test_evaluate_average_accuracy():
     average = classifier.evaluate_average_accuracy('test-reviews.csv')
     assert average > 0
     assert average < 100
+
+def test_save_model():
+    classifier = NeuralNetReviewClassifier()
+    classifier.train("test-reviews.csv")
+    classifier.save_model()
+    assert os.path.exists("trained_nn_model.json")
+
+def test_save_model_weights():
+    classifier = NeuralNetReviewClassifier()
+    classifier.train("test-reviews.csv")
+    classifier.save_model_weights()
+    assert os.path.exists("trained_nn_weights.h5")
+
+def test_load_model():
+    classifier = NeuralNetReviewClassifier()
+    classifier.load_nn_model()
+    assert classifier.model is not None

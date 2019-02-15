@@ -9,6 +9,7 @@ from nltk import RegexpTokenizer
 from nltk.corpus import stopwords
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
+from keras.models import model_from_json
 import sklearn.preprocessing as process
 from sklearn.model_selection import StratifiedKFold
 from sklearn.feature_extraction import DictVectorizer
@@ -152,3 +153,34 @@ class NeuralNetReviewClassifier():
 
         print('Average Accuracy: {}'.format(np.mean(model_scores)))
         return np.mean(model_scores)
+
+    def save_model(self):
+        """ Saves a trained Keras neural network model to a JSON file
+        """
+
+        model_json = self.model.to_json()
+        with open("trained_nn_model.json", "w") as json_file:
+            json_file.write(model_json)
+
+        print("Model has been saved!")
+        
+    def save_model_weights(self):
+        """ Saves a the weights of a trained Keras neural network to a HDF5 file
+        """
+
+        self.model.save_weights("trained_nn_weights.h5")
+        print("Model weights saved!")
+
+    def load_nn_model(self):
+        """ Loads a Keras neural network model and it's weights from a JSON and HDF5 file
+        """
+
+        print("Loading model...")
+        with open("trained_nn_model.json", 'r') as json_file:
+            loaded_model = json_file.read()
+            self.model = model_from_json(loaded_model)
+        
+        print("Loading model weights")
+        self.model.load_weights("trained_nn_weights.h5")
+
+        self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
