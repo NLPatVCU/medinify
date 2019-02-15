@@ -3,6 +3,7 @@
 
 # IDEs
 .vscode/
+.idea/
 
 # Project
 *.csv

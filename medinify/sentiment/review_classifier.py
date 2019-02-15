@@ -3,16 +3,15 @@ Text Classifier primarily for medical text.
 Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment analysis.
 """
 
-import string
-import math
 import csv
-import random
 import numpy as np
 from nltk.classify import NaiveBayesClassifier
 from nltk.classify import DecisionTreeClassifier
 import nltk.classify.util
 import nltk
 from sklearn.model_selection import StratifiedKFold
+from nltk.corpus import stopwords
+from nltk import RegexpTokenizer
 
 
 class ReviewClassifier():
@@ -24,27 +23,127 @@ class ReviewClassifier():
 
     """
     classifier_type = None # 'nb', 'dt'
+    # get rid of when write build dataset, rep with stop_words = set(stopwords.words('english'))
     stop_words_path = None
+    # get rid of when write accuracy function, just set to 10 like in nn
     iterations = 10
     negative_threshold = 2.0
     positive_threshold = 4.0
+    # get rid of when write accuracy function, not used in nn
     seed = 123
 
     model = None
 
-    def __init__(self, classifier_type=None, stop_words_path=None):
+    def __init__(self, classifier_type=None):
         self.classifier_type = classifier_type
-        self.stop_words_path = stop_words_path
+
+    def build_dataset(self, reviews_filename):
+        """ Builds dataset of labelled positive and negative reviews
+
+        :param reviews_path: CSV file with comments and ratings
+        :return: dataset with labeled positive and negative reviews
+        """
+
+        reviews = []
+        with open(reviews_filename, newline='') as reviews_file:
+            reader = csv.DictReader(reviews_file)
+
+            for row in reader:
+                reviews.append({'comment': row['comment'], 'rating': row['rating']})
+
+        # Separate reviews based on rating
+        positive_comments = []
+        negative_comments = []
+
+        for review in reviews:
+            comment = review['comment']
+            rating = review['rating']
+
+            # Make lowercase
+            comment = comment.lower()
+
+            # Remove punctuation and tokenize
+            tokenizer = RegexpTokenizer(r'\w+')
+            word_tokens = tokenizer.tokenize(comment)
+
+            # Remove stopwords and transform into BOW representation
+            stop_words = set(stopwords.words('english'))
+            filtered_tokens = {word: True for word in word_tokens if word not in stop_words}
+
+            if float(rating) <= self.negative_threshold:
+                negative_comments.append((filtered_tokens, 'neg'))
+            if float(rating) >= self.positive_threshold:
+                positive_comments.append((filtered_tokens, 'pos'))
+
+        print("Total Negative Instances:" + str(len(negative_comments)))
+        print("Total Positive Instances:" + str(len(positive_comments)))
+
+        dataset = positive_comments + negative_comments
+
+        return dataset
+
+    def create_trained_model(self, dataset):
+        if self.classifier_type == 'nb':
+            model = NaiveBayesClassifier.train(dataset)
+        elif self.classifier_type == 'dt':
+            model = DecisionTreeClassifier.train(dataset)
+        return model
+
+    def train(self, reviews_filename):
+        """ Trains a new naive bayes model or decision tree model
+
+        Args:
+            reviews_filename: CSV file of reviews with ratings
+        """
+        dataset = self.build_dataset(reviews_filename)
+
+        self.model = self.create_trained_model(dataset)
+
+    def evaluate_average_accuracy(self, reviews_filename):
+        """ Use stratified k fold to calculate average accuracy of models
+
+        Args:
+            reviews_filename: Filename of CSV with reviews to train on
+        """
+        dataset = self.build_dataset(reviews_filename)
+        comments = [x[0] for x in dataset]
+        ratings = [x[1] for x in dataset]
+
+        model_scores = []
+        fold = 0
+
+        kfold = StratifiedKFold(n_splits=self.iterations, shuffle=True, random_state=self.seed)
+
+        for train, test in kfold.split(comments, ratings):
+            fold += 1
+
+            test_data = []
+            for item in test:
+                test_data.append(dataset[item])
+
+            model = self.create_trained_model(dataset)
+
+            raw_score = nltk.classify.util.accuracy(model, test_data)
+            print("[err, acc] of fold {} : {}".format(fold, raw_score))
+
+            model_scores.append(raw_score*100)
+
+        print(f'Average Accuracy: {np.mean(model_scores)}')
+        return np.mean(model_scores)
+
+    """
 
     def remove_stop_words(self, text, stop_words):
-        """ Removes all stop words from text.
+       
+         Removes all stop words from text.
 
         Args:
             text: Text to be stripped of stop words.
             stop_words: Stop words to strip from text.
         Returns:
             Stripped text.
-        """
+      
+        
 
         word_list = text.split()
         filtered_words = [word for word in word_list if word not in stop_words]
@@ -53,14 +152,16 @@ class ReviewClassifier():
         return text
 
     def clean_text(self, text):
-        """ Takes a string, converts to lowercase, and removes all punctuation.
+      
+       Takes a string, converts to lowercase, and removes all punctuation.
 
         Args:
             sent: String to be converted.
             stop_words: Stop words to be removed. Defaults to None.
         Returns:
             The cleaned text.
-        """
+    
+        
 
         translator = str.maketrans('', '', string.punctuation)
         text = text.translate(translator).lower()
@@ -68,14 +169,15 @@ class ReviewClassifier():
         return text
 
     def format_text(self, text, stop_words=None):
-        """ Takes a string, converts to lowercase, and removes all punctuation & stop words.
+       
+        Takes a string, converts to lowercase, and removes all punctuation & stop words.
 
         Args:
             sent: String to be converted.
             stop_words: Stop words to be removed. Defaults to None.
         Returns:
             The formatted text.
-        """
+      
 
 
         text = self.clean_text(text)
@@ -86,13 +188,15 @@ class ReviewClassifier():
         return ({word: True for word in nltk.word_tokenize(text)})
 
     def parse_reviews(self, reviews_path):
-        """ Parses a CSV of reviews into a list of comments with rating.
+     
+         Parses a CSV of reviews into a list of comments with rating.
 
         Args:
             reviews_file: Reviews file to be parsed.
         Returns:
             The list of comments.
-        """
+        
+       
 
         reviews = []
 
@@ -102,11 +206,14 @@ class ReviewClassifier():
             for row in reader:
                 reviews.append({'comment': row['comment'], 'rating': row['rating']})
 
-        return reviews
+        
 
-    def build_dataset(self, reviews, stop_words):
-        """This method is being refactored soon.
-        """
+
+
+    def old_build_dataset(self, reviews, stop_words):
+       #This method is being refactored soon.
+       
+        
          ## Parse and convert positive and negative examples
         positive_comments = []
         negative_comments = []
@@ -136,17 +243,20 @@ class ReviewClassifier():
         pos_idx_train = sorted(random.sample(range(len(positive_comments)), poscutoff))
         pos_train = [positive_comments[i] for i in pos_idx_train]
 
+        print(pos_train)
+        print(neg_train)
+
         dataset = neg_train + pos_train
         return dataset
+    
 
-
-    def train(self, reviews_file):
-        """ Trains a classifier based on drug reviews with ratings
+    def old_train(self, reviews_file):
+         Trains a classifier based on drug reviews with ratings
 
         Args:
             reviews_file: Reviews file to use for training.
-        """
-        ## Parse data from files
+        
+        # Parse data from files
         reviews = self.parse_reviews(reviews_file)
 
         with open('stopwords.txt') as stop_words_file:
@@ -185,13 +295,12 @@ class ReviewClassifier():
 
 
     def classify(self, comments_filename):
-        """ Classifies comments as positive or negative based on training.
+        Classifies comments as positive or negative based on training.
 
         Args:
             comments_file: Comments file to classify
-        """
+       
 
-        # If model has been trained
         if self.model is not None:
 
             # Import the file needing classification.
@@ -201,3 +310,4 @@ class ReviewClassifier():
             # Classify each comment and print
             for comment in comments:
                 print(str(self.model.classify(self.format_text(comment))) + " :: " + comment)
+    """
