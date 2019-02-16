@@ -11,6 +11,7 @@
 *.bin
 *.pickle
 !test-dataset.pickle
+!test-reviews.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
