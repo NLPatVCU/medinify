@@ -146,7 +146,7 @@ class ReviewClassifier():
             self.model = self.create_trained_model(dataset)
         elif self.classifier_type == 'nn':
             train_data, train_target = self.build_dataset(reviews_filename)
-            self.model = self.create_trained_model(train_data, train_target)
+            self.model = self.create_trained_model(train_data=train_data, train_target=train_target)
 
     def evaluate_average_accuracy(self, reviews_filename):
         """ Use stratified k fold to calculate average accuracy of models
