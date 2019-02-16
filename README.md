@@ -59,9 +59,9 @@ Train and test a model for running sentiment analysis on drug reviews. Models ca
 from medinify.sentiment import ReviewClassifier
 
 # Train a use a classifier if you already have a Citalopram dataset
-review_classifier = ReviewClassifier('nb', 'stopwords.txt')
+review_classifier = ReviewClassifier('nb')
 review_classifier.train('citalopram-reviews.csv')
-review_classifier.classify('neutral.txt')
+review_classifier.evaluate_average_accuracy('citalopram-reviews.csv')
 ```
 
 ## Contributions
