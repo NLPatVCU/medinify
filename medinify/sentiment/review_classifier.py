@@ -186,18 +186,21 @@ class ReviewClassifier():
                 for item in train:
                     train_data.append(dataset[item])
 
-                model = self.create_trained_model(train_data)
+                model = self.create_trained_model(dataset=train_data)
 
-                raw_score = nltk.classify.util.accuracy(model, test_data)
-                print("[err, acc] of fold {} : {}".format(fold, raw_score))
+                scores = nltk.classify.util.accuracy(model, test_data)
+                model_scores.append(scores * 100)
 
-                model_scores.append(raw_score*100)
+                if self.classifier_type == 'nb':
+                    model.show_most_informative_features()
+
+                print("%.2f%% (+/- %.2f%%)" % (np.mean(model_scores), np.std(model_scores)))
 
         elif self.classifier_type == 'nn':
             for train, test in skfold.split(train_data, train_target):
                 fold += 1
 
-                model = self.create_trained_model(None, train_data[train], train_target[train])
+                model = self.create_trained_model(train_data=train_data[train], train_target=train_target[train])
 
                 raw_score = model.evaluate(train_data[test], np.array(train_target[test]), verbose=0)
                 print("[err, acc] of fold {} : {}".format(fold, raw_score))
