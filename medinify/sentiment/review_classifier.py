@@ -170,7 +170,8 @@ class ReviewClassifier():
                 train_data=train_data, train_target=train_target)
         elif self.classifier_type == 'rf':
             train_data, train_target = self.build_dataset(reviews_filename)
-            self.model = self.create_trained_model(train_data=train_data, train_target=train_target)
+            self.model = self.create_trained_model(
+                train_data=train_data, train_target=train_target)
 
     def evaluate_average_accuracy(self, reviews_filename):
         """ Use stratified k fold to calculate average accuracy of models
@@ -223,7 +224,7 @@ class ReviewClassifier():
                 print("%.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
                                                np.std(model_scores)))
 
-        elif self.classifier_type == 'nn':
+        elif self.classifier_type == 'nn' or self.classifier_type == 'rf':
             for train, test in skfold.split(train_data, train_target):
                 fold += 1
 
@@ -231,23 +232,17 @@ class ReviewClassifier():
                     train_data=train_data[train],
                     train_target=train_target[train])
 
-                raw_score = model.evaluate(
-                    train_data[test], np.array(train_target[test]), verbose=0)
-                print("[err, acc] of fold {} : {}".format(fold, raw_score))
+                if self.classifier_type == 'nn':
+                    raw_score = model.evaluate(
+                        train_data[test], np.array(train_target[test]), verbose=0)
+                    print("[err, acc] of fold {} : {}".format(fold, raw_score))
+                    model_scores.append(raw_score[1] * 100)
 
-                model_scores.append(raw_score[1] * 100)
-
-        elif self.classifier_type == "rf":
-            for train, test in skfold.split(train_data, train_target):
-                fold += 1
-
-                model = self.create_trained_model(train_data=train_data[train], train_target=train_target[train])
-
-                raw_score = model.score(train_data[test], train_target[test])
-
-                model_scores.append(raw_score * 100)
-                print("Accuracy of fold " + str(fold) + ": %.2f%% (+/- %.2f%%)" % (
-                    np.mean(model_scores), np.std(model_scores)))
+                elif self.classifier_type == 'rf':
+                    raw_score = model.score(train_data[test], train_target[test])
+                    model_scores.append(raw_score * 100)
+                    print("Accuracy of fold " + str(fold) + ": %.2f%% (+/- %.2f%%)" % (
+                        np.mean(model_scores), np.std(model_scores)))
 
         print(f'Average Accuracy: {np.mean(model_scores)}')
         return np.mean(model_scores)
