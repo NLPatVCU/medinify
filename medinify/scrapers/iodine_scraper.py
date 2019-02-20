@@ -39,7 +39,7 @@ class IodineScraper():
 
                 #list of individual reviews
                 review_list.append({
-                    'review': review,
+                    'comment': review,
                     'worth it': worth_it,
                     'worked well': worked_well,
                     'big hassle': big_hassle
