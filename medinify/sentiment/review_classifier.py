@@ -9,14 +9,13 @@ import pandas as pd
 from nltk.classify import NaiveBayesClassifier
 from nltk.classify import DecisionTreeClassifier
 import nltk.classify.util
-import nltk
-from sklearn.model_selection import StratifiedKFold
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
+from sklearn.model_selection import StratifiedKFold
 import sklearn.preprocessing as process
 from sklearn.feature_extraction import DictVectorizer
+from keras.models import Sequential
+from keras.layers import Dense, Dropout
 
 
 class ReviewClassifier():
@@ -27,7 +26,7 @@ class ReviewClassifier():
         attr2 (:obj:`int`, optional): Description of `attr2`.
 
     """
-    classifier_type = None # 'nb', 'dt', 'nn'
+    classifier_type = None  # 'nb', 'dt', 'nn'
     iterations = 10
     negative_threshold = 2.0
     positive_threshold = 4.0
@@ -50,7 +49,10 @@ class ReviewClassifier():
             reader = csv.DictReader(reviews_file)
 
             for row in reader:
-                reviews.append({'comment': row['comment'], 'rating': row['rating']})
+                reviews.append({
+                    'comment': row['comment'],
+                    'rating': row['rating']
+                })
 
         # Separate reviews based on rating
         positive_comments = []
@@ -69,7 +71,9 @@ class ReviewClassifier():
 
             # Remove stopwords and transform into BOW representation
             stop_words = set(stopwords.words('english'))
-            filtered_tokens = {word: True for word in word_tokens if word not in stop_words}
+            filtered_tokens = {
+                word: True for word in word_tokens if word not in stop_words
+            }
 
             if float(rating) <= self.negative_threshold:
                 negative_comments.append((filtered_tokens, 'neg'))
@@ -98,9 +102,10 @@ class ReviewClassifier():
 
         return train_data, train_target
 
-    def create_trained_model(self, dataset=None, train_data=None, train_target=None):
-
-
+    def create_trained_model(self,
+                             dataset=None,
+                             train_data=None,
+                             train_target=None):
         """ Creates and trains new model
 
         Args:
@@ -126,10 +131,21 @@ class ReviewClassifier():
             model.add(Dense(1, activation='sigmoid'))
 
             print('Compiling model...')
-            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+            model.compile(
+                optimizer='adam',
+                loss='binary_crossentropy',
+                metrics=['accuracy'])
 
             print('Training model...')
-            model.fit(train_data, train_target, epochs=50, verbose=0, class_weight={0: 3, 1: 1})
+            model.fit(
+                train_data,
+                train_target,
+                epochs=50,
+                verbose=0,
+                class_weight={
+                    0: 3,
+                    1: 1
+                })
 
             print('Model trained!')
 
@@ -146,7 +162,8 @@ class ReviewClassifier():
             self.model = self.create_trained_model(dataset)
         elif self.classifier_type == 'nn':
             train_data, train_target = self.build_dataset(reviews_filename)
-            self.model = self.create_trained_model(train_data=train_data, train_target=train_target)
+            self.model = self.create_trained_model(
+                train_data=train_data, train_target=train_target)
 
     def evaluate_average_accuracy(self, reviews_filename):
         """ Use stratified k fold to calculate average accuracy of models
@@ -194,19 +211,22 @@ class ReviewClassifier():
                 if self.classifier_type == 'nb':
                     model.show_most_informative_features()
 
-                print("%.2f%% (+/- %.2f%%)" % (np.mean(model_scores), np.std(model_scores)))
+                print("%.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
+                                               np.std(model_scores)))
 
         elif self.classifier_type == 'nn':
             for train, test in skfold.split(train_data, train_target):
                 fold += 1
 
-                model = self.create_trained_model(train_data=train_data[train], train_target=train_target[train])
+                model = self.create_trained_model(
+                    train_data=train_data[train],
+                    train_target=train_target[train])
 
-                raw_score = model.evaluate(train_data[test], np.array(train_target[test]), verbose=0)
+                raw_score = model.evaluate(
+                    train_data[test], np.array(train_target[test]), verbose=0)
                 print("[err, acc] of fold {} : {}".format(fold, raw_score))
 
                 model_scores.append(raw_score[1] * 100)
 
         print(f'Average Accuracy: {np.mean(model_scores)}')
         return np.mean(model_scores)
-
