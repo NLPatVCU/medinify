@@ -26,6 +26,7 @@ class ReviewClassifier():
     iterations = 10
     negative_threshold = 2.0
     positive_threshold = 4.0
+    seed = 123
 
     model = None
 
