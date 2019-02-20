@@ -1,8 +1,6 @@
 """
 Text Classifier primarily for medical text.
 Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment analysis.
-
-Based on work by Amy Olex 11/13/17.
 """
 
 import string
@@ -107,6 +105,8 @@ class ReviewClassifier():
         return reviews
 
     def build_dataset(self, reviews, stop_words):
+        """This method is being refactored soon.
+        """
          ## Parse and convert positive and negative examples
         positive_comments = []
         negative_comments = []
@@ -177,7 +177,6 @@ class ReviewClassifier():
             scores = nltk.classify.util.accuracy(self.model, test_data)
             print("{}%".format(scores * 100))
             cvscores.append(scores * 100)
-            # plot_model(model, to_file='model.png')
 
             if self.classifier_type == 'nb':
                 self.model.show_most_informative_features()
@@ -185,7 +184,7 @@ class ReviewClassifier():
             print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
 
-    def classify(self, comments_file):
+    def classify(self, comments_filename):
         """ Classifies comments as positive or negative based on training.
 
         Args:
@@ -196,7 +195,7 @@ class ReviewClassifier():
         if self.model is not None:
 
             # Import the file needing classification.
-            with open(comments_file) as comments_file:
+            with open(comments_filename) as comments_file:
                 comments = comments_file.readlines()
 
             # Classify each comment and print

@@ -44,14 +44,15 @@ def test_load(dataset):
 
 def test_write_file_json(dataset):
     """Test write json file"""
+    dataset.drug_name = 'doxil'
     dataset.write_file('json')
-    
-    assert os.path.exists('test-reviews.json')
+    assert os.path.exists('doxil-reviews.json')
     
 def test_write_file_csv(dataset):
     """Test write csv file"""
+    dataset.drug_name = 'doxil'
     dataset.write_file('csv')
-    assert os.path.exists('test-reviews.csv')
+    assert os.path.exists('doxil-reviews.csv')
 
 def test_remove_empty_comments(dataset):
     """Test remove empty comments"""
@@ -64,30 +65,16 @@ def test_remove_empty_comments(dataset):
 
     assert empty_comments == 0
 
-def test_combine_ratings_ttt(dataset):
-    """Test combine ratings True True True"""
-    review = {'effectiveness': 2, 'ease of use': 3, 'satisfaction': 4}
-    dataset.reviews.append(review)
-    dataset.combine_ratings()
-    assert dataset.reviews[-1]['rating'] == 3
-
-def test_combine_ratings_tft(dataset):
-    """Test combine ratings True False True"""
-    review = {'effectiveness': 3, 'ease of use': 1, 'satisfaction': 5}
-    dataset.reviews.append(review)
-    dataset.combine_ratings(True, False, True)
-    assert dataset.reviews[-1]['rating'] == 4
-
 def test_balance(dataset):
     """Test balance"""
-    dataset.combine_ratings()
+    dataset.generate_rating()
     positive_reviews = 0
     negative_reviews = 0
 
     for review in dataset.reviews:
-        if int(review['rating']) > 3:
+        if review['rating'] == 5:
             positive_reviews += 1
-        elif int(review['rating']) < 3:
+        elif review['rating'] <= 2:
             negative_reviews += 1
 
     least_reviews = min([positive_reviews, negative_reviews])
@@ -98,9 +85,9 @@ def test_balance(dataset):
     negative_reviews = 0
 
     for review in dataset.reviews:
-        if int(review['rating']) > 3:
+        if review['rating'] == 5:
             positive_reviews += 1
-        elif int(review['rating']) < 3:
+        elif review['rating'] <= 2:
             negative_reviews += 1
 
     assert positive_reviews == least_reviews
