@@ -3,6 +3,7 @@
 
 # IDEs
 .vscode/
+.idea/
 
 # Project
 *.csv
@@ -10,6 +11,7 @@
 *.bin
 *.pickle
 !test-dataset.pickle
+*.h5
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
