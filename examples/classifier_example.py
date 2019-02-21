@@ -3,7 +3,7 @@ Examples for how to use the Medinify package
 """
 
 from medinify.sentiment import ReviewClassifier
-from medinify.sentiment import NeuralNetReviewClassifier
+# from medinify.sentiment import NeuralNetReviewClassifier
 
 def main():
     """ Main function.
@@ -13,7 +13,7 @@ def main():
     review_classifier = ReviewClassifier('nb', 'stopwords.txt')
     review_classifier.train('common-reviews.csv')
     review_classifier.save_model()
-    review_classifier.load_model()
+    review_classifier.load_model('nb', 'trained_dt_model.pickle')
     review_classifier.classify('neutral.txt')
 
     # Decision tree classifier

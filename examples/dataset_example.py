@@ -9,7 +9,7 @@ def main():
     """
 
     review_dataset = ReviewDataset('Citalopram')
-    # review_dataset.collect('https://www.webmd.com/drugs/drugreview-52891-Adriamycin-intravenous.aspx?drugid=52891&drugname=Adriamycin-intravenous')
+    # review_dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
     # review_dataset.save()
     review_dataset.load()
     # review_dataset.generate_rating()
