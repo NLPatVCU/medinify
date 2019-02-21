@@ -36,6 +36,13 @@ def test_create_trained_model_nb():
     model = classifier.create_trained_model(dataset=dataset)
     assert model
 
+def test_create_trained_model_rf():
+    """Test create trained model for random forest"""
+    classifier = ReviewClassifier('rf')
+    train_data, train_target = classifier.build_dataset('test-reviews.csv')
+    model = classifier.create_trained_model(train_data=train_data, train_target=train_target)
+    assert model
+
 def test_train_nn():
     """Test train for neural network"""
     classifier = ReviewClassifier('nn')
@@ -45,6 +52,12 @@ def test_train_nn():
 def test_train_nb():
     """Test train for naive bayes"""
     classifier = ReviewClassifier('nb')
+    classifier.train('test-reviews.csv')
+    assert classifier.model is not None
+
+def test_train_rf():
+    """Test train for neural network"""
+    classifier = ReviewClassifier('rf')
     classifier.train('test-reviews.csv')
     assert classifier.model is not None
 
@@ -58,6 +71,13 @@ def test_evaluate_average_accuracy_nn():
 def test_evaluate_average_accuracy_nb():
     """Test evaluate average accuracy for naive bayes"""
     classifier = ReviewClassifier('nb')
+    average = classifier.evaluate_average_accuracy('test-reviews.csv')
+    assert average > 0
+    assert average < 100
+
+def test_evaluate_average_accuracy_rf():
+    """Test evaluate average accuracy for neural network"""
+    classifier = ReviewClassifier('rf')
     average = classifier.evaluate_average_accuracy('test-reviews.csv')
     assert average > 0
     assert average < 100

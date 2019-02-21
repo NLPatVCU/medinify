@@ -12,10 +12,11 @@ import nltk.classify.util
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
 from sklearn.model_selection import StratifiedKFold
-import sklearn.preprocessing as process
-from sklearn.feature_extraction import DictVectorizer
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
+import sklearn.preprocessing as process
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.ensemble import RandomForestClassifier
 
 
 class ReviewClassifier():
@@ -26,7 +27,7 @@ class ReviewClassifier():
         attr2 (:obj:`int`, optional): Description of `attr2`.
 
     """
-    classifier_type = None  # 'nb', 'dt', 'nn'
+    classifier_type = None  # 'nb', 'dt', 'nn', 'rf'
     iterations = 10
     negative_threshold = 2.0
     positive_threshold = 4.0
@@ -118,6 +119,9 @@ class ReviewClassifier():
             model = NaiveBayesClassifier.train(dataset)
         elif self.classifier_type == 'dt':
             model = DecisionTreeClassifier.train(dataset)
+        elif self.classifier_type == 'rf':
+            forest = RandomForestClassifier(n_estimators=100, random_state=0)
+            model = forest.fit(train_data, train_target)
         elif self.classifier_type == 'nn':
             input_dimension = len(train_data[0])
 
@@ -164,6 +168,10 @@ class ReviewClassifier():
             train_data, train_target = self.build_dataset(reviews_filename)
             self.model = self.create_trained_model(
                 train_data=train_data, train_target=train_target)
+        elif self.classifier_type == 'rf':
+            train_data, train_target = self.build_dataset(reviews_filename)
+            self.model = self.create_trained_model(
+                train_data=train_data, train_target=train_target)
 
     def evaluate_average_accuracy(self, reviews_filename):
         """ Use stratified k fold to calculate average accuracy of models
@@ -183,6 +191,8 @@ class ReviewClassifier():
             comments = [x[0] for x in dataset]
             ratings = [x[1] for x in dataset]
         elif self.classifier_type == 'nn':
+            train_data, train_target = self.build_dataset(reviews_filename)
+        elif self.classifier_type == 'rf':
             train_data, train_target = self.build_dataset(reviews_filename)
 
         model_scores = []
@@ -214,7 +224,7 @@ class ReviewClassifier():
                 print("%.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
                                                np.std(model_scores)))
 
-        elif self.classifier_type == 'nn':
+        elif self.classifier_type == 'nn' or self.classifier_type == 'rf':
             for train, test in skfold.split(train_data, train_target):
                 fold += 1
 
@@ -222,11 +232,17 @@ class ReviewClassifier():
                     train_data=train_data[train],
                     train_target=train_target[train])
 
-                raw_score = model.evaluate(
-                    train_data[test], np.array(train_target[test]), verbose=0)
-                print("[err, acc] of fold {} : {}".format(fold, raw_score))
+                if self.classifier_type == 'nn':
+                    raw_score = model.evaluate(
+                        train_data[test], np.array(train_target[test]), verbose=0)
+                    print("[err, acc] of fold {} : {}".format(fold, raw_score))
+                    model_scores.append(raw_score[1] * 100)
 
-                model_scores.append(raw_score[1] * 100)
+                elif self.classifier_type == 'rf':
+                    raw_score = model.score(train_data[test], train_target[test])
+                    model_scores.append(raw_score * 100)
+                    print("Accuracy of fold " + str(fold) + ": %.2f%% (+/- %.2f%%)" % (
+                        np.mean(model_scores), np.std(model_scores)))
 
         print(f'Average Accuracy: {np.mean(model_scores)}')
         return np.mean(model_scores)
