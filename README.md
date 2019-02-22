@@ -141,6 +141,9 @@ Add a title, a description, and then press the “Create pull request” button.
 
 Navigate to the reviewers tab and request Jorge Vargas to review the PR.
 
+### Authors
+Bridget McInnes, Jorge Vargas, Nathan West, Gabby Gurdin, Mark Groves
+
 ## More Info
 
 * [VCU Natural Language Processing Lab](https://nlp.cs.vcu.edu/)     ![alt text](https://nlp.cs.vcu.edu/images/vcu_head_logo "VCU")
