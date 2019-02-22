@@ -81,4 +81,3 @@ def test_evaluate_average_accuracy_rf():
     average = classifier.evaluate_average_accuracy('test-reviews.csv')
     assert average > 0
     assert average < 100
-
