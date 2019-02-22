@@ -11,7 +11,7 @@ def main():
 
     # Naive bayes classifier
     review_classifier = ReviewClassifier('nb', 'stopwords.txt')
-    review_classifier.train('common-reviews.csv')
+    review_classifier.train('citalopram-reviews.csv')
     review_classifier.save_model()
     review_classifier.load_model('nb', 'trained_dt_model.pickle')
     review_classifier.classify('neutral.txt')
