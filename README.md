@@ -59,8 +59,9 @@ from medinify.sentiment import ReviewClassifier
 from medinify.sentiment import NeuralNetReviewClassifier
 
 # Train a use a classifier if you already have a Citalopram dataset
-review_classifier = ReviewClassifier('nb', 'stopwords.txt')
+review_classifier = ReviewClassifier('nb')
 review_classifier.train('citalopram-reviews.csv')
+review_classifier.evaluate_average_accuracy('citalopram-reviews.csv')
 review_classifier.classify('neutral.txt')
 
 # For Neural Network

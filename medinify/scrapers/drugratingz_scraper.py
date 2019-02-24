@@ -20,31 +20,24 @@ class DrugRatingzScraper():
 
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        comments = soup.find_all('span', {'class': 'description'})
-        ratings = soup.find_all('td', {'align': 'center'})
-
-        for rating in ratings:
-            if 'height' in rating.attrs:
-                ratings.remove(rating)
-            elif 'rowspan' in rating.attrs:
-                ratings.remove(rating)
-            elif rating.find('a'):
-                ratings.remove(rating)
-            elif rating.find('img'):
-                ratings.remove(rating)
+        comments = [comment.text.strip() for comment in soup.find_all(
+            'span', {'class': 'description'})]
+        ratings = [rating.text.strip() for rating in soup.find_all(
+            'td', {'align': 'center'}) if 'valign' in rating.attrs
+            and rating.text.strip().isdigit()]
 
         review_list = []
         ratings_index = 0
         comment_index = 0
 
         while ratings_index < len(ratings):
-            effectiveness = ratings[ratings_index].text.strip()
-            nosideeffects = ratings[ratings_index + 1].text.strip()
-            convenience = ratings[ratings_index + 2].text.strip()
-            value = ratings[ratings_index + 3].text.strip()
+            effectiveness = ratings[ratings_index]
+            nosideeffects = ratings[ratings_index + 1]
+            convenience = ratings[ratings_index + 2]
+            value = ratings[ratings_index + 3]
 
             review_list.append({
-                'comment': comments[comment_index].text.strip(),
+                'comment': comments[comment_index],
                 'effectiveness': effectiveness,
                 'no side effects': nosideeffects,
                 'convenience': convenience,
