@@ -4,6 +4,7 @@ Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment an
 """
 
 import csv
+import pickle
 import numpy as np
 import pandas as pd
 from nltk.classify import NaiveBayesClassifier
@@ -12,13 +13,12 @@ import nltk.classify.util
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
 from sklearn.model_selection import StratifiedKFold
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
 import sklearn.preprocessing as process
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.ensemble import RandomForestClassifier
-
-
+from keras.models import Sequential
+from keras.models import model_from_json
+from keras.layers import Dense, Dropout
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
 
@@ -246,3 +246,41 @@ class ReviewClassifier():
 
         print(f'Average Accuracy: {np.mean(model_scores)}')
         return np.mean(model_scores)
+
+    def save_model(self):
+        """ Saves a trained model to a file
+        """
+
+        if self.classifier_type == 'nn':
+            with open("trained_nn_model.json", "w") as json_file:
+                json_file.write(self.model.to_json()) # Save mode
+            self.model.save_weights("trained_nn_weights.h5") # Save weights
+        else:
+            file_name = 'trained_' + self.classifier_type + '_model.pickle'
+            with open(file_name, 'wb') as pickle_file:
+                pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        print("Model has been saved!")
+    
+    def load_model(self):
+        """ Loads a trained model from a file
+        """
+
+        if self.classifier_type == 'nn':
+            print("Loading model...")
+            with open("trained_nn_model.json", 'r') as json_file:
+                loaded_model = json_file.read()
+                self.model = model_from_json(loaded_model)
+            
+            print("Loading model weights...")
+            self.model.load_weights("trained_nn_weights.h5")
+
+            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+        else:
+            filename = 'trained_' + self.classifier_type + '_model.pickle'
+            with open(filename, 'rb') as pickle_file:
+                self.model = pickle.load(pickle_file)
+        
+        if self.model is not None:
+            print("Model has been loaded!")

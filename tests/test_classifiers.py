@@ -3,7 +3,6 @@ Tests for the classifiers
 """
 
 import os
-import pytest
 from medinify.sentiment import ReviewClassifier
 
 def test_build_dataset_nn():
@@ -82,3 +81,41 @@ def test_evaluate_average_accuracy_rf():
     assert average > 0
     assert average < 100
 
+def test_save_nltk_model():
+    """Test save NLTK model"""
+    classifier = ReviewClassifier('nb')
+    classifier.train('test-reviews.csv')
+    classifier.save_model()
+    assert os.path.exists('trained_nb_model.pickle')
+    os.remove('trained_nb_model.pickle')
+
+def test_load_nltk_model():
+    """Test load NLTK model"""
+    classifier = ReviewClassifier('nb')
+    classifier.train("test-reviews.csv")
+    classifier.save_model()
+    classifier.model = None
+    classifier.load_model()
+    assert classifier.model is not None
+    os.remove('trained_nb_model.pickle')
+
+def test_save_nn_model():
+    """Test save NLTK model"""
+    classifier = ReviewClassifier('nn')
+    classifier.train('test-reviews.csv')
+    classifier.save_model()
+    assert os.path.exists('trained_nn_model.json')
+    assert os.path.exists('trained_nn_weights.h5')
+    os.remove('trained_nn_model.json')
+    os.remove('trained_nn_weights.h5')
+
+def test_load_nn_model():
+    """Test load NLTK model"""
+    classifier = ReviewClassifier('nn')
+    classifier.train('test-reviews.csv')
+    classifier.save_model()
+    classifier.model = None
+    classifier.load_model()
+    assert classifier.model is not None
+    os.remove('trained_nn_model.json')
+    os.remove('trained_nn_weights.h5')
