@@ -13,14 +13,12 @@ import nltk.classify.util
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
 from sklearn.model_selection import StratifiedKFold
-from keras.models import Sequential
-from keras.models import model_from_json
-from keras.layers import Dense, Dropout
 import sklearn.preprocessing as process
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.ensemble import RandomForestClassifier
-
-
+from keras.models import Sequential
+from keras.models import model_from_json
+from keras.layers import Dense, Dropout
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
 

@@ -163,7 +163,7 @@ class NeuralNetReviewClassifier():
             json_file.write(model_json)
 
         print("Model has been saved!")
-        
+
     def save_model_weights(self):
         """ Saves a the weights of a trained Keras neural network to a HDF5 file
         """
@@ -179,7 +179,7 @@ class NeuralNetReviewClassifier():
         with open("trained_nn_model.json", 'r') as json_file:
             loaded_model = json_file.read()
             self.model = model_from_json(loaded_model)
-        
+
         print("Loading model weights")
         self.model.load_weights("trained_nn_weights.h5")
 

@@ -67,7 +67,7 @@ review_classifier.classify('neutral.txt')
 # For Neural Network
 review_classifier = NeuralNetReviewClassifier()
 review_classifier.train('citalopram-reviews.csv')
-review_classifier.classify('neutral.txt)
+review_classifier.classify('neutral.txt')
 ```
 
 ## Contributions

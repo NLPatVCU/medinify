@@ -3,7 +3,6 @@ Tests for the classifiers
 """
 
 import os
-import pytest
 from medinify.sentiment import ReviewClassifier
 
 def test_build_dataset_nn():
