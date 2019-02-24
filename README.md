@@ -67,7 +67,7 @@ review_classifier.classify('neutral.txt')
 # For Neural Network
 review_classifier = NeuralNetReviewClassifier()
 review_classifier.train('citalopram-reviews.csv')
-review_classifier.classify('neutral.txt)
+review_classifier.classify('neutral.txt')
 ```
 
 ## Contributions
@@ -141,6 +141,9 @@ After following the steps above, you can make a pull request directly on the Med
 Add a title, a description, and then press the “Create pull request” button. If you are closing an issue, put "closes #14," if you had issue 14.
 
 Navigate to the reviewers tab and request Jorge Vargas to review the PR.
+
+### Authors
+Bridget McInnes, Jorge Vargas, Nathan West, Gabby Gurdin, Mark Groves
 
 ## More Info
 
