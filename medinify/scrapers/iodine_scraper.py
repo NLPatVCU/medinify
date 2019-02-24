@@ -2,6 +2,7 @@
 Drug review scraper for Iodine.com
 """
 
+import re
 import csv
 import requests
 from bs4 import BeautifulSoup
@@ -36,10 +37,13 @@ class IodineScraper():
                     worked_well += 1
                 elif review.find('div', {'class': "red-3"}):
                     big_hassle += 1
+                
+                comment = review.find('span', {'class': None})
+                comment = re.sub('<[/]span>', '', comment.decode())
+                comment = re.sub('<span>', '', comment)
 
-                #list of individual reviews
                 review_list.append({
-                    'comment': review,
+                    'comment': comment,
                     'worth it': worth_it,
                     'worked well': worked_well,
                     'big hassle': big_hassle
