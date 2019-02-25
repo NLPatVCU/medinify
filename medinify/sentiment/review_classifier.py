@@ -244,7 +244,7 @@ class ReviewClassifier():
                     print("Accuracy of fold " + str(fold) + ": %.2f%% (+/- %.2f%%)" % (
                         np.mean(model_scores), np.std(model_scores)))
 
-        print(f'Average Accuracy: {np.mean(model_scores)}')
+        print('Average Accuracy:', np.mean(model_scores))
         return np.mean(model_scores)
 
     def save_model(self):
