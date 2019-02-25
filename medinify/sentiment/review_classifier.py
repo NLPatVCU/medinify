@@ -261,7 +261,7 @@ class ReviewClassifier():
                 pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("Model has been saved!")
-    
+
     def load_model(self):
         """ Loads a trained model from a file
         """
@@ -271,7 +271,7 @@ class ReviewClassifier():
             with open("trained_nn_model.json", 'r') as json_file:
                 loaded_model = json_file.read()
                 self.model = model_from_json(loaded_model)
-            
+
             print("Loading model weights...")
             self.model.load_weights("trained_nn_weights.h5")
 
@@ -281,7 +281,7 @@ class ReviewClassifier():
             filename = 'trained_' + self.classifier_type + '_model.pickle'
             with open(filename, 'rb') as pickle_file:
                 self.model = pickle.load(pickle_file)
-        
+
         if self.model is not None:
             print("Model has been loaded!")
 
