@@ -119,3 +119,10 @@ def test_load_nn_model():
     assert classifier.model is not None
     os.remove('trained_nn_model.json')
     os.remove('trained_nn_weights.h5')
+
+def test_nltk_classify():
+    """Test NLTK classify"""
+    classifier = ReviewClassifier('nb')
+    classifier.train('test-reviews.csv')
+    classifier.classify('neutral.txt')
+    # TODO (Jorge) Change function to return instead of print

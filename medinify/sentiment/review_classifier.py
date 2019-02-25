@@ -261,7 +261,7 @@ class ReviewClassifier():
                 pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("Model has been saved!")
-    
+
     def load_model(self):
         """ Loads a trained model from a file
         """
@@ -271,7 +271,7 @@ class ReviewClassifier():
             with open("trained_nn_model.json", 'r') as json_file:
                 loaded_model = json_file.read()
                 self.model = model_from_json(loaded_model)
-            
+
             print("Loading model weights...")
             self.model.load_weights("trained_nn_weights.h5")
 
@@ -281,6 +281,53 @@ class ReviewClassifier():
             filename = 'trained_' + self.classifier_type + '_model.pickle'
             with open(filename, 'rb') as pickle_file:
                 self.model = pickle.load(pickle_file)
-        
+
         if self.model is not None:
             print("Model has been loaded!")
+
+    def classify(self, comments_filename):
+        """Classifies a list of comments as positive or negative
+
+        Args:
+            comment: String of comment to classify
+        """
+        bow_comments = []
+
+        if self.model is None:
+            print('Model needs training first')
+            return
+
+        with open(comments_filename) as comments_file:
+            comments = comments_file.readlines()
+
+        for comment in comments:
+            # Make lowercase
+            comment = comment.lower()
+
+            # Remove punctuation and tokenize
+            tokenizer = RegexpTokenizer(r'\w+')
+            word_tokens = tokenizer.tokenize(comment)
+
+            # Remove stopwords and transform into BOW representation
+            stop_words = set(stopwords.words('english'))
+            filtered_tokens = {
+                word: True for word in word_tokens if word not in stop_words
+            }
+
+            bow_comments.append(filtered_tokens)
+
+        if self.classifier_type != 'nn':
+            for i in range(len(comments)):
+                print(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
+        else:
+            print('Keras predict is not yet implemented. Need to solve vector size issue.')
+            # print(bow_comments)
+            # vectorizer = DictVectorizer(sparse=False)
+
+            # data = np.array(bow_comments)
+            # print(data)
+            # train_data = vectorizer.fit_transform(data)
+            # print(train_data)
+
+            # prediction = self.model.predict(train_data)
+            # print(prediction)

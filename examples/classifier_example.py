@@ -11,8 +11,9 @@ def main():
     review_classifier = ReviewClassifier('nb') # Try 'nb', 'dt', 'rf', and 'nn'
     review_classifier.train('citalopram-reviews.csv')
     review_classifier.save_model()
-    # review_classifier.load_model('nb', 'trained_dt_model.pickle')
+    # review_classifier.load_model()
     # review_classifier.evaluate_average_accuracy('citalopram-reviews.csv')
+    # review_classifier.classify('neutral.txt')
 
 if __name__ == "__main__":
     main()
