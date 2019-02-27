@@ -28,6 +28,7 @@ def test_webmd_scrape_page():
     assert 'ease of use' in keys
     assert 'satisfaction' in keys
 
+
 def test_webmd_scrape():
     """Test webmd scrape"""
     input_url = 'https://www.webmd.com/drugs/drugreview-151652-banzel.aspx?drugid=151652&drugname=banzel'
@@ -40,6 +41,7 @@ def test_webmd_scrape():
     assert 'effectiveness' in keys
     assert 'ease of use' in keys
     assert 'satisfaction' in keys
+
 def test_iodine_scrape():
     """Test iodine scrape"""
     input_url = 'https://www.iodine.com/drug/adderall/reviews'
@@ -48,21 +50,21 @@ def test_iodine_scrape():
     assert os.path.exists('test.csv')
     os.remove('test.csv')
 
-# TODO (Jorge): Fix drugratingz scraper. This test is correctly failing.
-# def test_drugratingz_scrape():
-#     """Test drug ratingz scrape"""
-#     url = 'https://www.drugratingz.com/reviews/75/Drug-Adderall-XR.html'
-#     drug_scraper = DrugRatingzScraper()
-#     drug_scraper.scrape(url, 'test.csv')
-#     assert os.path.exists('test.csv')
-#     os.remove('test.csv')
+
+def test_drugratingz_scrape():
+    """Test drug ratingz scrape"""
+    url = 'https://www.drugratingz.com/reviews/75/Drug-Adderall-XR.html'
+    drug_scraper = DrugRatingzScraper()
+    drug_scraper.scrape(url, 'test.csv')
+    assert os.path.exists('test.csv')
+    os.remove('test.csv')
 
 def test_drugs_max_pages():
     """Test drugs.com max pages"""
     input_url = 'https://www.drugs.com/comments/dabigatran/'
     drugs_scraper = DrugsScraper()
     assert drugs_scraper.max_pages(input_url) > 1
-    
+
 def test_drugs_scrape():
     """Test drugs.com scrape"""
     url = 'https://www.drugs.com/comments/dabigatran/'
