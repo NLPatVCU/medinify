@@ -27,13 +27,13 @@ class DrugsScraper():
         """
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        # document.querySelector('#content > div.contentBox > div.responsive-table-wrap-mobile > table > tfoot > tr > th:nth-child(3)')
-        # //*[@id="content"]/div[2]/div[2]/table/tfoot/tr/th[3]
-        # 
         table_footer = soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
         total_reviews = int(table_footer[2].get_text().split()[0])
 
         max_pages = total_reviews // 25
+        if (total_reviews % 25 != 0):
+            max_pages += 1
+
         print('Found ' + str(total_reviews) + ' reviews.')
         print('Scraping ' + str(max_pages) + ' pages...')
         return max_pages
