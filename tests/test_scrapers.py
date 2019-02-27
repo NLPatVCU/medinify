@@ -61,12 +61,11 @@ def test_drugs_max_pages():
     """Test drugs.com max pages"""
     input_url = 'https://www.drugs.com/comments/dabigatran/'
     drugs_scraper = DrugsScraper()
-    assert drugs_scraper.max_pages(input_url) == 2
-
+    assert drugs_scraper.max_pages(input_url) > 1
+    
 def test_drugs_scrape():
     """Test drugs.com scrape"""
     url = 'https://www.drugs.com/comments/dabigatran/'
     drugs_scraper = DrugsScraper()
-    drugs_scraper.scrape(url, 'test.csv', pages=1)
+    drugs_scraper.scrape(url, 1)
     assert len(drugs_scraper.review_list) > 5
-    os.remove('test.csv')

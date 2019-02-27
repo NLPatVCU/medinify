@@ -27,19 +27,23 @@ class DrugsScraper():
         """
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        total_reviews_text = soup.find('span', {'class': 'totalreviews'}).text
-        total_reviews = [int(s) for s in total_reviews_text.split() if s.isdigit()][0]
-        max_pages = total_reviews // 5
+        # document.querySelector('#content > div.contentBox > div.responsive-table-wrap-mobile > table > tfoot > tr > th:nth-child(3)')
+        # //*[@id="content"]/div[2]/div[2]/table/tfoot/tr/th[3]
+        # 
+        table_footer = soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
+        total_reviews = int(table_footer[2].get_text().split()[0])
+
+        max_pages = total_reviews // 25
         print('Found ' + str(total_reviews) + ' reviews.')
         print('Scraping ' + str(max_pages) + ' pages...')
         return max_pages
 
-    def scrape(self, drug_url, output_path, pages=1):
+    def scrape(self, drug_url, pages=1):
         """Scrape for drug reviews.
 
         Args:
             drug_url: Drugs.com page to scrape
-            output_path: Path to the file where the output should be sent
+            
             pages (int): Number of pages to scrape
         """
 
@@ -67,11 +71,6 @@ class DrugsScraper():
                     rating = float(review.find('div', {'class': 'rating-score'}).text)
 
                 self.review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
-
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, ['comment', 'for', 'rating'])
-            dict_writer.writeheader()
-            dict_writer.writerows(self.review_list)
 
         print('Reviews scraped: ' + str(len(self.review_list)))
 
