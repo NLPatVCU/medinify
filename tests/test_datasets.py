@@ -65,30 +65,6 @@ def test_remove_empty_comments(dataset):
 
     assert empty_comments == 0
 
-def test_balance(dataset):
-    """Test balance"""
-    dataset.generate_rating()
-    positive_reviews = 0
-    negative_reviews = 0
-
-    for review in dataset.reviews:
-        if review['rating'] == 5:
-            positive_reviews += 1
-        elif review['rating'] <= 2:
-            negative_reviews += 1
-
-    least_reviews = min([positive_reviews, negative_reviews])
-
-    dataset.balance()
-
-    positive_reviews = 0
-    negative_reviews = 0
-
-    for review in dataset.reviews:
-        if review['rating'] == 5:
-            positive_reviews += 1
-        elif review['rating'] <= 2:
-            negative_reviews += 1
-
-    assert positive_reviews == least_reviews
-    assert negative_reviews == least_reviews
+def test_print_meta(dataset):
+    """Test the meta print"""
+    dataset.print_meta()
