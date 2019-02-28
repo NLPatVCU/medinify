@@ -38,9 +38,13 @@ class WebMDScraper():
         """
         page = requests.get(input_url)
         soup = BeautifulSoup(page.text, 'html.parser')
+        if 'Be the first to share your experience with this treatment.' in soup.find('div', {'id': 'heading'}).text:
+            return 0
         total_reviews_text = soup.find('span', {'class': 'totalreviews'}).text
         total_reviews = [int(s) for s in total_reviews_text.split() if s.isdigit()][0]
         max_pages = total_reviews // 5
+        if max_pages == 0:
+            max_pages = 1
         print('Found ' + str(total_reviews) + ' reviews.')
         print('Scraping ' + str(max_pages) + ' pages...')
         return max_pages
