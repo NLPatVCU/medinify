@@ -13,7 +13,7 @@ def test_webmd_max_pages():
     """Test webmd max pages"""
     input_url = 'https://www.webmd.com/drugs/drugreview-151652-banzel.aspx?drugid=151652&drugname=banzel'
     webmd_scraper = WebMDScraper()
-    assert webmd_scraper.max_pages(input_url) == 2
+    assert webmd_scraper.max_pages(input_url) == 3
 
 
 def test_webmd_scrape_page():

@@ -42,9 +42,12 @@ class WebMDScraper():
             return 0
         total_reviews_text = soup.find('span', {'class': 'totalreviews'}).text
         total_reviews = [int(s) for s in total_reviews_text.split() if s.isdigit()][0]
+
+        # Does the equivalent of max_pages = ceil(total_reviews / 5) without the math library
         max_pages = total_reviews // 5
-        if max_pages == 0:
-            max_pages = 1
+        if total_reviews % 5 != 0:
+            max_pages += 1
+
         print('Found ' + str(total_reviews) + ' reviews.')
         print('Scraping ' + str(max_pages) + ' pages...')
         return max_pages
