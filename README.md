@@ -42,6 +42,7 @@ from medinify.datasets import ReviewDataset
 # Load a saved citalopram dataset, cleanse the data, write CSV, and print stats
 review_dataset = ReviewDataset('Citalopram')
 review_dataset.load()
+review_dataset.generate_ratings()
 review_dataset.write_file('csv')
 review_dataset.print_stats()
 ```
