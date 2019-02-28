@@ -106,6 +106,5 @@ def test_lock(dataset):
     dataset.final_save()
 
     assert reviews == dataset.reviews
-    assert os.path.exists('doxil-dataset.pickle') == False
-    assert os.path.exists('doxil-dataset-' + str(date.today) +
-                          '.pickle') == False
+    assert not os.path.exists('doxil-dataset.pickle')
+    assert not os.path.exists('doxil-dataset-' + str(date.today) + '.pickle')

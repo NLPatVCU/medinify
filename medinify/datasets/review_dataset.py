@@ -9,7 +9,6 @@ import pickle
 import csv
 import json
 import pprint
-from random import shuffle
 from medinify.scrapers import WebMDScraper
 
 class ReviewDataset():
@@ -113,7 +112,7 @@ class ReviewDataset():
         data = {'meta': self.meta, 'reviews': self.reviews}
         today = date.today()
         filename = self.drug_name + '-dataset-' + str(today) + '.pickle'
-        
+
         with open(filename, 'wb') as pickle_file:
             pickle.dump(data, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -217,11 +216,11 @@ class ReviewDataset():
         """Prints out meta data about dataset
         """
         locked = str(self.meta['locked'])
-        startTimestamp = self.meta['startTimestamp']
-        startTimestamp = datetime.utcfromtimestamp(startTimestamp).strftime('%Y-%m-%d %H:%M:%S')
-        endTimestamp = self.meta['endTimestamp']
-        endTimestamp = datetime.utcfromtimestamp(endTimestamp).strftime('%Y-%m-%d %H:%M:%S')
+        start_timestamp = self.meta['startTimestamp']
+        start_timestamp = datetime.utcfromtimestamp(start_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        end_timestamp = self.meta['endTimestamp']
+        end_timestamp = datetime.utcfromtimestamp(end_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
         print('Locked: ' + locked)
-        print('Started scrape at ' + startTimestamp + ' UTC')
-        print('Finished scrape at ' + endTimestamp + ' UTC')
+        print('Started scrape at ' + start_timestamp + ' UTC')
+        print('Finished scrape at ' + end_timestamp + ' UTC')

@@ -9,7 +9,8 @@ def main():
     """
 
     review_dataset = ReviewDataset('Citalopram')
-    review_dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
+    url = 'https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral'
+    review_dataset.collect(url)
     review_dataset.save()
     # review_dataset.load()
     # review_dataset.final_save()
