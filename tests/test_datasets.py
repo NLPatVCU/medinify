@@ -21,7 +21,7 @@ def dataset():
     final_dataset_name = 'doxil-dataset-' + str(date.today()) + '.pickle'
     filenames = [
         'doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv',
-        final_dataset_name
+        'test-url-dataset.pickle', final_dataset_name
     ]
 
     for name in filenames:
@@ -108,3 +108,10 @@ def test_lock(dataset):
     assert reviews == dataset.reviews
     assert not os.path.exists('doxil-dataset.pickle')
     assert not os.path.exists('doxil-dataset-' + str(date.today) + '.pickle')
+
+
+def test_collect_urls(dataset):
+    """Test collect urls"""
+    dataset.drug_name = 'test-url'
+    dataset.collect_urls('test-urls.csv', start=35)
+    assert os.path.exists('test-url-dataset.pickle')

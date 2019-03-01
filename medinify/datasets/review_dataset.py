@@ -10,6 +10,7 @@ import csv
 import json
 import pprint
 from medinify.scrapers import WebMDScraper
+import os
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -89,6 +90,47 @@ class ReviewDataset():
 
         self.meta['endTimestamp'] = time()
         print('\nAll common drug review scraping complete!')
+
+    def collect_urls(self, file_path, start=0):
+        """Scrape all reviews for all drugs urls in file
+
+        Args:
+            start: index to start at if continuing from previous run
+        """
+        if (os.path.isfile(self.drug_name.lower() + '-dataset.pickle')):
+            self.load()
+        scraper = WebMDScraper()
+        urls = []
+
+        with open(file_path) as csv_file:
+            reader = csv.DictReader(csv_file)
+            for row in reader:
+                if row['URL'] != 'Not found':
+                    urls.append({'name': row['Drug'], 'url': row['URL']})
+        print('Found {} urls.'.format(len(urls)))
+
+        # Loop through urls starting at start index
+        for i in range(start, len(urls)):
+            drug = urls[i]
+            print('\n{} drugs left to scrape.'.format(len(urls) - i))
+            print('Scraping {}...'.format(drug['name']))
+            reviews = scraper.scrape(drug['url'])
+            
+            # If it's the first drug then replace self.reviews instead of appending
+            if drug['name'] == urls[0]['name']:
+                self.reviews = reviews
+            else:
+                self.reviews += reviews
+
+            # Save our progress and let the user know the data is safe
+            self.save()
+            print('{} reviews saved. Safe to quit.'.format(drug['name']))
+
+            # Let the user know what start index to use to continue later
+            if i < len(urls) - 1:
+                print('To continue run with parameter start={}'.format(i + 1))
+
+        print('\nAll urls scraped!')
 
     def save(self):
         """Saves current reviews as a pickle file
