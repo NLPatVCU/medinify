@@ -9,17 +9,16 @@ def main():
     """
 
     review_dataset = ReviewDataset('Citalopram')
-    # review_dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
-    # review_dataset.save()
-    review_dataset.load()
-    # review_dataset.generate_rating()
-    # review_dataset.balance()
-    # review_dataset.reviews = review_dataset.reviews[:2000]
-    # review_dataset.print()
-    # review_dataset.collect_all_common_reviews()
-    # review_dataset.write_file('JSON')
-    review_dataset.write_file('csv')
+    url = 'https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral'
+    review_dataset.collect(url)
+    review_dataset.save()
+    # review_dataset.load()
+    # review_dataset.final_save()
+    review_dataset.generate_rating()
     review_dataset.print_stats()
+    review_dataset.print_meta()
+    # review_dataset.collect_all_common_reviews()
+    # review_dataset.write_file('csv')
 
 if __name__ == "__main__":
     main()
