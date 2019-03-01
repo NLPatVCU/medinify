@@ -18,15 +18,11 @@ def dataset():
     yield doxil_dataset
 
     print("teardown")
-<<<<<<< HEAD
-    filenames = ['doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv', 'test-url-dataset.pickle']
-=======
     final_dataset_name = 'doxil-dataset-' + str(date.today()) + '.pickle'
     filenames = [
         'doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv',
-        final_dataset_name
+        'test-url-dataset.pickle', final_dataset_name
     ]
->>>>>>> 0ee39cf7b76a90aba150397c86f638558a863f27
 
     for name in filenames:
         if os.path.exists(name):
