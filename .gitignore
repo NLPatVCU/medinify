@@ -12,6 +12,7 @@
 *.pickle
 !test-dataset.pickle
 !test-reviews.csv
+!test-urls.csv
 *.h5
 
 # Byte-compiled / optimized / DLL files

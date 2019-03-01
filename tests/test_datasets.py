@@ -16,7 +16,7 @@ def dataset():
     yield doxil_dataset
 
     print("teardown")
-    filenames = ['doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv']
+    filenames = ['doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv', 'test-url-dataset.pickle']
 
     for name in filenames:
         if os.path.exists(name):
@@ -92,3 +92,9 @@ def test_balance(dataset):
 
     assert positive_reviews == least_reviews
     assert negative_reviews == least_reviews
+
+def test_collect_urls(dataset):
+    """Test collect urls"""
+    dataset.drug_name = 'test-url'
+    dataset.collect_urls('test-urls.csv', start=35)
+    assert os.path.exists('test-url-dataset.pickle')
