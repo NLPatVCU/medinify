@@ -8,6 +8,7 @@ import json
 import pprint
 from random import shuffle
 from medinify.scrapers import WebMDScraper
+import os
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -81,7 +82,8 @@ class ReviewDataset():
         Args:
             start: index to start at if continuing from previous run
         """
-
+        if (os.path.isfile(self.drug_name.lower() + '-dataset.pickle')):
+            self.load()
         scraper = WebMDScraper()
         urls = []
 
