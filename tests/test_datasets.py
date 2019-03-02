@@ -42,6 +42,10 @@ def test_save(dataset):
         True)
     dataset.save()
     assert os.path.exists('doxil-dataset.pickle')
+    assert dataset.meta['drugs'] == ['doxil']
+    assert dataset.meta['startTimestamp']
+    assert dataset.meta['endTimestamp']
+    assert not dataset.meta['locked']
 
 
 def test_final_save(dataset):
@@ -91,6 +95,13 @@ def test_print_meta(dataset):
     """Test the meta print"""
     dataset.print_meta()
 
+def test_meta(dataset):
+    """Test that meta data has been created properly"""
+    dataset.load()
+    assert dataset.meta['drugs'] == ['test']
+    assert dataset.meta['startTimestamp']
+    assert dataset.meta['endTimestamp']
+    assert not dataset.meta['locked']
 
 def test_lock(dataset):
     """Test that final datasets are properly locked"""
@@ -101,7 +112,6 @@ def test_lock(dataset):
     dataset.collect(
         'https://www.webmd.com/drugs/drugreview-12120-Doxil-intravenous.aspx?drugid=12120&drugname=Doxil-intravenous'
     )
-    dataset.collect_all_common_reviews()
     dataset.save()
     dataset.final_save()
 
@@ -109,9 +119,14 @@ def test_lock(dataset):
     assert not os.path.exists('doxil-dataset.pickle')
     assert not os.path.exists('doxil-dataset-' + str(date.today) + '.pickle')
 
-
 def test_collect_urls(dataset):
     """Test collect urls"""
     dataset.drug_name = 'test-url'
-    dataset.collect_urls('test-urls.csv', start=35)
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('test-url-dataset.pickle')
+
+def test_collect_urls_continue(dataset):
+    """Test collect urls when continuing"""
+    dataset.drug_name = 'test-url'
+    dataset.collect_urls('test-urls.csv', 1)
     assert os.path.exists('test-url-dataset.pickle')
