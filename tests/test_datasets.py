@@ -42,6 +42,10 @@ def test_save(dataset):
         True)
     dataset.save()
     assert os.path.exists('doxil-dataset.pickle')
+    assert dataset.meta['drugs'] == ['doxil']
+    assert dataset.meta['startTimestamp']
+    assert dataset.meta['endTimestamp']
+    assert not dataset.meta['locked']
 
 
 def test_final_save(dataset):
@@ -91,6 +95,13 @@ def test_print_meta(dataset):
     """Test the meta print"""
     dataset.print_meta()
 
+def test_meta(dataset):
+    """Test that meta data has been created properly"""
+    dataset.load()
+    assert dataset.meta['drugs'] == ['test']
+    assert dataset.meta['startTimestamp']
+    assert dataset.meta['endTimestamp']
+    assert dataset.meta['locked'] == False
 
 def test_lock(dataset):
     """Test that final datasets are properly locked"""
