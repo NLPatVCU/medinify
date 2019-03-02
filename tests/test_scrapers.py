@@ -69,3 +69,9 @@ def test_drugs_scrape():
     drugs_scraper.scrape(url, 'test.csv', pages=1)
     assert os.path.exists('test.csv')
     os.remove('test.csv')
+
+def test_get_drug_urls():
+    scraper = WebMDScraper()
+    scraper.get_drug_urls('test-drug-names.csv', 'test-drug-urls.csv')
+    assert os.path.exists('test-drug-urls.csv')
+    os.remove('test-drug-urls.csv')
