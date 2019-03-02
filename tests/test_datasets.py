@@ -119,9 +119,14 @@ def test_lock(dataset):
     assert not os.path.exists('doxil-dataset.pickle')
     assert not os.path.exists('doxil-dataset-' + str(date.today) + '.pickle')
 
-
 def test_collect_urls(dataset):
     """Test collect urls"""
     dataset.drug_name = 'test-url'
-    dataset.collect_urls('test-urls.csv', start=35)
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('test-url-dataset.pickle')
+
+def test_collect_urls_continue(dataset):
+    """Test collect urls when continuing"""
+    dataset.drug_name = 'test-url'
+    dataset.collect_urls('test-urls.csv', 1)
     assert os.path.exists('test-url-dataset.pickle')
