@@ -55,6 +55,9 @@ class ReviewDataset():
         Args:
             start: index to start at if continuing from previous run
         """
+        if self.meta['locked']:
+            print('Dataset locked. Please load a different dataset.')
+            return
         scraper = WebMDScraper()
         urls = []
 
@@ -232,3 +235,4 @@ class ReviewDataset():
         print('Locked: ' + locked)
         print('Started scrape at ' + start_timestamp + ' UTC')
         print('Finished scrape at ' + end_timestamp + ' UTC')
+        print('Drugs in dataset: ' + str(self.meta['drugs']))
