@@ -139,6 +139,7 @@ class WebMDScraper():
             for row in drugs_reader:
                 drugs.append(row[0])
 
+        # search for drugs in drug name file on WebMD
         first_search_url = 'https://www.webmd.com/search/search_results/default.aspx?query='
         unfound_drugs = []
         drug_results_urls = {}
@@ -158,6 +159,7 @@ class WebMDScraper():
 
         drugs = drug_results_urls.keys()
 
+        # search for drug info page url
         drug_info_urls = {}
         for drug in drugs:
             drug_results_url = drug_results_urls[drug]
@@ -193,6 +195,7 @@ class WebMDScraper():
                     print('Found version of {} with most reviews!\n'.format(drug))
                     drug_info_urls[drug] = max_url
 
+        # searches on drug info pages for drug review pages
         drug_review_pages = {}
         for drug in drugs:
             print('Searching for {} reviews page'.format(drug))
@@ -212,6 +215,7 @@ class WebMDScraper():
         for drug in drugs:
             review_urls.append({'Drug': drug, 'URL': drug_review_pages[drug]})
 
+        # writes url csv file
         with open(output_file, 'w') as url_csv:
             fieldnames = ['Drug', 'URL']
             writer = csv.DictWriter(url_csv, fieldnames=fieldnames)
