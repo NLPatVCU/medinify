@@ -9,6 +9,7 @@ import re
 from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
+import csv
 
 class WebMDScraper():
     """
@@ -129,3 +130,92 @@ class WebMDScraper():
             drug_review_pages.append({'name': name, 'url': absolute_link})
 
         return drug_review_pages
+
+    def get_drug_urls(self, file_path, output_file):
+
+        drugs = []
+        with open(file_path, 'r') as drug_names:
+            drugs_reader = csv.reader(drug_names)
+            for row in drugs_reader:
+                drugs.append(row[0])
+
+        first_search_url = 'https://www.webmd.com/search/search_results/default.aspx?query='
+        unfound_drugs = []
+        drug_results_urls = {}
+        for drug in drugs:
+            print('Searching for {}'.format(drug))
+            search_url = first_search_url + drug.lower()
+            search_page = requests.get(search_url)
+            search_soup = BeautifulSoup(search_page.text, 'html.parser')
+            search_results = search_soup.find_all('p', {'class': 'search-results-doc-title'})
+            for link in search_results:
+                if 'Drug Results for' in link.text:
+                    query_url = 'https://www.webmd.com' + link.find('a').attrs['href']
+                    drug_results_urls[drug] = query_url
+                    print('Drug results page for {} found!\n'.format(drug))
+            if drug not in drug_results_urls.keys():
+                unfound_drugs.append(drug)
+
+        drugs = drug_results_urls.keys()
+
+        drug_info_urls = {}
+        for drug in drugs:
+            drug_results_url = drug_results_urls[drug]
+            drug_results_page = requests.get(drug_results_url)
+            drug_results_soup = BeautifulSoup(drug_results_page.text, 'html.parser')
+
+            print('Searching for {} info page'.format(drug))
+            if drug_results_soup.find('a', {'class': 'drug-review'}):
+                print('Found {} info page!\n'.format(drug))
+                drug_info_url = drug_results_urls[drug]
+                drug_info_urls[drug] = drug_info_url
+
+            elif drug_results_soup.find('a', {'data-metrics-link': 'result_1'}):
+                drug_versions_html = drug_results_soup.find_all('a', {'data-metrics-link': 'result_1'})
+                version_urls = []
+                for drug_version in drug_versions_html:
+                    version_url = 'https://www.webmd.com' + drug_version.attrs['href']
+                    version_urls.append(version_url)
+
+                max_reviews = 0
+                max_url = ''
+
+                for version_url in version_urls:
+                    version_page = requests.get(version_url)
+                    version_soup = BeautifulSoup(version_page.text, 'html.parser')
+                    num_reviews_text = version_soup.find('a', {'class': 'drug-review'}).text
+                    num_reviews = int(num_reviews_text.split()[2].replace('(', '').replace(')', '').replace(',', ''))
+                    if num_reviews > max_reviews:
+                        max_reviews = num_reviews
+                        max_url = version_url
+
+                if max_url != '':
+                    print('Found version of {} with most reviews!\n'.format(drug))
+                    drug_info_urls[drug] = max_url
+
+        drug_review_pages = {}
+        for drug in drugs:
+            print('Searching for {} reviews page'.format(drug))
+            drug_info = drug_info_urls[drug]
+            drug_info_page = requests.get(drug_info)
+            drug_info_soup = BeautifulSoup(drug_info_page.text, 'html.parser')
+            if drug_info_soup.find('a', {'class': 'drug-review'}):
+                print('Found {} reviews page\n'.format(drug))
+                drug_review_page = 'https://www.webmd.com' + drug_info_soup.find('a', {'class': 'drug-review'}).attrs['href']
+                drug_review_pages[drug] = drug_review_page
+
+        print('Found urls for {} drugs'.format(len(drug_review_pages)))
+        print('Did not find urls for {} drugs:\n {}\n'.format(len(unfound_drugs), unfound_drugs))
+
+        print('Writing url csv file')
+        review_urls = []
+        for drug in drugs:
+            review_urls.append({'Drug': drug, 'URL': drug_review_pages[drug]})
+
+        with open(output_file, 'w') as url_csv:
+            fieldnames = ['Drug', 'URL']
+            writer = csv.DictWriter(url_csv, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(review_urls)
+
+        print('Finished writing!')
