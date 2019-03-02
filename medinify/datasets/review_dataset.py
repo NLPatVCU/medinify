@@ -40,6 +40,7 @@ class ReviewDataset():
             return
 
         self.meta['startTimestamp'] = time()
+        self.meta['drugs'] = [self.drug_name]
         scraper = WebMDScraper()
 
         if testing:
@@ -48,57 +49,12 @@ class ReviewDataset():
         self.reviews = scraper.scrape(url)
         self.meta['endTimestamp'] = time()
 
-    def collect_all_common_reviews(self, start=0):
-        """Scrape all reviews for all "common" drugs on main WebMD drugs page
-
-        Args:
-            start: index to start at if continuing from previous run
-        """
-        if self.meta['locked']:
-            print('Dataset locked. Please load a different dataset.')
-            return
-
-        # Load in case we have pre-exisiting progress
-        self.load()
-        scraper = WebMDScraper()
-        self.meta['startTimestamp'] = time()
-
-        # Get common drugs names and urls
-        common_drugs = scraper.get_common_drugs()
-        print('Found {} common drugs.'.format(len(common_drugs)))
-
-        # Loop through common drugs starting at start index
-        for i in range(start, len(common_drugs)):
-            drug = common_drugs[i]
-            print('\n{} drugs left to scrape.'.format(len(common_drugs) - i))
-            print('Scraping {}...'.format(drug['name']))
-            reviews = scraper.scrape(drug['url'])
-
-            # If it's the first drug then replace self.reviews instead of appending
-            if drug['name'] == 'Actos':
-                self.reviews = reviews
-            else:
-                self.reviews += reviews
-
-            # Save our progress and let the user know the data is safe
-            self.save()
-            print('{} reviews saved. Safe to quit.'.format(drug['name']))
-
-            # Let the user know what start index to use to continue later
-            if i < len(common_drugs) - 1:
-                print('To continue run with parameter start={}'.format(i+1))
-
-        self.meta['endTimestamp'] = time()
-        print('\nAll common drug review scraping complete!')
-
     def collect_urls(self, file_path, start=0):
         """Scrape all reviews for all drugs urls in file
 
         Args:
             start: index to start at if continuing from previous run
         """
-        if os.path.isfile(self.drug_name.lower() + '-dataset.pickle'):
-            self.load()
         scraper = WebMDScraper()
         urls = []
 
@@ -108,6 +64,15 @@ class ReviewDataset():
                 if row['URL'] != 'Not found':
                     urls.append({'name': row['Drug'], 'url': row['URL']})
         print('Found {} urls.'.format(len(urls)))
+
+        if os.path.isfile(self.drug_name.lower() + '-dataset.pickle'):
+            self.load()
+        else:
+            print('Saving meta...')
+            drug_names = [x['name'] for x in urls]
+            self.meta['drugs'] = drug_names
+            self.meta['startTimestamp'] = time()
+            self.save()
 
         # Loop through urls starting at start index
         for i in range(start, len(urls)):
@@ -123,6 +88,7 @@ class ReviewDataset():
                 self.reviews += reviews
 
             # Save our progress and let the user know the data is safe
+            self.meta['endTimestamp'] = time()
             self.save()
             print('{} reviews saved. Safe to quit.'.format(drug['name']))
 

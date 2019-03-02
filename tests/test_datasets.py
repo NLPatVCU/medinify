@@ -112,7 +112,6 @@ def test_lock(dataset):
     dataset.collect(
         'https://www.webmd.com/drugs/drugreview-12120-Doxil-intravenous.aspx?drugid=12120&drugname=Doxil-intravenous'
     )
-    dataset.collect_all_common_reviews()
     dataset.save()
     dataset.final_save()
 
