@@ -101,7 +101,7 @@ def test_meta(dataset):
     assert dataset.meta['drugs'] == ['test']
     assert dataset.meta['startTimestamp']
     assert dataset.meta['endTimestamp']
-    assert dataset.meta['locked'] == False
+    assert not dataset.meta['locked']
 
 def test_lock(dataset):
     """Test that final datasets are properly locked"""

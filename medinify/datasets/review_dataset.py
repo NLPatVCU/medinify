@@ -2,6 +2,7 @@
 Dataset for collection, storing, and cleansing of drug reviews.
 """
 
+import os
 from time import time
 from datetime import date
 from datetime import datetime
@@ -10,7 +11,6 @@ import csv
 import json
 import pprint
 from medinify.scrapers import WebMDScraper
-import os
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -97,7 +97,7 @@ class ReviewDataset():
         Args:
             start: index to start at if continuing from previous run
         """
-        if (os.path.isfile(self.drug_name.lower() + '-dataset.pickle')):
+        if os.path.isfile(self.drug_name.lower() + '-dataset.pickle'):
             self.load()
         scraper = WebMDScraper()
         urls = []
@@ -115,7 +115,7 @@ class ReviewDataset():
             print('\n{} drugs left to scrape.'.format(len(urls) - i))
             print('Scraping {}...'.format(drug['name']))
             reviews = scraper.scrape(drug['url'])
-            
+
             # If it's the first drug then replace self.reviews instead of appending
             if drug['name'] == urls[0]['name']:
                 self.reviews = reviews
