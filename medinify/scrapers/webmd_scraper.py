@@ -10,6 +10,8 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 import csv
+import pickle
+import os
 
 class WebMDScraper():
     """
@@ -143,57 +145,79 @@ class WebMDScraper():
         first_search_url = 'https://www.webmd.com/search/search_results/default.aspx?query='
         unfound_drugs = []
         drug_results_urls = {}
-        for drug in drugs:
-            print('Searching for {}'.format(drug))
-            search_url = first_search_url + drug.lower()
-            search_page = requests.get(search_url)
-            search_soup = BeautifulSoup(search_page.text, 'html.parser')
-            search_results = search_soup.find_all('p', {'class': 'search-results-doc-title'})
-            for link in search_results:
-                if 'Drug Results for' in link.text:
-                    query_url = 'https://www.webmd.com' + link.find('a').attrs['href']
-                    drug_results_urls[drug] = query_url
-                    print('Drug results page for {} found!\n'.format(drug))
-            if drug not in drug_results_urls.keys():
-                unfound_drugs.append(drug)
 
+        if not os.path.exists('drug_results.pickle'):
+            for drug in drugs:
+                print('Searching for {}'.format(drug))
+                search_url = first_search_url + drug.lower()
+                search_page = requests.get(search_url)
+                search_soup = BeautifulSoup(search_page.text, 'html.parser')
+                search_results = search_soup.find_all('p', {'class': 'search-results-doc-title'})
+                for link in search_results:
+                    if 'Drug Results for' in link.text:
+                        query_url = 'https://www.webmd.com' + link.find('a').attrs['href']
+                        drug_results_urls[drug] = query_url
+                        print('Drug results page for {} found!\n'.format(drug))
+                        with open('drug_results.pickle', 'wb') as pickle_file:
+                            pickle.dump(drug_results_urls, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+                if drug not in drug_results_urls.keys():
+                    unfound_drugs.append(drug)
+
+        else:
+            with open('drug_results.pickle', 'rb') as results_file:
+                drug_results_urls = pickle.load(results_file)
+
+        print('Drugs not found: {}'.format(unfound_drugs))
         drugs = drug_results_urls.keys()
 
         # search for drug info page url
         drug_info_urls = {}
-        for drug in drugs:
-            drug_results_url = drug_results_urls[drug]
-            drug_results_page = requests.get(drug_results_url)
-            drug_results_soup = BeautifulSoup(drug_results_page.text, 'html.parser')
 
-            print('Searching for {} info page'.format(drug))
-            if drug_results_soup.find('a', {'class': 'drug-review'}):
-                print('Found {} info page!\n'.format(drug))
-                drug_info_url = drug_results_urls[drug]
-                drug_info_urls[drug] = drug_info_url
+        if os.path.exists('drug_info_page.pickle'):
+            with open('drug_info_page.pickle', 'rb') as info_pages:
+                drug_info_urls = pickle.load(info_pages)
 
-            elif drug_results_soup.find('a', {'data-metrics-link': 'result_1'}):
-                drug_versions_html = drug_results_soup.find_all('a', {'data-metrics-link': 'result_1'})
-                version_urls = []
-                for drug_version in drug_versions_html:
-                    version_url = 'https://www.webmd.com' + drug_version.attrs['href']
-                    version_urls.append(version_url)
+        else:
+            for drug in drugs:
+                drug_results_url = drug_results_urls[drug]
+                drug_results_page = requests.get(drug_results_url)
+                drug_results_soup = BeautifulSoup(drug_results_page.text, 'html.parser')
 
-                max_reviews = 0
-                max_url = ''
+                print('Searching for {} info page'.format(drug))
+                if drug_results_soup.find('a', {'class': 'drug-review'}):
+                    print('Found {} info page!\n'.format(drug))
+                    drug_info_url = drug_results_urls[drug]
+                    drug_info_urls[drug] = drug_info_url
+                    with open('drug_info_page.pickle', 'wb') as pickle_file:
+                        pickle.dump(drug_info_urls, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
-                for version_url in version_urls:
-                    version_page = requests.get(version_url)
-                    version_soup = BeautifulSoup(version_page.text, 'html.parser')
-                    num_reviews_text = version_soup.find('a', {'class': 'drug-review'}).text
-                    num_reviews = int(num_reviews_text.split()[2].replace('(', '').replace(')', '').replace(',', ''))
-                    if num_reviews > max_reviews:
-                        max_reviews = num_reviews
-                        max_url = version_url
+                elif drug_results_soup.find('a', {'data-metrics-link': 'result_1'}):
+                    drug_versions_html = drug_results_soup.find_all('a', {'data-metrics-link': 'result_1'})
+                    version_urls = []
+                    for drug_version in drug_versions_html:
+                        version_url = 'https://www.webmd.com' + drug_version.attrs['href']
+                        version_urls.append(version_url)
 
-                if max_url != '':
-                    print('Found version of {} with most reviews!\n'.format(drug))
-                    drug_info_urls[drug] = max_url
+                    max_reviews = 0
+                    max_url = ''
+
+                    for version_url in version_urls:
+                        version_page = requests.get(version_url)
+                        version_soup = BeautifulSoup(version_page.text, 'html.parser')
+                        num_reviews_text = version_soup.find('a', {'class': 'drug-review'}).text
+                        num_reviews = int(num_reviews_text.split()[2].replace('(', '').replace(')', '').replace(',', ''))
+                        if num_reviews > max_reviews:
+                            max_reviews = num_reviews
+                            max_url = version_url
+
+                    if max_url != '':
+                        print('Found version of {} with most reviews!\n'.format(drug))
+                        drug_info_urls[drug] = max_url
+                        with open('drug_info_page.pickle', 'wb') as pickle_file:
+                            pickle.dump(drug_info_urls, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        drugs = list(drug_info_urls.keys())
 
         # searches on drug info pages for drug review pages
         drug_review_pages = {}
@@ -223,3 +247,7 @@ class WebMDScraper():
             writer.writerows(review_urls)
 
         print('Finished writing!')
+        if os.path.exists('drug_info_page.pickle'):
+            os.remove('drug_info_page.pickle')
+        if os.path.exists('drug_results.pickle'):
+            os.remove('drug_results.pickle')
