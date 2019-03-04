@@ -5,6 +5,8 @@ Currently can use Naive Bayes, Neural Network, or Decision Tree for sentiment an
 
 import csv
 import pickle
+from time import time
+from datetime import datetime
 import numpy as np
 import pandas as pd
 from nltk.classify import NaiveBayesClassifier
@@ -219,7 +221,7 @@ class ReviewClassifier():
                 if self.classifier_type == 'nb':
                     model.show_most_informative_features()
 
-                print("Accuracy of fold %d : %.2f%%" % (fold, scores * 100))
+                self.log("Accuracy of fold %d : %.2f%%" % (fold, scores * 100))
 
         elif self.classifier_type in ['nn', 'rf', 'svm']:
             for train, test in skfold.split(train_data, train_target):
@@ -232,15 +234,15 @@ class ReviewClassifier():
                 if self.classifier_type == 'nn':
                     raw_score = model.evaluate(
                         train_data[test], np.array(train_target[test]), verbose=0)
-                    print("[err, acc] of fold {} : {}".format(fold, raw_score))
+                    self.log("[err, acc] of fold {} : {}".format(fold, raw_score))
                     model_scores.append(raw_score[1] * 100)
 
                 else:
                     raw_score = model.score(train_data[test], train_target[test])
                     model_scores.append(raw_score * 100)
-                    print("Accuracy of fold %d : %.2f%%" % (fold, raw_score * 100))
+                    self.log("Accuracy of fold %d : %.2f%%" % (fold, raw_score * 100))
 
-        print("Final Average Accuracy: %.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
+        self.log("Final Average Accuracy: %.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
                                                np.std(model_scores)))
         return np.mean(model_scores)
 
@@ -328,3 +330,10 @@ class ReviewClassifier():
 
             # prediction = self.model.predict(train_data)
             # print(prediction)
+
+    def log(self, statement):
+        print(statement)
+        with open('output.log', 'a') as output:
+            timestamp = time()
+            timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            output.write(timestamp + ' - ' + statement + '\n')
