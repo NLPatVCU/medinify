@@ -219,7 +219,7 @@ class ReviewClassifier():
                 if self.classifier_type == 'nb':
                     model.show_most_informative_features()
 
-                print("Accuracy of fold %d : %.2f%%" % (fold, raw_score * 100))
+                print("Accuracy of fold %d : %.2f%%" % (fold, scores * 100))
 
         elif self.classifier_type in ['nn', 'rf', 'svm']:
             for train, test in skfold.split(train_data, train_target):
