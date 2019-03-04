@@ -12,6 +12,7 @@ from nltk.classify import DecisionTreeClassifier
 import nltk.classify.util
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
+from sklearn import svm
 from sklearn.model_selection import StratifiedKFold
 import sklearn.preprocessing as process
 from sklearn.feature_extraction import DictVectorizer
@@ -27,7 +28,7 @@ class ReviewClassifier():
         attr2 (:obj:`int`, optional): Description of `attr2`.
 
     """
-    classifier_type = None  # 'nb', 'dt', 'nn', 'rf'
+    classifier_type = None  # 'nb', 'dt', 'nn', 'rf', 'svm'
     iterations = 10
     negative_threshold = 2.0
     positive_threshold = 4.0
@@ -122,6 +123,9 @@ class ReviewClassifier():
         elif self.classifier_type == 'rf':
             forest = RandomForestClassifier(n_estimators=100, random_state=0)
             model = forest.fit(train_data, train_target)
+        elif self.classifier_type == 'svm':
+            model = svm.SVC(gamma='scale')
+            model.fit(train_data, train_target)
         elif self.classifier_type == 'nn':
             input_dimension = len(train_data[0])
 
@@ -164,11 +168,7 @@ class ReviewClassifier():
         if self.classifier_type == 'nb' or self.classifier_type == 'dt':
             dataset = self.build_dataset(reviews_filename)
             self.model = self.create_trained_model(dataset)
-        elif self.classifier_type == 'nn':
-            train_data, train_target = self.build_dataset(reviews_filename)
-            self.model = self.create_trained_model(
-                train_data=train_data, train_target=train_target)
-        elif self.classifier_type == 'rf':
+        elif self.classifier_type in ['nn', 'rf', 'svm']:
             train_data, train_target = self.build_dataset(reviews_filename)
             self.model = self.create_trained_model(
                 train_data=train_data, train_target=train_target)
@@ -190,9 +190,7 @@ class ReviewClassifier():
             dataset = self.build_dataset(reviews_filename)
             comments = [x[0] for x in dataset]
             ratings = [x[1] for x in dataset]
-        elif self.classifier_type == 'nn':
-            train_data, train_target = self.build_dataset(reviews_filename)
-        elif self.classifier_type == 'rf':
+        elif self.classifier_type in ['nn', 'rf', 'svm']:
             train_data, train_target = self.build_dataset(reviews_filename)
 
         model_scores = []
@@ -221,10 +219,9 @@ class ReviewClassifier():
                 if self.classifier_type == 'nb':
                     model.show_most_informative_features()
 
-                print("%.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
-                                               np.std(model_scores)))
+                print("Accuracy of fold %d : %.2f%%" % (fold, raw_score * 100))
 
-        elif self.classifier_type == 'nn' or self.classifier_type == 'rf':
+        elif self.classifier_type in ['nn', 'rf', 'svm']:
             for train, test in skfold.split(train_data, train_target):
                 fold += 1
 
@@ -238,13 +235,13 @@ class ReviewClassifier():
                     print("[err, acc] of fold {} : {}".format(fold, raw_score))
                     model_scores.append(raw_score[1] * 100)
 
-                elif self.classifier_type == 'rf':
+                else:
                     raw_score = model.score(train_data[test], train_target[test])
                     model_scores.append(raw_score * 100)
-                    print("Accuracy of fold " + str(fold) + ": %.2f%% (+/- %.2f%%)" % (
-                        np.mean(model_scores), np.std(model_scores)))
+                    print("Accuracy of fold %d : %.2f%%" % (fold, raw_score * 100))
 
-        print('Average Accuracy:', np.mean(model_scores))
+        print("Final Average Accuracy: %.2f%% (+/- %.2f%%)" % (np.mean(model_scores),
+                                               np.std(model_scores)))
         return np.mean(model_scores)
 
     def save_model(self):
