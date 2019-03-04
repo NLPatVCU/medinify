@@ -332,8 +332,42 @@ class ReviewClassifier():
             # print(prediction)
 
     def log(self, statement):
+        """Logs and prints statements
+        
+        Args:
+            statement: Statement to log to file and print
+        """
         print(statement)
         with open('output.log', 'a') as output:
             timestamp = time()
             timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
             output.write(timestamp + ' - ' + statement + '\n')
+
+    def evaluate_accuracy(self, test_filename):
+        """Evaluate accuracy of current model on new data
+
+        Args:
+            test_filename: Filepath of reviews to test on
+        """
+
+        dataset = []
+        train_data = []
+        train_target = []
+        score = 0
+
+        if self.classifier_type == 'nb':
+            dataset = self.build_dataset(test_filename)
+        else:
+            train_data, train_target = self.build_dataset(test_filename)
+
+        if self.classifier_type == 'nb':
+            score = nltk.classify.util.accuracy(self.model, dataset)
+            self.model.show_most_informative_features()
+        else:
+            if self.classifier_type == 'rf':
+                self.log(self.model.feature_importances_)
+                
+            score = self.model.score(train_data, train_target)
+            
+
+        self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
