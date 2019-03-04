@@ -151,7 +151,21 @@ class WebMDScraper():
                 search_url = 'https://www.webmd.com/drugs/2/search?type=drugs&query=' + drug.lower()
                 search_page = requests.get(search_url)
                 search_soup = BeautifulSoup(search_page.text, 'html.parser')
-                if search_soup.find('a', {'class': 'drug-review'}):
+                if len(drug) < 4 and search_soup.find('ul', {'class': 'exact-match'}):
+                    exact_matches = search_soup.find('ul', {'class': 'exact-match'})
+                    search_results = exact_matches.find_all('a', {'data-metrics-link': 'result_1'})
+                    links = ['https://www.webmd.com' + link.attrs['href'] for link in search_results]
+                    print('\nMultiple versions were found for {}'.format(drug))
+                    print('Its name was determined to be too short to verify the result\'s legitimacy')
+                    print('The following versions were found:')
+                    for link in links:
+                        version_page = requests.get(link)
+                        version_soup = BeautifulSoup(version_page.text, 'html.parser')
+                        drug_name = version_soup.find('h1').text
+                        print(drug_name)
+                    print('\n')
+
+                elif search_soup.find('a', {'class': 'drug-review'}):
                     drug_info_urls[drug] = search_url
                 elif search_soup.find('ul', {'class': 'exact-match'}):
                     exact_matches = search_soup.find('ul', {'class': 'exact-match'})
