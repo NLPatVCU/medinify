@@ -22,6 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
+import os
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
 
@@ -35,6 +36,9 @@ class ReviewClassifier():
     negative_threshold = 2.0
     positive_threshold = 4.0
     seed = 123
+    vectorizer = None
+    encoder = None
+    evaluating = False
 
     model = None
 
@@ -89,20 +93,20 @@ class ReviewClassifier():
 
         dataset = positive_comments + negative_comments
 
-        if self.classifier_type == 'nb' or self.classifier_type == 'dt':
+        if self.classifier_type == 'nb' or self.classifier_type == 'dt' or self.evaluating:
             return dataset
 
         # Vectorize the BOW with sentiment reviews
-        vectorizer = DictVectorizer(sparse=False)
+        self.vectorizer = DictVectorizer(sparse=False)
         data_frame = pd.DataFrame(dataset)
         data_frame.columns = ['data', 'target']
 
         data = np.array(data_frame['data'])
-        train_data = vectorizer.fit_transform(data)
+        train_data = self.vectorizer.fit_transform(data)
 
         target = np.array(data_frame['target'])
-        encoder = process.LabelEncoder()
-        train_target = encoder.fit_transform(target)
+        self.encoder = process.LabelEncoder()
+        train_target = self.encoder.fit_transform(target)
 
         return train_data, train_target
 
@@ -332,8 +336,51 @@ class ReviewClassifier():
             # print(prediction)
 
     def log(self, statement):
+        """Logs and prints statements
+        
+        Args:
+            statement: Statement to log to file and print
+        """
         print(statement)
         with open('output.log', 'a') as output:
             timestamp = time()
             timestamp = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
             output.write(timestamp + ' - ' + statement + '\n')
+
+    def evaluate_accuracy(self, test_filename):
+        """Evaluate accuracy of current model on new data
+
+        Args:
+            test_filename: Filepath of reviews to test on
+        """
+
+        score = 0
+
+        if self.classifier_type == 'nb':
+            dataset = self.build_dataset(test_filename)
+            score = nltk.classify.util.accuracy(self.model, dataset)
+            self.model.show_most_informative_features()
+
+        if self.classifier_type in ['rf', 'svm', 'nn']:
+            self.evaluating = True
+            evaluate_dataset = self.build_dataset(test_filename)
+
+            # Vectorize the BOW with sentiment reviews
+            data_frame = pd.DataFrame(evaluate_dataset)
+            data_frame.columns = ['data', 'target']
+
+            evaluate_data = np.array(data_frame['data'])
+            test_data = self.vectorizer.transform(evaluate_data)
+
+            evaluate_target = np.array(data_frame['target'])
+            test_target = self.encoder.fit_transform(evaluate_target)
+
+            if self.classifier_type in ['rf', 'svm']:
+                score = self.model.score(test_data, test_target)
+            elif self.classifier_type == 'nn':
+                score = self.model.evaluate(
+                    test_data, np.array(test_target), verbose=0)[1]
+
+            self.evaluating = False
+
+        self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
