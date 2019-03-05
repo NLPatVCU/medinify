@@ -319,9 +319,34 @@ class ReviewClassifier():
 
             bow_comments.append(filtered_tokens)
 
-        if self.classifier_type != 'nn':
+        if self.classifier_type == 'nb':
             for i in range(len(comments)):
                 print(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
+
+        else:
+            if self.classifier_type in ['rf', 'svm']:
+                for i in range(len(comments)):
+                    vectorized_comments = self.vectorizer.transform(bow_comments[i])
+                    predict_output = self.model.predict(vectorized_comments)
+                    sentiment = ''
+                    if predict_output[0] == [0]:
+                        sentiment = 'neg'
+                    elif predict_output[0] == [1]:
+                        sentiment = 'pos'
+                    print(sentiment + ' :: ' + comments[i])
+            elif self.classifier_type == 'nn':
+                for i in range(len(comments)):
+                    vectorized_comments = self.vectorizer.transform(bow_comments[i])
+                    predict_output = self.model.predict_classes(vectorized_comments)
+                    sentiment = ''
+                    if predict_output[0] == 0:
+                        sentiment = 'neg'
+                    elif predict_output[0] == 1:
+                        sentiment = 'pos'
+                    print(sentiment + ' :: ' + comments[i])
+
+
+        """
         else:
             print('Keras predict is not yet implemented. Need to solve vector size issue.')
             # print(bow_comments)
@@ -334,7 +359,7 @@ class ReviewClassifier():
 
             # prediction = self.model.predict(train_data)
             # print(prediction)
-
+    """
     def log(self, statement):
         """Logs and prints statements
         
