@@ -1,6 +1,5 @@
 """
 Drug review scraper for Medinify.
-
 This module scrapes comments from WebMD along with their rating.
 Based on work by Amy Olex 11/13/17.
 """
@@ -17,7 +16,6 @@ import os
 class WebMDScraper():
     """
     Class to scrap drug reviews from WebMD
-
     Attributes:
         all_pages: Boolean for whether or not to scrape all pages
         pages: int for # of pages to scrape if all_pages is 0
@@ -34,14 +32,13 @@ class WebMDScraper():
 
     def max_pages(self, input_url):
         """Finds number of review pages for this drug.
-
         Args:
             input_url: URL for the first page of reviews.
         Returns:
             (int) Highest page number
         """
-        
-        
+
+
         while True:
             try:
                 page = requests.get(input_url)
@@ -67,7 +64,6 @@ class WebMDScraper():
 
     def scrape_page(self, page_url):
         """Scrapes a single page for reviews and adds them to review_list
-
         Args:
             page_url: URL of the page to scrape.
         """
@@ -92,7 +88,6 @@ class WebMDScraper():
 
     def scrape(self, input_url):
         """Scrapes the reviews from WebMD
-
         Args:
             input_url : WebMD URL to scrape
         """
@@ -124,7 +119,6 @@ class WebMDScraper():
 
     def get_common_drugs(self):
         """ Get all urls for 'common' drug review pages
-
         Returns:
             List of urls for each drug's review page
         """
@@ -190,9 +184,7 @@ class WebMDScraper():
                     unfound_drugs.append(drug)
 
         print('Drugs not found: {}'.format(unfound_drugs))
-        print(drug_info_urls)
         drugs = list(drug_info_urls.keys())
-        print(drugs)
 
         # searches on drug info pages for drug review pages
         drug_review_pages = {}
