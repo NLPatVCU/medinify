@@ -22,6 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
+import os
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
 
@@ -35,6 +36,9 @@ class ReviewClassifier():
     negative_threshold = 2.0
     positive_threshold = 4.0
     seed = 123
+    vectorizer = None
+    encoder = None
+    evaluating = False
 
     model = None
 
@@ -89,20 +93,20 @@ class ReviewClassifier():
 
         dataset = positive_comments + negative_comments
 
-        if self.classifier_type == 'nb' or self.classifier_type == 'dt':
+        if self.classifier_type == 'nb' or self.classifier_type == 'dt' or self.evaluating:
             return dataset
 
         # Vectorize the BOW with sentiment reviews
-        vectorizer = DictVectorizer(sparse=False)
+        self.vectorizer = DictVectorizer(sparse=False)
         data_frame = pd.DataFrame(dataset)
         data_frame.columns = ['data', 'target']
 
         data = np.array(data_frame['data'])
-        train_data = vectorizer.fit_transform(data)
+        train_data = self.vectorizer.fit_transform(data)
 
         target = np.array(data_frame['target'])
-        encoder = process.LabelEncoder()
-        train_target = encoder.fit_transform(target)
+        self.encoder = process.LabelEncoder()
+        train_target = self.encoder.fit_transform(target)
 
         return train_data, train_target
 
@@ -350,6 +354,56 @@ class ReviewClassifier():
             test_filename: Filepath of reviews to test on
         """
 
+        score = 0
+
+        if self.classifier_type == 'nb':
+            dataset = self.build_dataset(test_filename)
+            score = nltk.classify.util.accuracy(self.model, dataset)
+            self.model.show_most_informative_features()
+
+        if self.classifier_type in ['rf', 'svm']:
+            self.evaluating = True
+            evaluate_dataset = self.build_dataset(test_filename)
+
+            # Vectorize the BOW with sentiment reviews
+            data_frame = pd.DataFrame(evaluate_dataset)
+            data_frame.columns = ['data', 'target']
+
+            evaluate_data = np.array(data_frame['data'])
+            test_data = self.vectorizer.transform(evaluate_data)
+
+            evaluate_target = np.array(data_frame['target'])
+            test_target = self.encoder.fit_transform(evaluate_target)
+
+            score = self.model.score(test_data, test_target)
+
+            self.evaluating = False
+
+        print(score * 100)
+
+        """
+        classifier = ReviewClassifier('nb')
+        dataset = classifier.build_dataset('citalopram.csv')
+
+        # Vectorize the BOW with sentiment reviews
+        vectorizer = DictVectorizer(sparse=False)
+        data_frame = pd.DataFrame(dataset)
+        data_frame.columns = ['data', 'target']
+
+        data = np.array(data_frame['data'])
+        train_data = vectorizer.fit_transform(data)
+        print(train_data[0].size)
+
+        other_dataset = classifier.build_dataset('mood_reviews.csv')
+        data_frame = pd.DataFrame(other_dataset)
+        data_frame.columns = ['data', 'target']
+
+        other_data = np.array(data_frame['data'])
+        other_train_data = vectorizer.transform(other_data)
+        print(other_train_data[0].size)
+        """
+
+        """
         dataset = []
         train_data = []
         train_target = []
@@ -371,3 +425,4 @@ class ReviewClassifier():
             
 
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
+        """
