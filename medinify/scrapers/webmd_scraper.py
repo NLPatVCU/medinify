@@ -6,6 +6,7 @@ Based on work by Amy Olex 11/13/17.
 """
 
 import re
+from time import sleep
 from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
@@ -39,10 +40,19 @@ class WebMDScraper():
         Returns:
             (int) Highest page number
         """
-        page = requests.get(input_url)
-        soup = BeautifulSoup(page.text, 'html.parser')
-        if 'Be the first to share your experience with this treatment.' in soup.find('div', {'id': 'heading'}).text:
-            return 0
+        
+        
+        while True:
+            try:
+                page = requests.get(input_url)
+                soup = BeautifulSoup(page.text, 'html.parser')
+                if 'Be the first to share your experience with this treatment.' in soup.find('div', {'id': 'heading'}).text:
+                    return 0
+                break
+            except AttributeError:
+                print('Ran into AttributeError. Waiting 10 seconds and retrying...')
+                sleep(10)
+
         total_reviews_text = soup.find('span', {'class': 'totalreviews'}).text
         total_reviews = [int(s) for s in total_reviews_text.split() if s.isdigit()][0]
 
