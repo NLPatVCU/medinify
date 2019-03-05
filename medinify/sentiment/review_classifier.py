@@ -361,7 +361,7 @@ class ReviewClassifier():
             score = nltk.classify.util.accuracy(self.model, dataset)
             self.model.show_most_informative_features()
 
-        if self.classifier_type in ['rf', 'svm']:
+        if self.classifier_type in ['rf', 'svm', 'nn']:
             self.evaluating = True
             evaluate_dataset = self.build_dataset(test_filename)
 
@@ -375,54 +375,12 @@ class ReviewClassifier():
             evaluate_target = np.array(data_frame['target'])
             test_target = self.encoder.fit_transform(evaluate_target)
 
-            score = self.model.score(test_data, test_target)
+            if self.classifier_type in ['rf', 'svm']:
+                score = self.model.score(test_data, test_target)
+            elif self.classifier_type == 'nn':
+                score = self.model.evaluate(
+                    test_data, np.array(test_target), verbose=0)[1]
 
             self.evaluating = False
 
-        print(score * 100)
-
-        """
-        classifier = ReviewClassifier('nb')
-        dataset = classifier.build_dataset('citalopram.csv')
-
-        # Vectorize the BOW with sentiment reviews
-        vectorizer = DictVectorizer(sparse=False)
-        data_frame = pd.DataFrame(dataset)
-        data_frame.columns = ['data', 'target']
-
-        data = np.array(data_frame['data'])
-        train_data = vectorizer.fit_transform(data)
-        print(train_data[0].size)
-
-        other_dataset = classifier.build_dataset('mood_reviews.csv')
-        data_frame = pd.DataFrame(other_dataset)
-        data_frame.columns = ['data', 'target']
-
-        other_data = np.array(data_frame['data'])
-        other_train_data = vectorizer.transform(other_data)
-        print(other_train_data[0].size)
-        """
-
-        """
-        dataset = []
-        train_data = []
-        train_target = []
-        score = 0
-
-        if self.classifier_type == 'nb':
-            dataset = self.build_dataset(test_filename)
-        else:
-            train_data, train_target = self.build_dataset(test_filename)
-
-        if self.classifier_type == 'nb':
-            score = nltk.classify.util.accuracy(self.model, dataset)
-            self.model.show_most_informative_features()
-        else:
-            if self.classifier_type == 'rf':
-                self.log(self.model.feature_importances_)
-                
-            score = self.model.score(train_data, train_target)
-            
-
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
-        """
