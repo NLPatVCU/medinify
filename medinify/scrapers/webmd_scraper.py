@@ -190,9 +190,7 @@ class WebMDScraper():
                     unfound_drugs.append(drug)
 
         print('Drugs not found: {}'.format(unfound_drugs))
-        print(drug_info_urls)
         drugs = list(drug_info_urls.keys())
-        print(drugs)
 
         # searches on drug info pages for drug review pages
         drug_review_pages = {}
@@ -204,7 +202,8 @@ class WebMDScraper():
             if drug_info_soup.find('a', {'class': 'drug-review'}):
                 print('Found {} reviews page\n'.format(drug))
                 drug_review_page = 'https://www.webmd.com' + drug_info_soup.find('a', {'class': 'drug-review'}).attrs['href']
-                drug_review_pages[drug] = drug_review_page
+                if drug_review_page not in drug_review_pages.values():
+                    drug_review_pages[drug] = drug_review_page
 
         print('Found urls for {} drugs'.format(len(drug_review_pages)))
         print('Did not find urls for {} drugs:\n {}\n'.format(len(unfound_drugs), unfound_drugs))
