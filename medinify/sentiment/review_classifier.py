@@ -130,7 +130,7 @@ class ReviewClassifier():
             forest = RandomForestClassifier(n_estimators=100, random_state=0)
             model = forest.fit(train_data, train_target)
         elif self.classifier_type == 'svm':
-            model = svm.SVC(gamma='scale')
+            model = svm.LinearSVC(max_iter=10000)
             model.fit(train_data, train_target)
         elif self.classifier_type == 'nn':
             input_dimension = len(train_data[0])
