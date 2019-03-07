@@ -22,6 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
+from heapq import nlargest
 import os
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
@@ -234,7 +235,12 @@ class ReviewClassifier():
                 model = self.create_trained_model(
                     train_data=train_data[train],
                     train_target=train_target[train])
-
+                """
+                if self.classifier_type == 'rf':
+                    print(len(model.feature_importances_))
+                    print(model.feature_importances_)
+                    print(self.vectorizer.feature_names_)
+                """
                 if self.classifier_type == 'nn':
                     raw_score = model.evaluate(
                         train_data[test], np.array(train_target[test]), verbose=0)
@@ -265,9 +271,26 @@ class ReviewClassifier():
 
         print("Model has been saved!")
 
-    def load_model(self):
+    def load_model(self, filename=None):
         """ Loads a trained model from a file
         """
+
+        self.evaluating = True
+        dataset = self.build_dataset('final-common-reviews.csv')
+        self.vectorizer = DictVectorizer(sparse=False)
+
+        data_frame = pd.DataFrame(dataset)
+        data_frame.columns = ['data', 'target']
+
+        data = np.array(data_frame['data'])
+        self.vectorizer.fit_transform(data)
+
+        target = np.array(data_frame['target'])
+        self.encoder = process.LabelEncoder()
+        self.encoder.fit_transform(target)
+
+        self.evaluating = False
+
 
         if self.classifier_type == 'nn':
             print("Loading model...")
@@ -281,7 +304,8 @@ class ReviewClassifier():
             self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
         else:
-            filename = 'trained_' + self.classifier_type + '_model.pickle'
+            if not filename:
+                filename = 'trained_' + self.classifier_type + '_model.pickle'
             with open(filename, 'rb') as pickle_file:
                 self.model = pickle.load(pickle_file)
 
@@ -409,3 +433,22 @@ class ReviewClassifier():
             self.evaluating = False
 
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
+
+    def print_top_features(self):
+        if not self.model:
+            print('Must train a model')
+            return
+        if self.classifier_type == 'rf':
+            word_features = self.vectorizer.feature_names_
+            feature_importances = self.model.feature_importances_
+            most_important = nlargest(5, feature_importances)
+
+            important_words = []
+            importances = feature_importances.tolist()
+            for feature in most_important:
+                index = importances.index(feature)
+                important_word = word_features[index]
+                important_words.append(important_word)
+
+            print('Most important words: ' + str(important_words))
+
