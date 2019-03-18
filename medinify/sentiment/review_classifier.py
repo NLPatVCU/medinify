@@ -308,21 +308,27 @@ class ReviewClassifier():
         else:
             print('No model loaded. Please use model filename(s) arguments.')
 
-    def classify(self, comments_filename):
+    def classify(self, comments_filename, output_file):
         """Classifies a list of comments as positive or negative
 
         Args:
-            comment: String of comment to classify
+            comments_filename: CSV file with comments to classify
         """
-        file = open('depression-ratings-common-rf.txt', 'w')
-        bow_comments = []
 
         if self.model is None:
             print('Model needs training first')
             return
 
-        with open(comments_filename) as comments_file:
-            comments = comments_file.readlines()
+        """
+        move comments from CSV into list of comments without ratings
+        """
+
+        comments = []
+        with open(comments_filename, 'r') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+            for row in csv_reader: comments.append(row['comment'])
+
+        bow_comments = []
 
         for comment in comments:
             # Make lowercase
@@ -340,10 +346,11 @@ class ReviewClassifier():
 
             bow_comments.append(filtered_tokens)
 
+        classifications_file = open(output_file, 'w')
+
         if self.classifier_type == 'nb':
             for i in range(len(comments)):
-                print(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
-                file.write(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
+                classifications_file.write(str(self.model.classify(bow_comments[i])) + " :: " + comments[i] + '\n')
 
         else:
             if self.classifier_type in ['rf', 'svm']:
@@ -355,8 +362,7 @@ class ReviewClassifier():
                         sentiment = 'neg'
                     elif predict_output[0] == [1]:
                         sentiment = 'pos'
-                    print(sentiment + ' :: ' + comments[i])
-                    file.write(sentiment + ' :: ' + comments[i])
+                    classifications_file.write(sentiment + ' :: ' + comments[i] + '\n')
             elif self.classifier_type == 'nn':
                 for i in range(len(comments)):
                     vectorized_comments = self.vectorizer.transform(bow_comments[i])
@@ -366,8 +372,9 @@ class ReviewClassifier():
                         sentiment = 'neg'
                     elif predict_output[0] == 1:
                         sentiment = 'pos'
-                    print(sentiment + ' :: ' + comments[i])
-                    file.write(sentiment + ' :: ' + comments[i])
+                    classifications_file.write(sentiment + ' :: ' + comments[i] + '\n')
+
+        print('Classification file written!')
 
     def log(self, statement):
         """Logs and prints statements
