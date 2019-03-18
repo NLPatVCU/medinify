@@ -235,12 +235,7 @@ class ReviewClassifier():
                 model = self.create_trained_model(
                     train_data=train_data[train],
                     train_target=train_target[train])
-                """
-                if self.classifier_type == 'rf':
-                    print(len(model.feature_importances_))
-                    print(model.feature_importances_)
-                    print(self.vectorizer.feature_names_)
-                """
+
                 if self.classifier_type == 'nn':
                     raw_score = model.evaluate(
                         train_data[test], np.array(train_target[test]), verbose=0)
@@ -308,27 +303,10 @@ class ReviewClassifier():
 
             self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-        """
-        if self.classifier_type == 'nn':
-            print("Loading model...")
-            with open("trained_nn_model.json", 'r') as json_file:
-                loaded_model = json_file.read()
-                self.model = model_from_json(loaded_model)
-
-            print("Loading model weights...")
-            self.model.load_weights("trained_nn_weights.h5")
-
-            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-        else:
-            if not filename:
-                filename = 'trained_' + self.classifier_type + '_model.pickle'
-            with open(filename, 'rb') as pickle_file:
-                self.model = pickle.load(pickle_file)
-        """
-
         if self.model is not None:
             print("Model has been loaded!")
+        else:
+            print('No model loaded. Please use model filename(s) arguments.')
 
     def classify(self, comments_filename):
         """Classifies a list of comments as positive or negative
