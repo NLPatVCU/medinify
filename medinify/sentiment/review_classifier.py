@@ -271,12 +271,13 @@ class ReviewClassifier():
 
         print("Model has been saved!")
 
-    def load_model(self, filename=None):
+    def load_model(self, pickle_file=None, json_file=None, h5_file=None):
         """ Loads a trained model from a file
         """
 
         self.evaluating = True
-        dataset = self.build_dataset('final-common-reviews.csv')
+
+        dataset = self.build_dataset('final_depression_reviews.csv')
         self.vectorizer = DictVectorizer(sparse=False)
 
         data_frame = pd.DataFrame(dataset)
@@ -291,7 +292,23 @@ class ReviewClassifier():
 
         self.evaluating = False
 
+        if pickle_file:
+            print("Loading model...")
+            with open(pickle_file, 'rb') as pickle_model:
+                self.model = pickle.load(pickle_model)
 
+        elif json_file and h5_file:
+            print("Loading model...")
+            with open(json_file, 'r') as json_model:
+                loaded_model = json_model.read()
+                self.model = model_from_json(loaded_model)
+
+            print("Loading model weights...")
+            self.model.load_weights(h5_file)
+
+            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+        """
         if self.classifier_type == 'nn':
             print("Loading model...")
             with open("trained_nn_model.json", 'r') as json_file:
@@ -308,6 +325,7 @@ class ReviewClassifier():
                 filename = 'trained_' + self.classifier_type + '_model.pickle'
             with open(filename, 'rb') as pickle_file:
                 self.model = pickle.load(pickle_file)
+        """
 
         if self.model is not None:
             print("Model has been loaded!")
@@ -318,6 +336,7 @@ class ReviewClassifier():
         Args:
             comment: String of comment to classify
         """
+        file = open('depression-ratings-common-rf.txt', 'w')
         bow_comments = []
 
         if self.model is None:
@@ -346,6 +365,7 @@ class ReviewClassifier():
         if self.classifier_type == 'nb':
             for i in range(len(comments)):
                 print(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
+                file.write(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
 
         else:
             if self.classifier_type in ['rf', 'svm']:
@@ -358,6 +378,7 @@ class ReviewClassifier():
                     elif predict_output[0] == [1]:
                         sentiment = 'pos'
                     print(sentiment + ' :: ' + comments[i])
+                    file.write(sentiment + ' :: ' + comments[i])
             elif self.classifier_type == 'nn':
                 for i in range(len(comments)):
                     vectorized_comments = self.vectorizer.transform(bow_comments[i])
@@ -368,22 +389,8 @@ class ReviewClassifier():
                     elif predict_output[0] == 1:
                         sentiment = 'pos'
                     print(sentiment + ' :: ' + comments[i])
+                    file.write(sentiment + ' :: ' + comments[i])
 
-
-        """
-        else:
-            print('Keras predict is not yet implemented. Need to solve vector size issue.')
-            # print(bow_comments)
-            # vectorizer = DictVectorizer(sparse=False)
-
-            # data = np.array(bow_comments)
-            # print(data)
-            # train_data = vectorizer.fit_transform(data)
-            # print(train_data)
-
-            # prediction = self.model.predict(train_data)
-            # print(prediction)
-    """
     def log(self, statement):
         """Logs and prints statements
         
@@ -410,12 +417,12 @@ class ReviewClassifier():
             score = nltk.classify.util.accuracy(self.model, dataset)
             self.model.show_most_informative_features()
 
-        if self.classifier_type in ['rf', 'svm', 'nn']:
-            self.evaluating = True
-            evaluate_dataset = self.build_dataset(test_filename)
+        elif self.classifier_type in ['rf', 'svm', 'nn']:
 
-            # Vectorize the BOW with sentiment reviews
-            data_frame = pd.DataFrame(evaluate_dataset)
+            self.evaluating = True
+
+            dataset = self.build_dataset(test_filename)
+            data_frame = pd.DataFrame(dataset)
             data_frame.columns = ['data', 'target']
 
             evaluate_data = np.array(data_frame['data'])
@@ -424,13 +431,13 @@ class ReviewClassifier():
             evaluate_target = np.array(data_frame['target'])
             test_target = self.encoder.fit_transform(evaluate_target)
 
+            self.evaluating = False
+
             if self.classifier_type in ['rf', 'svm']:
                 score = self.model.score(test_data, test_target)
             elif self.classifier_type == 'nn':
                 score = self.model.evaluate(
                     test_data, np.array(test_target), verbose=0)[1]
-
-            self.evaluating = False
 
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
 
