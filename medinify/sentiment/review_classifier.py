@@ -23,6 +23,7 @@ from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
 from heapq import nlargest
+import os
 
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
@@ -255,6 +256,11 @@ class ReviewClassifier():
         """ Saves a trained model to a file
         """
 
+        vectorizer_file = open('trained_' + self.classifier_type + '_vectorizer.pickle', 'wb')
+        pickle.dump(self.vectorizer, vectorizer_file, protocol=pickle.HIGHEST_PROTOCOL)
+        encoder_file = open('trained_' + self.classifier_type + '_encoder.pickle', 'wb')
+        pickle.dump(self.encoder, encoder_file, protocol=pickle.HIGHEST_PROTOCOL)
+
         if self.classifier_type == 'nn':
             with open("trained_nn_model.json", "w") as json_file:
                 json_file.write(self.model.to_json()) # Save mode
@@ -266,49 +272,78 @@ class ReviewClassifier():
 
         print("Model has been saved!")
 
-    def load_model(self, pickle_file=None, json_file=None, h5_file=None):
+    def load_model(self, pickle_file=None, json_file=None, h5_file=None,
+                   vectorizer_file=None, encoder_file=None, file_trained_on=None):
         """ Loads a trained model from a file
         """
 
-        self.evaluating = True
+        if vectorizer_file and encoder_file:
+            with open(vectorizer_file, 'rb') as vectorizer_file:
+                self.vectorizer = pickle.load(vectorizer_file)
+            with open(encoder_file, 'rb') as encoder_file:
+                self.encoder = pickle.load(encoder_file)
 
-        dataset = self.build_dataset('final_depression_reviews.csv')
-        self.vectorizer = DictVectorizer(sparse=False)
+        elif os.path.exists('trained_' + self.classifier_type + '_vectorizer.pickle') and \
+                os.path.exists('trained_' + self.classifier_type + '_encoder.pickle'):
+            with open('trained_' + self.classifier_type + '_vectorizer.pickle', 'rb') as vectorizer_file:
+                self.vectorizer = pickle.load(vectorizer_file)
+            with open('trained_' + self.classifier_type + '_encoder.pickle', 'rb') as encoder_file:
+                self.encoder = pickle.load(encoder_file)
 
-        data_frame = pd.DataFrame(dataset)
-        data_frame.columns = ['data', 'target']
+        else:
+            self.evaluating = True
 
-        data = np.array(data_frame['data'])
-        self.vectorizer.fit_transform(data)
+            dataset = self.build_dataset(file_trained_on)
+            self.vectorizer = DictVectorizer(sparse=False)
 
-        target = np.array(data_frame['target'])
-        self.encoder = process.LabelEncoder()
-        self.encoder.fit_transform(target)
+            data_frame = pd.DataFrame(dataset)
+            data_frame.columns = ['data', 'target']
 
-        self.evaluating = False
+            data = np.array(data_frame['data'])
+            self.vectorizer.fit_transform(data)
 
-        if pickle_file:
-            print("Loading model...")
-            with open(pickle_file, 'rb') as pickle_model:
-                self.model = pickle.load(pickle_model)
+            target = np.array(data_frame['target'])
+            self.encoder = process.LabelEncoder()
+            self.encoder.fit_transform(target)
 
-        elif json_file and h5_file:
-            print("Loading model...")
-            with open(json_file, 'r') as json_model:
-                loaded_model = json_model.read()
-                self.model = model_from_json(loaded_model)
+            self.evaluating = False
 
-            print("Loading model weights...")
-            self.model.load_weights(h5_file)
+        if self.classifier_type in ['nb', 'rf', 'svm']:
+            if pickle_file:
+                print("Loading model...")
+                with open(pickle_file, 'rb') as pickle_model:
+                    self.model = pickle.load(pickle_model)
+            else:
+                print("Loading model...")
+                with open('trained_' + self.classifier_type + '_model.pickle', 'rb') as pickle_model:
+                    self.model = pickle.load(pickle_model)
 
-            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        elif self.classifier_type == 'nn':
+            if json_file and h5_file:
+                print("Loading model...")
+                with open(json_file, 'r') as json_model:
+                    loaded_model = json_model.read()
+                    self.model = model_from_json(loaded_model)
+
+                print("Loading model weights...")
+                self.model.load_weights(h5_file)
+
+                self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+            else:
+                print("Loading model...")
+                with open('trained_nn_model.json', 'r') as json_model:
+                    loaded_model = json_model.read()
+                    self.model = model_from_json(loaded_model)
+
+                print("Loading model weights...")
+                self.model.load_weights('trained_nn_weights.h5')
+
+                self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
         if self.model is not None:
             print("Model has been loaded!")
-        else:
-            print('No model loaded. Please use model filename(s) arguments.')
 
-    def classify(self, comments_filename, output_file):
+    def classify(self, output_file, comments_filename=None, comments_text_file=None):
         """Classifies a list of comments as positive or negative
 
         Args:
@@ -319,14 +354,16 @@ class ReviewClassifier():
             print('Model needs training first')
             return
 
-        """
-        move comments from CSV into list of comments without ratings
-        """
-
         comments = []
-        with open(comments_filename, 'r') as csv_file:
-            csv_reader = csv.DictReader(csv_file)
-            for row in csv_reader: comments.append(row['comment'])
+
+        if comments_text_file:
+            text_file = open(comments_text_file, 'r')
+            comments = text_file.readlines()
+
+        else:
+            with open(comments_filename, 'r') as csv_file:
+                csv_reader = csv.DictReader(csv_file)
+                for row in csv_reader: comments.append(row['comment'])
 
         bow_comments = []
 
