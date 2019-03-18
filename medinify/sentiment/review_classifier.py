@@ -23,7 +23,7 @@ from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
 from heapq import nlargest
-import os
+
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
 
@@ -49,7 +49,7 @@ class ReviewClassifier():
     def build_dataset(self, reviews_filename):
         """ Builds dataset of labelled positive and negative reviews
 
-        :param reviews_path: CSV file with comments and ratings
+        :param reviews_filename: CSV file with comments and ratings
         :return: dataset with labeled positive and negative reviews
         """
 
@@ -426,6 +426,9 @@ class ReviewClassifier():
 
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
 
+    """
+    This function is meant to print the most important features for a rf model
+    
     def print_top_features(self):
         if not self.model:
             print('Must train a model')
@@ -443,4 +446,5 @@ class ReviewClassifier():
                 important_words.append(important_word)
 
             print('Most important words: ' + str(important_words))
+    """
 
