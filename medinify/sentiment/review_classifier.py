@@ -283,13 +283,6 @@ class ReviewClassifier():
             with open(encoder_file, 'rb') as encoder_file:
                 self.encoder = pickle.load(encoder_file)
 
-        elif os.path.exists('trained_' + self.classifier_type + '_vectorizer.pickle') and \
-                os.path.exists('trained_' + self.classifier_type + '_encoder.pickle'):
-            with open('trained_' + self.classifier_type + '_vectorizer.pickle', 'rb') as vectorizer_file:
-                self.vectorizer = pickle.load(vectorizer_file)
-            with open('trained_' + self.classifier_type + '_encoder.pickle', 'rb') as encoder_file:
-                self.encoder = pickle.load(encoder_file)
-
         else:
             self.evaluating = True
 
@@ -313,10 +306,6 @@ class ReviewClassifier():
                 print("Loading model...")
                 with open(pickle_file, 'rb') as pickle_model:
                     self.model = pickle.load(pickle_model)
-            else:
-                print("Loading model...")
-                with open('trained_' + self.classifier_type + '_model.pickle', 'rb') as pickle_model:
-                    self.model = pickle.load(pickle_model)
 
         elif self.classifier_type == 'nn':
             if json_file and h5_file:
@@ -327,16 +316,6 @@ class ReviewClassifier():
 
                 print("Loading model weights...")
                 self.model.load_weights(h5_file)
-
-                self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-            else:
-                print("Loading model...")
-                with open('trained_nn_model.json', 'r') as json_model:
-                    loaded_model = json_model.read()
-                    self.model = model_from_json(loaded_model)
-
-                print("Loading model weights...")
-                self.model.load_weights('trained_nn_weights.h5')
 
                 self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
@@ -462,6 +441,7 @@ class ReviewClassifier():
                     test_data, np.array(test_target), verbose=0)[1]
 
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
+        return score
 
     """
     This function is meant to print the most important features for a rf model
