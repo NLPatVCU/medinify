@@ -256,10 +256,12 @@ class ReviewClassifier():
         """ Saves a trained model to a file
         """
 
+        """
         vectorizer_file = open('trained_' + self.classifier_type + '_vectorizer.pickle', 'wb')
         pickle.dump(self.vectorizer, vectorizer_file, protocol=pickle.HIGHEST_PROTOCOL)
         encoder_file = open('trained_' + self.classifier_type + '_encoder.pickle', 'wb')
         pickle.dump(self.encoder, encoder_file, protocol=pickle.HIGHEST_PROTOCOL)
+        """
 
         if self.classifier_type == 'nn':
             with open("trained_nn_model.json", "w") as json_file:
@@ -269,19 +271,23 @@ class ReviewClassifier():
             file_name = 'trained_' + self.classifier_type + '_model.pickle'
             with open(file_name, 'wb') as pickle_file:
                 pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(self.vectorizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(self.encoder, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
         print("Model has been saved!")
 
     def load_model(self, pickle_file=None, json_file=None, h5_file=None,
-                   vectorizer_file=None, encoder_file=None, file_trained_on=None):
+                   saved_vectorizer=True, file_trained_on=None):
         """ Loads a trained model from a file
         """
 
-        if vectorizer_file and encoder_file:
-            with open(vectorizer_file, 'rb') as vectorizer_file:
-                self.vectorizer = pickle.load(vectorizer_file)
-            with open(encoder_file, 'rb') as encoder_file:
-                self.encoder = pickle.load(encoder_file)
+        if saved_vectorizer and pickle_file:
+            print('Loading model...')
+            with open(pickle_file, 'rb') as model_file:
+                self.model = pickle.load(model_file)
+                self.vectorizer = pickle.load(model_file)
+                self.encoder = pickle.load(model_file)
+            print('Model loaded!')
 
         else:
             self.evaluating = True
@@ -301,23 +307,23 @@ class ReviewClassifier():
 
             self.evaluating = False
 
-        if self.classifier_type in ['nb', 'rf', 'svm']:
-            if pickle_file:
-                print("Loading model...")
-                with open(pickle_file, 'rb') as pickle_model:
-                    self.model = pickle.load(pickle_model)
+            if self.classifier_type in ['nb', 'rf', 'svm']:
+                if pickle_file:
+                    print("Loading model...")
+                    with open(pickle_file, 'rb') as pickle_model:
+                        self.model = pickle.load(pickle_model)
 
-        elif self.classifier_type == 'nn':
-            if json_file and h5_file:
-                print("Loading model...")
-                with open(json_file, 'r') as json_model:
-                    loaded_model = json_model.read()
-                    self.model = model_from_json(loaded_model)
+            elif self.classifier_type == 'nn':
+                if json_file and h5_file:
+                    print("Loading model...")
+                    with open(json_file, 'r') as json_model:
+                        loaded_model = json_model.read()
+                        self.model = model_from_json(loaded_model)
 
-                print("Loading model weights...")
-                self.model.load_weights(h5_file)
+                    print("Loading model weights...")
+                    self.model.load_weights(h5_file)
 
-                self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+                    self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
         if self.model is not None:
             print("Model has been loaded!")
