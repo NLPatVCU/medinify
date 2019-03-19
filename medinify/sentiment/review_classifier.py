@@ -22,8 +22,9 @@ from sklearn.ensemble import RandomForestClassifier
 from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
-from heapq import nlargest
+import tarfile
 import os
+from heapq import nlargest
 
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
@@ -256,17 +257,23 @@ class ReviewClassifier():
         """ Saves a trained model to a file
         """
 
-        """
-        vectorizer_file = open('trained_' + self.classifier_type + '_vectorizer.pickle', 'wb')
-        pickle.dump(self.vectorizer, vectorizer_file, protocol=pickle.HIGHEST_PROTOCOL)
-        encoder_file = open('trained_' + self.classifier_type + '_encoder.pickle', 'wb')
-        pickle.dump(self.encoder, encoder_file, protocol=pickle.HIGHEST_PROTOCOL)
-        """
-
         if self.classifier_type == 'nn':
             with open("trained_nn_model.json", "w") as json_file:
                 json_file.write(self.model.to_json()) # Save mode
             self.model.save_weights("trained_nn_weights.h5") # Save weights
+            with open('trained_nn_vec_encoder.pickle', 'wb') as pickle_file:
+                pickle.dump(self.vectorizer, pickle_file)
+                pickle.dump(self.encoder, pickle_file)
+            tar_file = tarfile.open("trained_nn_model.tar", 'w')
+            tar_file.add('trained_nn_model.json')
+            tar_file.add('trained_nn_weights.h5')
+            tar_file.add('trained_nn_vec_encoder.pickle')
+            tar_file.close()
+
+            os.remove('trained_nn_model.json')
+            os.remove('trained_nn_weights.h5')
+            os.remove('trained_nn_vec_encoder.pickle')
+
         else:
             file_name = 'trained_' + self.classifier_type + '_model.pickle'
             with open(file_name, 'wb') as pickle_file:
@@ -276,8 +283,8 @@ class ReviewClassifier():
 
         print("Model has been saved!")
 
-    def load_model(self, pickle_file=None, json_file=None, h5_file=None,
-                   saved_vectorizer=True, file_trained_on=None):
+    def load_model(self, pickle_file=None, tar_file=None, json_file=None,
+                   h5_file=None, saved_vectorizer=True, file_trained_on=None):
         """ Loads a trained model from a file
         """
 
@@ -288,6 +295,26 @@ class ReviewClassifier():
                 self.vectorizer = pickle.load(model_file)
                 self.encoder = pickle.load(model_file)
             print('Model loaded!')
+
+        elif saved_vectorizer and tar_file:
+            print('Loading model...')
+            tfile = tarfile.open(tar_file, 'r')
+            tfile.extractall()
+            tfile.close()
+
+            with open('trained_nn_model.json', 'r') as json_model:
+                loaded_model = json_model.read()
+                self.model = model_from_json(loaded_model)
+
+            self.model.load_weights('trained_nn_weights.h5')
+            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+            with open('trained_nn_vec_encoder.pickle', 'rb') as pickle_file:
+                self.vectorizer = pickle.load(pickle_file)
+                self.encoder = pickle.load(pickle_file)
+
+            os.remove('trained_nn_model.json')
+            os.remove('trained_nn_weights.h5')
+            os.remove('trained_nn_vec_encoder.pickle')
 
         else:
             self.evaluating = True
