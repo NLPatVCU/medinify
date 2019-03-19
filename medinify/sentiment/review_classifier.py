@@ -22,7 +22,9 @@ from sklearn.ensemble import RandomForestClassifier
 from keras.models import Sequential
 from keras.models import model_from_json
 from keras.layers import Dense, Dropout
+from heapq import nlargest
 import os
+
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
 
@@ -48,7 +50,7 @@ class ReviewClassifier():
     def build_dataset(self, reviews_filename):
         """ Builds dataset of labelled positive and negative reviews
 
-        :param reviews_path: CSV file with comments and ratings
+        :param reviews_filename: CSV file with comments and ratings
         :return: dataset with labeled positive and negative reviews
         """
 
@@ -254,6 +256,11 @@ class ReviewClassifier():
         """ Saves a trained model to a file
         """
 
+        vectorizer_file = open('trained_' + self.classifier_type + '_vectorizer.pickle', 'wb')
+        pickle.dump(self.vectorizer, vectorizer_file, protocol=pickle.HIGHEST_PROTOCOL)
+        encoder_file = open('trained_' + self.classifier_type + '_encoder.pickle', 'wb')
+        pickle.dump(self.encoder, encoder_file, protocol=pickle.HIGHEST_PROTOCOL)
+
         if self.classifier_type == 'nn':
             with open("trained_nn_model.json", "w") as json_file:
                 json_file.write(self.model.to_json()) # Save mode
@@ -265,43 +272,79 @@ class ReviewClassifier():
 
         print("Model has been saved!")
 
-    def load_model(self):
+    def load_model(self, pickle_file=None, json_file=None, h5_file=None,
+                   vectorizer_file=None, encoder_file=None, file_trained_on=None):
         """ Loads a trained model from a file
         """
 
-        if self.classifier_type == 'nn':
-            print("Loading model...")
-            with open("trained_nn_model.json", 'r') as json_file:
-                loaded_model = json_file.read()
-                self.model = model_from_json(loaded_model)
-
-            print("Loading model weights...")
-            self.model.load_weights("trained_nn_weights.h5")
-
-            self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        if vectorizer_file and encoder_file:
+            with open(vectorizer_file, 'rb') as vectorizer_file:
+                self.vectorizer = pickle.load(vectorizer_file)
+            with open(encoder_file, 'rb') as encoder_file:
+                self.encoder = pickle.load(encoder_file)
 
         else:
-            filename = 'trained_' + self.classifier_type + '_model.pickle'
-            with open(filename, 'rb') as pickle_file:
-                self.model = pickle.load(pickle_file)
+            self.evaluating = True
+
+            dataset = self.build_dataset(file_trained_on)
+            self.vectorizer = DictVectorizer(sparse=False)
+
+            data_frame = pd.DataFrame(dataset)
+            data_frame.columns = ['data', 'target']
+
+            data = np.array(data_frame['data'])
+            self.vectorizer.fit_transform(data)
+
+            target = np.array(data_frame['target'])
+            self.encoder = process.LabelEncoder()
+            self.encoder.fit_transform(target)
+
+            self.evaluating = False
+
+        if self.classifier_type in ['nb', 'rf', 'svm']:
+            if pickle_file:
+                print("Loading model...")
+                with open(pickle_file, 'rb') as pickle_model:
+                    self.model = pickle.load(pickle_model)
+
+        elif self.classifier_type == 'nn':
+            if json_file and h5_file:
+                print("Loading model...")
+                with open(json_file, 'r') as json_model:
+                    loaded_model = json_model.read()
+                    self.model = model_from_json(loaded_model)
+
+                print("Loading model weights...")
+                self.model.load_weights(h5_file)
+
+                self.model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
         if self.model is not None:
             print("Model has been loaded!")
 
-    def classify(self, comments_filename):
+    def classify(self, output_file, comments_filename=None, comments_text_file=None):
         """Classifies a list of comments as positive or negative
 
         Args:
-            comment: String of comment to classify
+            comments_filename: CSV file with comments to classify
         """
-        bow_comments = []
 
         if self.model is None:
             print('Model needs training first')
             return
 
-        with open(comments_filename) as comments_file:
-            comments = comments_file.readlines()
+        comments = []
+
+        if comments_text_file:
+            text_file = open(comments_text_file, 'r')
+            comments = text_file.readlines()
+
+        else:
+            with open(comments_filename, 'r') as csv_file:
+                csv_reader = csv.DictReader(csv_file)
+                for row in csv_reader: comments.append(row['comment'])
+
+        bow_comments = []
 
         for comment in comments:
             # Make lowercase
@@ -319,9 +362,11 @@ class ReviewClassifier():
 
             bow_comments.append(filtered_tokens)
 
+        classifications_file = open(output_file, 'w')
+
         if self.classifier_type == 'nb':
             for i in range(len(comments)):
-                print(str(self.model.classify(bow_comments[i])) + " :: " + comments[i])
+                classifications_file.write(str(self.model.classify(bow_comments[i])) + " :: " + comments[i] + '\n')
 
         else:
             if self.classifier_type in ['rf', 'svm']:
@@ -333,7 +378,7 @@ class ReviewClassifier():
                         sentiment = 'neg'
                     elif predict_output[0] == [1]:
                         sentiment = 'pos'
-                    print(sentiment + ' :: ' + comments[i])
+                    classifications_file.write(sentiment + ' :: ' + comments[i] + '\n')
             elif self.classifier_type == 'nn':
                 for i in range(len(comments)):
                     vectorized_comments = self.vectorizer.transform(bow_comments[i])
@@ -343,23 +388,10 @@ class ReviewClassifier():
                         sentiment = 'neg'
                     elif predict_output[0] == 1:
                         sentiment = 'pos'
-                    print(sentiment + ' :: ' + comments[i])
+                    classifications_file.write(sentiment + ' :: ' + comments[i] + '\n')
 
+        print('Classification file written!')
 
-        """
-        else:
-            print('Keras predict is not yet implemented. Need to solve vector size issue.')
-            # print(bow_comments)
-            # vectorizer = DictVectorizer(sparse=False)
-
-            # data = np.array(bow_comments)
-            # print(data)
-            # train_data = vectorizer.fit_transform(data)
-            # print(train_data)
-
-            # prediction = self.model.predict(train_data)
-            # print(prediction)
-    """
     def log(self, statement):
         """Logs and prints statements
         
@@ -386,12 +418,12 @@ class ReviewClassifier():
             score = nltk.classify.util.accuracy(self.model, dataset)
             self.model.show_most_informative_features()
 
-        if self.classifier_type in ['rf', 'svm', 'nn']:
-            self.evaluating = True
-            evaluate_dataset = self.build_dataset(test_filename)
+        elif self.classifier_type in ['rf', 'svm', 'nn']:
 
-            # Vectorize the BOW with sentiment reviews
-            data_frame = pd.DataFrame(evaluate_dataset)
+            self.evaluating = True
+
+            dataset = self.build_dataset(test_filename)
+            data_frame = pd.DataFrame(dataset)
             data_frame.columns = ['data', 'target']
 
             evaluate_data = np.array(data_frame['data'])
@@ -400,12 +432,36 @@ class ReviewClassifier():
             evaluate_target = np.array(data_frame['target'])
             test_target = self.encoder.fit_transform(evaluate_target)
 
+            self.evaluating = False
+
             if self.classifier_type in ['rf', 'svm']:
                 score = self.model.score(test_data, test_target)
             elif self.classifier_type == 'nn':
                 score = self.model.evaluate(
                     test_data, np.array(test_target), verbose=0)[1]
 
-            self.evaluating = False
-
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
+        return score
+
+    """
+    This function is meant to print the most important features for a rf model
+    
+    def print_top_features(self):
+        if not self.model:
+            print('Must train a model')
+            return
+        if self.classifier_type == 'rf':
+            word_features = self.vectorizer.feature_names_
+            feature_importances = self.model.feature_importances_
+            most_important = nlargest(5, feature_importances)
+
+            important_words = []
+            importances = feature_importances.tolist()
+            for feature in most_important:
+                index = importances.index(feature)
+                important_word = word_features[index]
+                important_words.append(important_word)
+
+            print('Most important words: ' + str(important_words))
+    """
+
