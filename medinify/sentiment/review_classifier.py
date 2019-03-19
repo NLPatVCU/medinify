@@ -274,7 +274,12 @@ class ReviewClassifier():
             os.remove('trained_nn_weights.h5')
             os.remove('trained_nn_vec_encoder.pickle')
 
-        else:
+        elif self.classifier_type == 'nb':
+            file_name = 'trained_nb_model.pickle'
+            with open(file_name, 'wb') as pickle_file:
+                pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        elif self.classifier_type in ['rf', 'svm']:
             file_name = 'trained_' + self.classifier_type + '_model.pickle'
             with open(file_name, 'wb') as pickle_file:
                 pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
@@ -288,12 +293,13 @@ class ReviewClassifier():
         """ Loads a trained model from a file
         """
 
-        if saved_vectorizer and pickle_file:
+        if self.classifier_type in ['nb', 'svm', 'rf']:
             print('Loading model...')
             with open(pickle_file, 'rb') as model_file:
                 self.model = pickle.load(model_file)
-                self.vectorizer = pickle.load(model_file)
-                self.encoder = pickle.load(model_file)
+                if self.classifier_type in ['svm', 'rf']:
+                    self.vectorizer = pickle.load(model_file)
+                    self.encoder = pickle.load(model_file)
             print('Model loaded!')
 
         elif saved_vectorizer and tar_file:
@@ -334,7 +340,7 @@ class ReviewClassifier():
 
             self.evaluating = False
 
-            if self.classifier_type in ['nb', 'rf', 'svm']:
+            if self.classifier_type in ['rf', 'svm']:
                 if pickle_file:
                     print("Loading model...")
                     with open(pickle_file, 'rb') as pickle_model:
