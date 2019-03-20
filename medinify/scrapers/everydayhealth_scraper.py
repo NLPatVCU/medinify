@@ -10,12 +10,11 @@ class EverydayHealthScraper():
     """Scrapes EverydayHealth.com for drug reviews.
     """
 
-    def scrape(self, url, output_path, pages):
+    def scrape(self, url, pages=1):  # fix pages setup once added max pages method
         """Scrape for drug reviews.
 
         Args:
-            drug_url: EverydayHealth.com page to scrape
-            output_path: Path to the file where the output should be sent
+            url: EverydayHealth.com page to scrape
             pages (int): Number of pages to scrape
         """
 
@@ -40,9 +39,6 @@ class EverydayHealthScraper():
 
                 review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
 
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, ['comment', 'for', 'rating'])
-            dict_writer.writeheader()
-            dict_writer.writerows(review_list)
-
         print("Number of reviews scraped: " + str(len(review_list)))
+        return review_list
+

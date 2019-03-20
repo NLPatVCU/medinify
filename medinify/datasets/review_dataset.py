@@ -10,7 +10,8 @@ import pickle
 import csv
 import json
 import pprint
-from medinify.scrapers import WebMDScraper
+from medinify.scrapers import WebMDScraper, EverydayHealthScraper, \
+    DrugRatingzScraper, DrugsScraper, IodineScraper
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -22,11 +23,13 @@ class ReviewDataset():
     reviews = []
     drug_name = ''
     meta = {'locked': False}
+    scraper = ''  # WebMD, EverydayHealth, Drugs, DrugRatingz, Iodine
 
-    def __init__(self, drug_name):
+    def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
         drug_name = ''.join(char for char in drug_name if char.isalnum())
         self.drug_name = drug_name
+        self.scraper = scraper
         print('Created object for {}'.format(self.drug_name))
 
     def collect(self, url, testing=False):
@@ -41,7 +44,18 @@ class ReviewDataset():
 
         self.meta['startTimestamp'] = time()
         self.meta['drugs'] = [self.drug_name]
-        scraper = WebMDScraper()
+
+        scraper = None
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
+        elif self.scraper == 'Iodine':
+            scraper = IodineScraper()
 
         if testing:
             scraper = WebMDScraper(False, 1)
@@ -55,51 +69,55 @@ class ReviewDataset():
         Args:
             start: index to start at if continuing from previous run
         """
-        if self.meta['locked']:
-            print('Dataset locked. Please load a different dataset.')
-            return
-        scraper = WebMDScraper()
-        urls = []
+        if self.scraper == 'WebMD':
+            if self.meta['locked']:
+                print('Dataset locked. Please load a different dataset.')
+                return
+            scraper = WebMDScraper()
+            urls = []
 
-        with open(file_path) as csv_file:
-            reader = csv.DictReader(csv_file)
-            for row in reader:
-                if row['URL'] != 'Not found':
-                    urls.append({'name': row['Drug'], 'url': row['URL']})
-        print('Found {} urls.'.format(len(urls)))
+            with open(file_path) as csv_file:
+                reader = csv.DictReader(csv_file)
+                for row in reader:
+                    if row['URL'] != 'Not found':
+                        urls.append({'name': row['Drug'], 'url': row['URL']})
+            print('Found {} urls.'.format(len(urls)))
 
-        if os.path.isfile(self.drug_name.lower() + '-dataset.pickle'):
-            self.load()
-        else:
-            print('Saving meta...')
-            drug_names = [x['name'] for x in urls]
-            self.meta['drugs'] = drug_names
-            self.meta['startTimestamp'] = time()
-            self.save()
-
-        # Loop through urls starting at start index
-        for i in range(start, len(urls)):
-            drug = urls[i]
-            print('\n{} drugs left to scrape.'.format(len(urls) - i))
-            print('Scraping {}...'.format(drug['name']))
-            reviews = scraper.scrape(drug['url'])
-
-            # If it's the first drug then replace self.reviews instead of appending
-            if drug['name'] == urls[0]['name']:
-                self.reviews = reviews
+            if os.path.isfile(self.drug_name.lower() + '-dataset.pickle'):
+                self.load()
             else:
-                self.reviews += reviews
+                print('Saving meta...')
+                drug_names = [x['name'] for x in urls]
+                self.meta['drugs'] = drug_names
+                self.meta['startTimestamp'] = time()
+                self.save()
 
-            # Save our progress and let the user know the data is safe
-            self.meta['endTimestamp'] = time()
-            self.save()
-            print('{} reviews saved. Safe to quit.'.format(drug['name']))
+            # Loop through urls starting at start index
+            for i in range(start, len(urls)):
+                drug = urls[i]
+                print('\n{} drugs left to scrape.'.format(len(urls) - i))
+                print('Scraping {}...'.format(drug['name']))
+                reviews = scraper.scrape(drug['url'])
 
-            # Let the user know what start index to use to continue later
-            if i < len(urls) - 1:
-                print('To continue run with parameter start={}'.format(i + 1))
+                # If it's the first drug then replace self.reviews instead of appending
+                if drug['name'] == urls[0]['name']:
+                    self.reviews = reviews
+                else:
+                    self.reviews += reviews
 
-        print('\nAll urls scraped!')
+                # Save our progress and let the user know the data is safe
+                self.meta['endTimestamp'] = time()
+                self.save()
+                print('{} reviews saved. Safe to quit.'.format(drug['name']))
+
+                # Let the user know what start index to use to continue later
+                if i < len(urls) - 1:
+                    print('To continue run with parameter start={}'.format(i + 1))
+
+            print('\nAll urls scraped!')
+
+        else:
+            print('collect_urls has not been implemented for {} scraper'.format(self.scraper))
 
     def save(self):
         """Saves current reviews as a pickle file
@@ -190,12 +208,16 @@ class ReviewDataset():
         """
         updated_reviews = []
 
-        for review in self.reviews:
-            review['rating'] = review['effectiveness']
-            del review['effectiveness']
-            updated_reviews.append(review)
+        if self.scraper == 'WebMD':
+            for review in self.reviews:
+                review['rating'] = review['effectiveness']
+                del review['effectiveness']
+                updated_reviews.append(review)
 
-        self.reviews = updated_reviews
+            self.reviews = updated_reviews
+
+        else:
+            print('generate_reviews not implemented for {} scraper'.format(self.scraper))
 
     def print_stats(self):
         """Print relevant stats about the dataset

@@ -9,7 +9,7 @@ class DrugsScraper():
     """Scrapes Drugs.com for drug reviews.
     """
 
-    def scrape(self, drug_url, output_path, pages=1):
+    def scrape(self, drug_url, pages=1):
         """Scrape for drug reviews.
 
         Args:
@@ -27,18 +27,13 @@ class DrugsScraper():
             reviews = soup.find_all('div', {'class': 'user-comment'})
 
             for review in reviews:
-                review_for = review.find('b').text
                 comment = review.find('span').text.lstrip('"').rstrip('"')
                 rating = ''
 
                 if review.find('div', {'class': 'rating-score'}):
                     rating = float(review.find('div', {'class': 'rating-score'}).text)
 
-                review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
-
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, ['comment', 'for', 'rating'])
-            dict_writer.writeheader()
-            dict_writer.writerows(review_list)
+                review_list.append({'comment': comment, 'rating': rating})
 
         print('Reviews scraped: ' + str(len(review_list)))
+        return review_list

@@ -10,7 +10,7 @@ class DrugRatingzScraper():
     """Scrapes drugratingz.com for drug reviews.
     """
 
-    def scrape(self, drug_url, output_path):
+    def scrape(self, drug_url):
         """Scrape for drug reviews.
 
         Args:
@@ -47,12 +47,5 @@ class DrugRatingzScraper():
             ratings_index = ratings_index + 4
             comment_index = comment_index + 1
 
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(output_file, [
-                'comment', 'effectiveness', 'no side effects', 'convenience',
-                'value'
-            ])
-            dict_writer.writeheader()
-            dict_writer.writerows(review_list)
-
         print('Reviews scraped: ' + str(len(review_list)))
+        return review_list

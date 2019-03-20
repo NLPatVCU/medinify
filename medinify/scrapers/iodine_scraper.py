@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 class IodineScraper():
     """Objective of script is to scrape iodine.com for drug reviews """
 
-    def scraper(self, drug_url, output_path):
+    def scraper(self, drug_url):
         """
         Args: drug_url: iodine.com page
         output_path: file path for output
@@ -49,11 +49,5 @@ class IodineScraper():
                     'big hassle': big_hassle
                 })
 
-        with open(output_path, 'w') as output_file:
-            dict_writer = csv.DictWriter(
-                output_file,
-                ['comment', 'worth it', 'worked well', 'big hassle'])
-            dict_writer.writeheader()
-            dict_writer.writerows(review_list)
-
         print('Reviews scraped: ' + str(len(review_list)))
+        return review_list
