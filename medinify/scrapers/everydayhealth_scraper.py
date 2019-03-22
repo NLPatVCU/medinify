@@ -46,3 +46,30 @@ class EverydayHealthScraper():
             dict_writer.writerows(review_list)
 
         print("Number of reviews scraped: " + str(len(review_list)))
+
+    def max_pages(self, input_url):
+        """Finds number of review pages for this drug.
+        Args:
+            input_url: URL for the first page of reviews.
+        Returns:
+            (int) Highest page number
+        """
+        while True:
+
+                page = requests.get(input_url)
+                soup = BeautifulSoup(page.text, 'html.parser')
+
+                # Case if no reviews available
+                
+                break
+
+        total_reviews_head = soup.find('div', {'class': 'review-details clearfix'}).find('h5').find('span', {'itemprop': 'reviewCount'}).text
+        total_reviews = int(total_reviews_head)
+
+        max_pages_foot = soup.find('div', {'class': 'review-pagination'}).find('section', {'class': 'review-pagination__section--info'}).text.split()
+        max_pages = int(max_pages_foot[2])
+    
+       
+        print('Found ' + str(total_reviews) + ' reviews.')
+        print('Scraping ' + str(max_pages) + ' pages...')
+        return max_pages

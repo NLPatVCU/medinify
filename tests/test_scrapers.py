@@ -7,6 +7,7 @@ from medinify.scrapers import WebMDScraper
 from medinify.scrapers import IodineScraper
 from medinify.scrapers import DrugRatingzScraper
 from medinify.scrapers import DrugsScraper
+from medinify.scrapers import EverydayHealthScraper
 
 
 def test_webmd_max_pages():
@@ -70,8 +71,21 @@ def test_drugs_scrape():
     assert os.path.exists('test.csv')
     os.remove('test.csv')
 
-def test_get_drug_urls():
-    scraper = WebMDScraper()
-    scraper.get_drug_urls('test-drug-names.csv', 'test-drug-urls.csv')
-    assert os.path.exists('test-drug-urls.csv')
-    os.remove('test-drug-urls.csv')
+# def test_get_drug_urls():
+#    scraper = WebMDScraper()
+#    scraper.get_drug_urls('test-drug-names.csv', 'test-drug-urls.csv')
+#    assert os.path.exists('test-drug-urls.csv')
+#    os.remove('test-drug-urls.csv')
+
+def test_everydayhealth_max_pages():
+    """Test everydayhealth max pages"""
+    url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
+    everydayhealth_scraper = EverydayHealthScraper()
+    assert everydayhealth_scraper.max_pages(url) == 15
+
+def test_everydayhealth_scrape():
+    url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
+    everydayhealth_scraper = EverydayHealthScraper()
+    everydayhealth_scraper.scrape(url, 'test.csv', 3)
+    assert os.path.exists('test.csv')
+    os.remove('test.csv')
