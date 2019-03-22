@@ -13,15 +13,9 @@
 !test-dataset.pickle
 !test-reviews.csv
 !test-urls.csv
-!test_nb_encoder.pickle
 !test_nb_model.pickle
-!test_nb_vectorizer.pickle
-!test_nn_encoder.pickle
-!test_nn_model.json
-!test_nn_vectorizer.pickle
-!test_rf_encoder.pickle
 !test_rf_model.pickle
-!test_rf_vectorizer.pickle
+!test_svm_model.pickle
 
 *.h5
 !test_nn_weights.h5

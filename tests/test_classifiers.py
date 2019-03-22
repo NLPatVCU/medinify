@@ -112,25 +112,23 @@ def test_save_nb_model():
     classifier.train('test-reviews.csv')
     classifier.save_model()
     assert os.path.exists('trained_nb_model.pickle')
-    assert os.path.exists('trained_nb_vectorizer.pickle')
-    assert os.path.exists('trained_nb_encoder.pickle')
     os.remove('trained_nb_model.pickle')
-    os.remove('trained_nb_vectorizer.pickle')
-    os.remove('trained_nb_encoder.pickle')
+
+def test_save_svm_model():
+    """Test save svm model"""
+    classifier = ReviewClassifier('svm')
+    classifier.train('test-reviews.csv')
+    classifier.save_model()
+    assert os.path.exists('trained_svm_model.pickle')
+    os.remove('trained_svm_model.pickle')
 
 def test_save_nn_model():
     """Test save nn model"""
     classifier = ReviewClassifier('nn')
     classifier.train('test-reviews.csv')
     classifier.save_model()
-    assert os.path.exists('trained_nn_model.json')
-    assert os.path.exists('trained_nn_weights.h5')
-    assert os.path.exists('trained_nn_vectorizer.pickle')
-    assert os.path.exists('trained_nn_encoder.pickle')
-    os.remove('trained_nn_model.json')
-    os.remove('trained_nn_weights.h5')
-    os.remove('trained_nn_vectorizer.pickle')
-    os.remove('trained_nn_encoder.pickle')
+    assert os.path.exists('trained_nn_model.tar')
+    os.remove('trained_nn_model.tar')
 
 def test_load_model_nb_no_file():
     """Test load naive bayes model without  model"""
@@ -144,42 +142,32 @@ def test_load_model_nn_no_file():
     with pytest.raises(Exception):
         classifier.load_model()
 
-def test_load_model_nb_no_vectorizer():
-    """Test load nb model without vectorizer or encoder files"""
+def test_load_nb_model():
+    """Test load nb model from pickle file"""
     classifier = ReviewClassifier('nb')
-    classifier.load_model(pickle_file='test_nb_model.pickle', file_trained_on='test-reviews.csv')
+    classifier.load_model(pickle_file='test_nb_model.pickle')
     assert classifier.model
 
-def test_load_model_nn_no_vectorizer():
-    """Test load nn model without vectorizer or encoder files"""
+def test_load_nn_model():
+    """Test load nn model from tar file"""
     classifier = ReviewClassifier('nn')
-    classifier.load_model(json_file='test_nn_model.json',
-                          h5_file='test_nn_weights.h5', file_trained_on='test-reviews.csv')
+    classifier.load_model(tar_file='test_nn_model.tar')
     assert classifier.model
+    assert classifier.vectorizer
+    assert classifier.encoder
 
-def test_load_model_nb_with_vectorizer():
-    """Test load nb model with vectorizer or encoder files"""
-    classifier = ReviewClassifier('nb')
-    classifier.load_model(pickle_file='test_nb_model.pickle',
-                          vectorizer_file='test_nb_vectorizer.pickle',
-                          encoder_file='test_nb_encoder.pickle')
+def test_load_svm_model():
+    """Test load svm model from pickle file"""
+    classifier = ReviewClassifier('svm')
+    classifier.load_model(pickle_file='test_svm_model.pickle')
     assert classifier.model
-
-def test_load_model_nn_with_vectorizer():
-    """Test load nn model with vectorizer or encoder files"""
-    classifier = ReviewClassifier('nn')
-    classifier.load_model(json_file='test_nn_model.json',
-                          h5_file='test_nn_weights.h5',
-                          vectorizer_file='test_nn_vectorizer.pickle',
-                          encoder_file='test_nn_encoder.pickle')
-    assert classifier.model
+    assert classifier.vectorizer
+    assert classifier.encoder
 
 def test_classify_from_text_file():
     """Test classify comments text file"""
     classifer = ReviewClassifier('nb')
-    classifer.load_model(pickle_file='test_nb_model.pickle',
-                         vectorizer_file='test_nb_vectorizer.pickle',
-                         encoder_file='test_nb_encoder.pickle')
+    classifer.load_model(pickle_file='test_nb_model.pickle')
     classifer.classify('classified_comments.txt', comments_text_file='neutral.txt')
     assert os.path.exists('classified_comments.txt')
     os.remove('classified_comments.txt')
@@ -187,9 +175,7 @@ def test_classify_from_text_file():
 def test_classify_nb_from_csv():
     """Test classify using nb model from csv file"""
     classifer = ReviewClassifier('nb')
-    classifer.load_model(pickle_file='test_nb_model.pickle',
-                         vectorizer_file='test_nb_vectorizer.pickle',
-                         encoder_file='test_nb_encoder.pickle')
+    classifer.load_model(pickle_file='test_nb_model.pickle')
     classifer.classify('classified_comments.txt', comments_filename='test-reviews.csv')
     assert os.path.exists('classified_comments.txt')
     os.remove('classified_comments.txt')
@@ -197,9 +183,7 @@ def test_classify_nb_from_csv():
 def test_classify_rf():
     """Test classify using rf"""
     classifer = ReviewClassifier('rf')
-    classifer.load_model(pickle_file='test_rf_model.pickle',
-                         vectorizer_file='test_rf_vectorizer.pickle',
-                         encoder_file='test_rf_encoder.pickle')
+    classifer.load_model(pickle_file='test_rf_model.pickle')
     classifer.classify('classified_comments.txt', comments_filename='test-reviews.csv')
     assert os.path.exists('classified_comments.txt')
     os.remove('classified_comments.txt')
@@ -207,10 +191,7 @@ def test_classify_rf():
 def test_classify_nn():
     """Test classify using nn"""
     classifer = ReviewClassifier('nn')
-    classifer.load_model(json_file='test_nn_model.json',
-                         h5_file='test_nn_weights.h5',
-                         vectorizer_file='test_nn_vectorizer.pickle',
-                         encoder_file='test_nn_encoder.pickle')
+    classifer.load_model(tar_file='test_nn_model.tar')
     classifer.classify('classified_comments.txt', comments_filename='test-reviews.csv')
     assert os.path.exists('classified_comments.txt')
     os.remove('classified_comments.txt')
@@ -218,9 +199,7 @@ def test_classify_nn():
 def test_evaluate_accuracy_nb():
     """Test evaluate_accuracy for nb model"""
     classifer = ReviewClassifier('nb')
-    classifer.load_model(pickle_file='test_nb_model.pickle',
-                         vectorizer_file='test_nb_vectorizer.pickle',
-                         encoder_file='test_nb_encoder.pickle')
+    classifer.load_model(pickle_file='test_nb_model.pickle')
     score = classifer.evaluate_accuracy('test-reviews.csv')
     assert score > 0
     os.remove('output.log')
@@ -228,9 +207,7 @@ def test_evaluate_accuracy_nb():
 def test_evaluate_accuracy_rf():
     """Test evaluate_accuracy for rf model"""
     classifer = ReviewClassifier('rf')
-    classifer.load_model(pickle_file='test_rf_model.pickle',
-                         vectorizer_file='test_rf_vectorizer.pickle',
-                         encoder_file='test_rf_encoder.pickle')
+    classifer.load_model(pickle_file='test_rf_model.pickle')
     score = classifer.evaluate_accuracy('test-reviews.csv')
     assert score > 0
     os.remove('output.log')
@@ -238,10 +215,7 @@ def test_evaluate_accuracy_rf():
 def test_evaluate_accuracy_nn():
     """Test evaluate_accuracy for nn model"""
     classifer = ReviewClassifier('nn')
-    classifer.load_model(json_file='test_nn_model.json',
-                         h5_file='test_nn_weights.h5',
-                         vectorizer_file='test_nn_vectorizer.pickle',
-                         encoder_file='test_nn_encoder.pickle')
+    classifer.load_model(tar_file='test_nn_model.tar')
     score = classifer.evaluate_accuracy('test-reviews.csv')
     assert score > 0
     os.remove('output.log')
