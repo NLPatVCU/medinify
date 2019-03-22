@@ -12,7 +12,7 @@ from medinify.datasets import ReviewDataset
 def dataset():
     """Fixture for standard dataset"""
     print("setup")
-    doxil_dataset = ReviewDataset('TEST')
+    doxil_dataset = ReviewDataset('TEST', 'WebMD')
     doxil_dataset.load()
 
     yield doxil_dataset
@@ -29,10 +29,28 @@ def dataset():
             os.remove(name)
 
 
-def test_init_name(dataset):
+def test_init_webmd(dataset):
     """Test the name is lowercased during init"""
     assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'WebMD'
 
+def test_init_drugs():
+    """Test the name is lowercased during init"""
+    dataset = ReviewDataset('test', 'Drugs')
+    assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'Drugs'
+
+def test_init_drugratingz():
+    """Test the name is lowercased during init"""
+    dataset = ReviewDataset('test', 'DrugRatingz')
+    assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'DrugRatingz'
+
+def test_init_everydayhealth():
+    """Test the name is lowercased during init"""
+    dataset = ReviewDataset('test', 'EverydayHealth')
+    assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'EverydayHealth'
 
 def test_save(dataset):
     """Test save"""
@@ -119,11 +137,32 @@ def test_lock(dataset):
     assert not os.path.exists('doxil-dataset.pickle')
     assert not os.path.exists('doxil-dataset-' + str(date.today) + '.pickle')
 
-def test_collect_urls(dataset):
+def test_collect_webmd_urls(dataset):
     """Test collect urls"""
     dataset.drug_name = 'test-url'
     dataset.collect_urls('test-urls.csv')
     assert os.path.exists('test-url-dataset.pickle')
+
+def test_collect_drugs_urls():
+    """Test collect urls"""
+    dataset = ReviewDataset('test-url', 'Drugs')
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('testurl-dataset.pickle')
+    os.remove('testurl-dataset.pickle')
+
+def test_collect_drugratingz_urls():
+    """Test collect urls"""
+    dataset = ReviewDataset('test-url', 'DrugRatingz')
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('testurl-dataset.pickle')
+    os.remove('testurl-dataset.pickle')
+
+def test_collect_everydayhealth_urls():
+    """Test collect urls"""
+    dataset = ReviewDataset('test-url', 'EverydayHealth')
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('testurl-dataset.pickle')
+    os.remove('testurl-dataset.pickle')
 
 def test_collect_urls_continue(dataset):
     """Test collect urls when continuing"""
