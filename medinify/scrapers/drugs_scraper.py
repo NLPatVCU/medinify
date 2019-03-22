@@ -28,13 +28,11 @@ class DrugsScraper():
             reviews = soup.find_all('div', {'class': 'user-comment'})
 
             for review in reviews:
-                comment = review.find('span').text.lstrip('"').rstrip('"')
-                rating = ''
+                comment = review.find('span').text.lstrip('"').rstrip('"').replace('\n', '')
 
                 if review.find('div', {'class': 'rating-score'}):
                     rating = float(review.find('div', {'class': 'rating-score'}).text)
-
-                review_list.append({'comment': comment, 'rating': rating})
+                    review_list.append({'comment': comment, 'rating': rating})
 
         print('Reviews scraped: ' + str(len(review_list)))
         return review_list

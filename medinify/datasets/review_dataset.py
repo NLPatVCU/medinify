@@ -238,27 +238,33 @@ class ReviewDataset():
 
             self.reviews = updated_reviews
 
+        elif self.scraper == 'EverydayHealth':
+            return
+
         else:
             print('generate_reviews not implemented for {} scraper'.format(self.scraper))
 
     def print_stats(self):
         """Print relevant stats about the dataset
         """
-        reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        if self.scraper in ['WebMD', 'EverydayHealth']:
+            reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 
-        for review in self.reviews:
-            rating = review['rating']
-            reviews_ratings[rating] += 1
+            for review in self.reviews:
+                rating = review['rating']
+                reviews_ratings[rating] += 1
 
-        print('\nTotal reviews: {}'.format(len(self.reviews)))
-        for key, val in reviews_ratings.items():
-            print('{} star ratings: {}'.format(key, val))
+            print('\nTotal reviews: {}'.format(len(self.reviews)))
+            for key, val in reviews_ratings.items():
+                print('{} star ratings: {}'.format(key, val))
 
-        positive_ratings = reviews_ratings[4] + reviews_ratings[5]
-        negative_ratings = reviews_ratings[1] + reviews_ratings[2]
-        print('Positive ratings: {}'.format(positive_ratings))
-        print('Negative ratings: {}'.format(negative_ratings))
-        print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
+            positive_ratings = reviews_ratings[4] + reviews_ratings[5]
+            negative_ratings = reviews_ratings[1] + reviews_ratings[2]
+            print('Positive ratings: {}'.format(positive_ratings))
+            print('Negative ratings: {}'.format(negative_ratings))
+            print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
+        else:
+            print('print_stats not implemented for {} scraper'.format(self.scraper))
 
     def print_reviews(self):
         """Prints out current dataset in human readable format

@@ -36,7 +36,7 @@ class EverydayHealthScraper():
 
                 if review.find('div', {'class': 'star-rating-print'}):
                     rating = review.find('div', {'class': 'star-rating-print'}).text
-                    rating = re.sub('Stars', '', rating)
+                    rating = int(re.sub('Stars', '', rating).strip())
 
                 review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
 
