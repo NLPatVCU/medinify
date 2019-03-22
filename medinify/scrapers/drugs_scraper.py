@@ -38,6 +38,7 @@ class DrugsScraper():
         return review_list
 
     def get_drug_urls(self, file_path, output_file):
+        """Given a list of drug names, gets reviews pages on Drugs.com"""
 
         drugs = []
         with open(file_path, 'r') as drug_names:

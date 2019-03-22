@@ -64,6 +64,13 @@ class ReviewDataset():
         self.meta['endTimestamp'] = time()
 
     def collect_drug_names(self, file_path, output_path):
+        """Given list of drug names, collect urls for those review page on
+            the scraper's website
+
+        Args:
+            file_path: input csv with list of drug names
+            output_path: output csv with urls
+        """
         if self.scraper == 'WebMD':
             scraper = WebMDScraper()
             scraper.get_drug_urls(file_path, output_path)

@@ -138,6 +138,7 @@ class WebMDScraper():
         return drug_review_pages
 
     def get_drug_urls(self, file_path, output_file):
+        """Given a list of drug names, gets reviews pages on WebMD.com"""
 
         drugs = []
         with open(file_path, 'r') as drug_names:
