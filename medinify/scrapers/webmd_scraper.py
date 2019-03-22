@@ -199,6 +199,8 @@ class WebMDScraper():
                 if drug_review_page not in drug_review_pages.values():
                     drug_review_pages[drug] = drug_review_page
 
+        drugs = list(drug_review_pages.keys())
+
         print('Found urls for {} drugs'.format(len(drug_review_pages)))
         print('Did not find urls for {} drugs:\n {}\n'.format(len(unfound_drugs), unfound_drugs))
 
