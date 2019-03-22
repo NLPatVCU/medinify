@@ -75,10 +75,10 @@ class DrugsScraper():
                 if drug not in list(no_duplicates_urls.keys()):
                     unfound_drugs.append(drug)
 
-                drugs = list(no_duplicates_urls.keys())
-                for drug in drugs:
-                    entry = {'Drug': drug, 'URL': no_duplicates_urls[drug]}
-                    review_urls.append(entry)
+            drugs = list(no_duplicates_urls.keys())
+            for drug in drugs:
+                entry = {'Drug': drug, 'URL': no_duplicates_urls[drug]}
+                review_urls.append(entry)
 
         print(str(len(unfound_drugs)) + ' drugs not found')
         print(unfound_drugs)

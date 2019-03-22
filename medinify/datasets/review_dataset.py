@@ -23,7 +23,7 @@ class ReviewDataset():
     reviews = []
     drug_name = ''
     meta = {'locked': False}
-    scraper = ''  # WebMD, EverydayHealth, Drugs, DrugRatingz, Iodine
+    scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz, Iodine
 
     def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
@@ -88,7 +88,17 @@ class ReviewDataset():
         if self.meta['locked']:
             print('Dataset locked. Please load a different dataset.')
             return
-        scraper = WebMDScraper()
+
+        scraper = None
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
+
         urls = []
 
         with open(file_path) as csv_file:
