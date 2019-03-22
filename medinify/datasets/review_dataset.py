@@ -144,6 +144,33 @@ class ReviewDataset():
 
         print('\nAll urls scraped!')
 
+    @staticmethod
+    def collect_all_nanodrugs():
+        webmd_dataset = ReviewDataset('nano', 'WebMD')
+        drugs_dataset = ReviewDataset('nano', 'Drugs')
+        drugratingz_dataset = ReviewDataset('nano', 'DrugRatingz')
+        everydayhealth_dataset = ReviewDataset('nano', 'EverydayHealth')
+
+        webmd_dataset.collect_drug_names('nanodrug_names.csv', 'nano_webmd.csv')
+        drugs_dataset.collect_drug_names('nanodrug_names.csv', 'nano_drugs.csv')
+        drugratingz_dataset.collect_drug_names('nanodrug_names.csv', 'nano_drugratingz.csv')
+        everydayhealth_dataset.collect_drug_names('nanodrug_names.csv', 'nano_everydayhealth.csv')
+
+        webmd_dataset.collect_urls('nano_webmd.csv')
+        drugs_dataset.collect_urls('nano_drugs.csv')
+        drugratingz_dataset.collect_urls('nano_drugratingz.csv')
+        everydayhealth_dataset.collect_urls('nano_everydayhealth.csv')
+
+        webmd_dataset.write_file('csv', 'nano_urls_webmd.csv')
+        drugs_dataset.write_file('csv', 'nano_urls_drugs.csv')
+        drugratingz_dataset.write_file('csv', 'nano_urls_drugratingz.csv')
+        everydayhealth_dataset.write_file('csv', 'nano_urls_everydayhealth.csv')
+
+        os.remove('nano_webmd.csv')
+        os.remove('nano_drugs.csv')
+        os.remove('nano_drugratingz.csv')
+        os.remove('nano_everydayhealth.csv')
+
     def save(self):
         """Saves current reviews as a pickle file
         """
