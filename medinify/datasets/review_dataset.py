@@ -11,7 +11,7 @@ import csv
 import json
 import pprint
 from medinify.scrapers import WebMDScraper, EverydayHealthScraper, \
-    DrugRatingzScraper, DrugsScraper, IodineScraper
+    DrugRatingzScraper, DrugsScraper
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -23,7 +23,7 @@ class ReviewDataset():
     reviews = []
     drug_name = ''
     meta = {'locked': False}
-    scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz, Iodine
+    scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz
 
     def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
@@ -54,8 +54,6 @@ class ReviewDataset():
             scraper = DrugsScraper()
         elif self.scraper == 'DrugRatingz':
             scraper = DrugRatingzScraper()
-        elif self.scraper == 'Iodine':
-            scraper = IodineScraper()
 
         if testing:
             scraper = WebMDScraper(False, 1)
@@ -83,8 +81,6 @@ class ReviewDataset():
         elif self.scraper == 'DrugRatingz':
             scraper = DrugRatingzScraper()
             scraper.get_drug_urls(file_path, output_path)
-        elif self.scraper == 'Iodine':
-            print('collect_drug_names is not implemented for Iodine scraper')
 
     def collect_urls(self, file_path, start=0):
         """Scrape all reviews for all drugs urls in file

@@ -11,6 +11,5 @@ __all__ = (
     'WebMDScraper',
     'DrugsScraper',
     'DrugRatingzScraper',
-    'IodineScraper',
     'EverydayHealthScraper',
 )

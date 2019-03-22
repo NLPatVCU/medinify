@@ -4,7 +4,6 @@ Tests for all drug review scrapers
 
 import os
 from medinify.scrapers import WebMDScraper
-from medinify.scrapers import IodineScraper
 from medinify.scrapers import DrugRatingzScraper
 from medinify.scrapers import DrugsScraper
 
@@ -42,16 +41,6 @@ def test_webmd_scrape():
     assert 'effectiveness' in keys
     assert 'ease of use' in keys
     assert 'satisfaction' in keys
-
-
-def test_iodine_scrape():
-    """Test iodine scrape"""
-    input_url = 'https://www.iodine.com/drug/adderall/reviews'
-    iodine_scraper = IodineScraper()
-    iodine_scraper.scraper(input_url, 'test.csv')
-    assert os.path.exists('test.csv')
-    os.remove('test.csv')
-
 
 def test_drugratingz_scrape():
     """Test drug ratingz scrape"""
