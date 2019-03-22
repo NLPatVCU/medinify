@@ -228,8 +228,8 @@ class ReviewDataset():
         print('{} empty comments removed.'.format(empty_comments_removed))
         self.reviews = updated_reviews
 
-    def generate_rating(self):
-        """Generate rating based on source and options
+    def generate_rating_webmd(self):
+        """Generate rating based for webmd
         """
         updated_reviews = []
 
@@ -241,11 +241,30 @@ class ReviewDataset():
 
             self.reviews = updated_reviews
 
-        elif self.scraper == 'EverydayHealth':
-            return
+    def generate_ratings_drugratingz(self):
+        """Generate rating based for drugratingz
+        """
+        updated_reviews = []
 
-        else:
-            print('generate_reviews not implemented for {} scraper'.format(self.scraper))
+        if self.scraper == 'DrugRatingz':
+            for review in self.reviews:
+                review['rating'] = review['effectiveness']
+                del review['effectiveness']
+                updated_reviews.append(review)
+
+            self.reviews = updated_reviews
+
+    def generate_ratings_drugs(self):
+        """Generate rating based for drugs
+        """
+        updated_reviews = []
+
+        if self.scraper == 'Drugs':
+            for review in self.reviews:
+                review['rating'] = review['rating'] / 2.0
+                updated_reviews.append(review)
+
+            self.reviews = updated_reviews
 
     def print_stats(self):
         """Print relevant stats about the dataset
