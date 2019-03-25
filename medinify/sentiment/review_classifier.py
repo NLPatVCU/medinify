@@ -116,6 +116,7 @@ class ReviewClassifier():
         return train_data, train_target
 
     def build_dataset(self, reviews_filename):
+        """Given reviews file, builds train_data and train_target datasets"""
         dataset = self.create_dataset(reviews_filename)
         train_data, train_target = self.split_data_target(dataset)
         return train_data, train_target
