@@ -5,6 +5,8 @@ Tests for all drug review scrapers
 import os
 from medinify.scrapers import WebMDScraper
 from medinify.scrapers import DrugRatingzScraper
+from medinify.scrapers import DrugsScraper
+from medinify.scrapers import EverydayHealthScraper
 from medinify.scrapers import DrugsScraper, EverydayHealthScraper
 
 def test_webmd_max_pages():
@@ -68,6 +70,24 @@ def test_drugs_scrape():
     review_list = drugs_scraper.scrape(input_url)
     assert len(review_list) > 5
 
+def test_get_drug_urls():
+   scraper = WebMDScraper()
+   scraper.get_drug_urls('test-drug-names.csv', 'test-drug-urls.csv')
+   assert os.path.exists('test-drug-urls.csv')
+   os.remove('test-drug-urls.csv')
+
+def test_everydayhealth_max_pages():
+    """Test everydayhealth max pages"""
+    url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
+    everydayhealth_scraper = EverydayHealthScraper()
+    assert everydayhealth_scraper.max_pages(url) == 15
+
+def test_everydayhealth_scrape():
+    url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
+    everydayhealth_scraper = EverydayHealthScraper()
+    review_list = everydayhealth_scraper.scrape(url, 'test.csv', 4)
+    assert os.path.exists('test.csv')
+    os.remove('test.csv')
     keys = list(review_list[-1].keys())
     assert 'comment' in keys
     assert 'rating' in keys
@@ -78,7 +98,6 @@ def test_everydayhealth_scrape():
     everydayhealth_scraper = EverydayHealthScraper()
     review_list = everydayhealth_scraper.scrape(input_url)
     assert len(review_list) > 5
-
     keys = list(review_list[-1].keys())
     assert 'comment' in keys
     assert 'rating' in keys
@@ -106,3 +125,4 @@ def test_get_drug_urls_drugratingz():
     scraper.get_drug_urls('test-drug-names.csv', 'urls.csv')
     assert os.path.exists('urls.csv')
     os.remove('urls.csv')
+
