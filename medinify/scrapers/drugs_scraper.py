@@ -13,7 +13,6 @@ class DrugsScraper():
 
     all_pages = True
     pages = 1
-    review_list = []
 
     def __init__(self, all_pages=True, pages=1):
         self.all_pages = all_pages
@@ -30,7 +29,7 @@ class DrugsScraper():
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
         table_footer = soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
-        total_reviews = int(table_footer[2].get_text().split()[0])
+        total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
 
         max_pages = total_reviews // 25
         if (total_reviews % 25 != 0):
@@ -52,7 +51,7 @@ class DrugsScraper():
 
         print('Scraping Drugs.com...')
 
-        self.review_list = []
+        review_list = []
         
         if self.all_pages:
             num_pages = self.max_pages(drug_url)

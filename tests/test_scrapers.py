@@ -72,12 +72,6 @@ def test_drugs_max_pages():
 
 def test_drugs_scrape():
     """Test drugs.com scrape"""
-    url = 'https://www.drugs.com/comments/dabigatran/'
-    drugs_scraper = DrugsScraper()
-    drugs_scraper.scrape(url, 1)
-    assert len(drugs_scraper.review_list) > 5
-
-    """Test drugs scrape"""
     input_url = 'https://www.drugs.com/comments/dabigatran/'
     drugs_scraper = DrugsScraper()
     review_list = drugs_scraper.scrape(input_url)
