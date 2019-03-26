@@ -38,6 +38,11 @@ class EverydayHealthScraper():
                     rating = review.find('div', {'class': 'star-rating-print'}).text
                     rating = re.sub('Stars', '', rating)
 
+                # Encode string to unicode for ascii codec
+                comment = comment.encode('utf-8')
+                review_for = review_for.encode('utf-8')
+                rating = rating.encode('utf-8')
+                
                 review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
 
         with open(output_path, 'w') as output_file:

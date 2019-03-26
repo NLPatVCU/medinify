@@ -86,6 +86,6 @@ def test_everydayhealth_max_pages():
 def test_everydayhealth_scrape():
     url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
     everydayhealth_scraper = EverydayHealthScraper()
-    everydayhealth_scraper.scrape(url, 'test.csv', 3)
+    everydayhealth_scraper.scrape(url, 'test.csv', 4)
     assert os.path.exists('test.csv')
     os.remove('test.csv')
