@@ -4,7 +4,6 @@ Examples for how to use the Medinify package
 
 # from medinify.scrapers import WebMDScraper
 # from medinify.scrapers import DrugsScraper
-# from medinify.scrapers import IodineScraper 
 from medinify.scrapers import WebMDScraper
 # from medinify.scrapers import DrugsScraper
 # from medinify.scrapers import EverydayHealthScraper

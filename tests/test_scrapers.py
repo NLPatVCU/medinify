@@ -41,15 +41,6 @@ def test_webmd_scrape():
     assert 'ease of use' in keys
     assert 'satisfaction' in keys
 
-
-def test_iodine_scrape():
-    """Test iodine scrape"""
-    input_url = 'https://www.iodine.com/drug/adderall/reviews'
-    iodine_scraper = IodineScraper()
-    iodine_scraper.scraper(input_url, 'test.csv')
-    assert os.path.exists('test.csv')
-    os.remove('test.csv')
-
 def test_drugratingz_scrape():
     """Test drug ratingz scrape"""
     input_url = 'https://www.drugratingz.com/reviews/75/Drug-Adderall-XR.html'
