@@ -10,7 +10,8 @@ import pickle
 import csv
 import json
 import pprint
-from medinify.scrapers import WebMDScraper
+from medinify.scrapers import WebMDScraper, EverydayHealthScraper, \
+    DrugRatingzScraper, DrugsScraper
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -22,11 +23,13 @@ class ReviewDataset():
     reviews = []
     drug_name = ''
     meta = {'locked': False}
+    scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz
 
-    def __init__(self, drug_name):
+    def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
         drug_name = ''.join(char for char in drug_name if char.isalnum())
         self.drug_name = drug_name
+        self.scraper = scraper
         print('Created object for {}'.format(self.drug_name))
 
     def collect(self, url, testing=False):
@@ -41,13 +44,43 @@ class ReviewDataset():
 
         self.meta['startTimestamp'] = time()
         self.meta['drugs'] = [self.drug_name]
-        scraper = WebMDScraper()
+
+        scraper = None
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
 
         if testing:
             scraper = WebMDScraper(False, 1)
 
         self.reviews = scraper.scrape(url)
         self.meta['endTimestamp'] = time()
+
+    def collect_drug_names(self, file_path, output_path):
+        """Given list of drug names, collect urls for those review page on
+            the scraper's website
+
+        Args:
+            file_path: input csv with list of drug names
+            output_path: output csv with urls
+        """
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+            scraper.get_drug_urls(file_path, output_path)
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+            scraper.get_drug_urls(file_path, output_path)
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+            scraper.get_drug_urls(file_path, output_path)
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
+            scraper.get_drug_urls(file_path, output_path)
 
     def collect_urls(self, file_path, start=0):
         """Scrape all reviews for all drugs urls in file
@@ -58,7 +91,17 @@ class ReviewDataset():
         if self.meta['locked']:
             print('Dataset locked. Please load a different dataset.')
             return
-        scraper = WebMDScraper()
+
+        scraper = None
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
+
         urls = []
 
         with open(file_path) as csv_file:
@@ -185,36 +228,65 @@ class ReviewDataset():
         print('{} empty comments removed.'.format(empty_comments_removed))
         self.reviews = updated_reviews
 
-    def generate_rating(self):
-        """Generate rating based on source and options
+    def generate_rating_webmd(self):
+        """Generate rating based for webmd
         """
         updated_reviews = []
 
-        for review in self.reviews:
-            review['rating'] = review['effectiveness']
-            del review['effectiveness']
-            updated_reviews.append(review)
+        if self.scraper == 'WebMD':
+            for review in self.reviews:
+                review['rating'] = review['effectiveness']
+                del review['effectiveness']
+                updated_reviews.append(review)
 
-        self.reviews = updated_reviews
+            self.reviews = updated_reviews
+
+    def generate_ratings_drugratingz(self):
+        """Generate rating based for drugratingz
+        """
+        updated_reviews = []
+
+        if self.scraper == 'DrugRatingz':
+            for review in self.reviews:
+                review['rating'] = review['effectiveness']
+                del review['effectiveness']
+                updated_reviews.append(review)
+
+            self.reviews = updated_reviews
+
+    def generate_ratings_drugs(self):
+        """Generate rating based for drugs
+        """
+        updated_reviews = []
+
+        if self.scraper == 'Drugs':
+            for review in self.reviews:
+                review['rating'] = review['rating'] / 2.0
+                updated_reviews.append(review)
+
+            self.reviews = updated_reviews
 
     def print_stats(self):
         """Print relevant stats about the dataset
         """
-        reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        if self.scraper in ['WebMD', 'EverydayHealth']:
+            reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 
-        for review in self.reviews:
-            rating = review['rating']
-            reviews_ratings[rating] += 1
+            for review in self.reviews:
+                rating = review['rating']
+                reviews_ratings[rating] += 1
 
-        print('\nTotal reviews: {}'.format(len(self.reviews)))
-        for key, val in reviews_ratings.items():
-            print('{} star ratings: {}'.format(key, val))
+            print('\nTotal reviews: {}'.format(len(self.reviews)))
+            for key, val in reviews_ratings.items():
+                print('{} star ratings: {}'.format(key, val))
 
-        positive_ratings = reviews_ratings[4] + reviews_ratings[5]
-        negative_ratings = reviews_ratings[1] + reviews_ratings[2]
-        print('Positive ratings: {}'.format(positive_ratings))
-        print('Negative ratings: {}'.format(negative_ratings))
-        print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
+            positive_ratings = reviews_ratings[4] + reviews_ratings[5]
+            negative_ratings = reviews_ratings[1] + reviews_ratings[2]
+            print('Positive ratings: {}'.format(positive_ratings))
+            print('Negative ratings: {}'.format(negative_ratings))
+            print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
+        else:
+            print('print_stats not implemented for {} scraper'.format(self.scraper))
 
     def print_reviews(self):
         """Prints out current dataset in human readable format
