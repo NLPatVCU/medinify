@@ -41,11 +41,11 @@ class EverydayHealthScraper():
                 # Encode string to unicode for ascii codec
                 comment = comment.encode('utf-8')
                 review_for = review_for.encode('utf-8')
-                rating = rating.encode('utf-8')
                 
                 review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
 
         print("Number of reviews scraped: " + str(len(review_list)))
+        return review_list
 
     def max_pages(self, input_url):
         """Finds number of review pages for this drug.
@@ -73,7 +73,6 @@ class EverydayHealthScraper():
         print('Found ' + str(total_reviews) + ' reviews.')
         print('Scraping ' + str(max_pages) + ' pages...')
         return max_pages
-        return review_list
 
     def get_drug_urls(self, file_path, output_file):
         """Given a list of drug names, gets reviews pages on EverydayHealth.com"""
