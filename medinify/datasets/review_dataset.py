@@ -2,12 +2,16 @@
 Dataset for collection, storing, and cleansing of drug reviews.
 """
 
+import os
+from time import time
+from datetime import date
+from datetime import datetime
 import pickle
 import csv
 import json
 import pprint
-from random import shuffle
-from medinify.scrapers import WebMDScraper
+from medinify.scrapers import WebMDScraper, EverydayHealthScraper, \
+    DrugRatingzScraper, DrugsScraper
 
 class ReviewDataset():
     """Dataset for collection, storing, and cleansing of drug reviews.
@@ -18,11 +22,14 @@ class ReviewDataset():
     """
     reviews = []
     drug_name = ''
+    meta = {'locked': False}
+    scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz
 
-    def __init__(self, drug_name):
+    def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
         drug_name = ''.join(char for char in drug_name if char.isalnum())
         self.drug_name = drug_name
+        self.scraper = scraper
         print('Created object for {}'.format(self.drug_name))
 
     def collect(self, url, testing=False):
@@ -31,65 +38,148 @@ class ReviewDataset():
         Args:
             url: WebMD URL where all the reviews are
         """
-        scraper = WebMDScraper()
+        if self.meta['locked']:
+            print('Dataset locked. Please load a different dataset.')
+            return
+
+        self.meta['startTimestamp'] = time()
+        self.meta['drugs'] = [self.drug_name]
+
+        scraper = None
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
 
         if testing:
             scraper = WebMDScraper(False, 1)
 
         self.reviews = scraper.scrape(url)
+        self.meta['endTimestamp'] = time()
 
-    def collect_all_common_reviews(self, start=0):
-        """Scrape all reviews for all "common" drugs on main WebMD drugs page
+    def collect_drug_names(self, file_path, output_path):
+        """Given list of drug names, collect urls for those review page on
+            the scraper's website
+
+        Args:
+            file_path: input csv with list of drug names
+            output_path: output csv with urls
+        """
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+            scraper.get_drug_urls(file_path, output_path)
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+            scraper.get_drug_urls(file_path, output_path)
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+            scraper.get_drug_urls(file_path, output_path)
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
+            scraper.get_drug_urls(file_path, output_path)
+
+    def collect_urls(self, file_path, start=0):
+        """Scrape all reviews for all drugs urls in file
 
         Args:
             start: index to start at if continuing from previous run
         """
-        # Load in case we have pre-exisiting progress
-        self.load()
-        scraper = WebMDScraper()
+        if self.meta['locked']:
+            print('Dataset locked. Please load a different dataset.')
+            return
 
-        # Get common drugs names and urls
-        common_drugs = scraper.get_common_drugs()
-        print('Found {} common drugs.'.format(len(common_drugs)))
+        scraper = None
+        if self.scraper == 'WebMD':
+            scraper = WebMDScraper()
+        elif self.scraper == 'EverydayHealth':
+            scraper = EverydayHealthScraper()
+        elif self.scraper == 'Drugs':
+            scraper = DrugsScraper()
+        elif self.scraper == 'DrugRatingz':
+            scraper = DrugRatingzScraper()
 
-        # Loop through common drugs starting at start index
-        for i in range(start, len(common_drugs)):
-            drug = common_drugs[i]
-            print('\n{} drugs left to scrape.'.format(len(common_drugs) - i))
+        urls = []
+
+        with open(file_path) as csv_file:
+            reader = csv.DictReader(csv_file)
+            for row in reader:
+                if row['URL'] != 'Not found':
+                    urls.append({'name': row['Drug'], 'url': row['URL']})
+        print('Found {} urls.'.format(len(urls)))
+
+        if os.path.isfile(self.drug_name.lower() + '-dataset.pickle'):
+            self.load()
+        else:
+            print('Saving meta...')
+            drug_names = [x['name'] for x in urls]
+            self.meta['drugs'] = drug_names
+            self.meta['startTimestamp'] = time()
+            self.save()
+
+        # Loop through urls starting at start index
+        for i in range(start, len(urls)):
+            drug = urls[i]
+            print('\n{} drugs left to scrape.'.format(len(urls) - i))
             print('Scraping {}...'.format(drug['name']))
             reviews = scraper.scrape(drug['url'])
 
             # If it's the first drug then replace self.reviews instead of appending
-            if drug['name'] == 'Actos':
+            if drug['name'] == urls[0]['name']:
                 self.reviews = reviews
             else:
                 self.reviews += reviews
 
             # Save our progress and let the user know the data is safe
+            self.meta['endTimestamp'] = time()
             self.save()
             print('{} reviews saved. Safe to quit.'.format(drug['name']))
 
             # Let the user know what start index to use to continue later
-            if i < len(common_drugs) - 1:
-                print('To continue run with parameter start={}'.format(i+1))
+            if i < len(urls) - 1:
+                print('To continue run with parameter start={}'.format(i + 1))
 
-        print('\nAll common drug review scraping complete!')
+        print('\nAll urls scraped!')
 
     def save(self):
         """Saves current reviews as a pickle file
         """
-        filename = self.drug_name + '-dataset.pickle'
-        with open(filename, 'wb') as pickle_file:
-            pickle.dump(
-                self.reviews, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        if self.meta['locked']:
+            print('Dataset locked. Please load a different dataset.')
+            return
 
-    def load(self):
+        filename = self.drug_name + '-dataset.pickle'
+        data = {'meta': self.meta, 'reviews': self.reviews}
+        with open(filename, 'wb') as pickle_file:
+            pickle.dump(data, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def final_save(self):
+        """Save current reviews as a pickle file with timestamp and locks it
+        """
+        if self.meta['locked']:
+            print('Dataset locked. Please load a different dataset.')
+            return
+        self.meta['locked'] = True
+        data = {'meta': self.meta, 'reviews': self.reviews}
+        today = date.today()
+        filename = self.drug_name + '-dataset-' + str(today) + '.pickle'
+
+        with open(filename, 'wb') as pickle_file:
+            pickle.dump(data, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load(self, filename=None):
         """Loads set of reviews from a pickle file
         """
-        filename = self.drug_name + '-dataset.pickle'
+        if filename is None:
+            filename = self.drug_name + '-dataset.pickle'
+
         with open(filename, 'rb') as pickle_file:
             data = pickle.load(pickle_file)
-            self.reviews = data
+            self.reviews = data['reviews']
+            self.meta = data['meta']
 
     def write_file(self, filetype, filename=None):
         """Creates CSV file of review data
@@ -138,87 +228,65 @@ class ReviewDataset():
         print('{} empty comments removed.'.format(empty_comments_removed))
         self.reviews = updated_reviews
 
-    # def combine_ratings(self, effectiveness=True, ease=True, satisfaction=True):
-    #     """Take 3 WebMD ratings, save the average, and remove the original scores
-    #     """
-    #     updated_reviews = []
-    #     types_of_ratings = sum([effectiveness, ease, satisfaction])
-
-    #     print('Combining ratings...')
-
-    #     for review in self.reviews:
-    #         rating_sum = 0
-
-    #         rating_sum += review['effectiveness'] if effectiveness else 0
-    #         rating_sum += review['ease of use'] if ease else 0
-    #         rating_sum += review['satisfaction'] if satisfaction else 0
-
-    #         del review['effectiveness']
-    #         del review['ease of use']
-    #         del review['satisfaction']
-
-    #         review['rating'] = float(rating_sum) / float(types_of_ratings)
-    #         updated_reviews.append(review)
-
-    #     self.reviews = updated_reviews
-
-    def generate_rating(self):
-        """Generate rating based on source and options
+    def generate_rating_webmd(self):
+        """Generate rating based for webmd
         """
         updated_reviews = []
 
-        for review in self.reviews:
-            review['rating'] = review['effectiveness']
-            del review['effectiveness']
-            updated_reviews.append(review)
+        if self.scraper == 'WebMD':
+            for review in self.reviews:
+                review['rating'] = review['effectiveness']
+                del review['effectiveness']
+                updated_reviews.append(review)
 
-        self.reviews = updated_reviews
+            self.reviews = updated_reviews
 
-    def balance(self):
-        """Remove ratings so there's even number of positive and negative
+    def generate_ratings_drugratingz(self):
+        """Generate rating based for drugratingz
         """
-        positive_reviews = []
-        negative_reviews = []
+        updated_reviews = []
 
-        for review in self.reviews:
-            if review['rating'] == 5:
-                positive_reviews.append(review)
-            elif review['rating'] <= 2:
-                negative_reviews.append(review)
+        if self.scraper == 'DrugRatingz':
+            for review in self.reviews:
+                review['rating'] = review['effectiveness']
+                del review['effectiveness']
+                updated_reviews.append(review)
 
-        positives = len(positive_reviews)
-        negatives = len(negative_reviews)
+            self.reviews = updated_reviews
 
-        least_reviews = min([positives, negatives])
+    def generate_ratings_drugs(self):
+        """Generate rating based for drugs
+        """
+        updated_reviews = []
 
-        if positives == least_reviews:
-            shuffle(negative_reviews)
-            negative_reviews = negative_reviews[:least_reviews]
-        elif negatives == least_reviews:
-            shuffle(positive_reviews)
-            positive_reviews = positive_reviews[:least_reviews]
+        if self.scraper == 'Drugs':
+            for review in self.reviews:
+                review['rating'] = review['rating'] / 2.0
+                updated_reviews.append(review)
 
-        self.reviews = positive_reviews + negative_reviews
-        shuffle(self.reviews)
+            self.reviews = updated_reviews
 
     def print_stats(self):
         """Print relevant stats about the dataset
         """
-        reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        if self.scraper in ['WebMD', 'EverydayHealth']:
+            reviews_ratings = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
 
-        for review in self.reviews:
-            rating = review['rating']
-            reviews_ratings[rating] += 1
+            for review in self.reviews:
+                rating = review['rating']
+                reviews_ratings[rating] += 1
 
-        print('\nTotal reviews: {}'.format(len(self.reviews)))
-        for key, val in reviews_ratings.items():
-            print('{} star ratings: {}'.format(key, val))
+            print('\nTotal reviews: {}'.format(len(self.reviews)))
+            for key, val in reviews_ratings.items():
+                print('{} star ratings: {}'.format(key, val))
 
-        positive_ratings = reviews_ratings[4] + reviews_ratings[5]
-        negative_ratings = reviews_ratings[1] + reviews_ratings[2]
-        print('Positive ratings: {}'.format(positive_ratings))
-        print('Negative ratings: {}'.format(negative_ratings))
-        print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
+            positive_ratings = reviews_ratings[4] + reviews_ratings[5]
+            negative_ratings = reviews_ratings[1] + reviews_ratings[2]
+            print('Positive ratings: {}'.format(positive_ratings))
+            print('Negative ratings: {}'.format(negative_ratings))
+            print('Pos:Neg ratio: {}'.format(positive_ratings / negative_ratings))
+        else:
+            print('print_stats not implemented for {} scraper'.format(self.scraper))
 
     def print_reviews(self):
         """Prints out current dataset in human readable format
@@ -226,3 +294,17 @@ class ReviewDataset():
         print('\n-----"{}" Review Dataset-----'.format(self.drug_name))
         pprint.pprint(self.reviews)
         print('\n"{}" Reviews: {}'.format(self.drug_name, len(self.reviews)))
+
+    def print_meta(self):
+        """Prints out meta data about dataset
+        """
+        locked = str(self.meta['locked'])
+        start_timestamp = self.meta['startTimestamp']
+        start_timestamp = datetime.utcfromtimestamp(start_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        end_timestamp = self.meta['endTimestamp']
+        end_timestamp = datetime.utcfromtimestamp(end_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+        print('Locked: ' + locked)
+        print('Started scrape at ' + start_timestamp + ' UTC')
+        print('Finished scrape at ' + end_timestamp + ' UTC')
+        print('Drugs in dataset: ' + str(self.meta['drugs']))

@@ -3,35 +3,75 @@ Tests for the ReviewDataset()
 """
 
 import os
+from datetime import date
 import pytest
 from medinify.datasets import ReviewDataset
+
 
 @pytest.fixture()
 def dataset():
     """Fixture for standard dataset"""
     print("setup")
-    doxil_dataset = ReviewDataset('TEST')
+    doxil_dataset = ReviewDataset('TEST', 'WebMD')
     doxil_dataset.load()
 
     yield doxil_dataset
 
     print("teardown")
-    filenames = ['doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv']
+    final_dataset_name = 'doxil-dataset-' + str(date.today()) + '.pickle'
+    filenames = [
+        'doxil-dataset.pickle', 'doxil-reviews.json', 'doxil-reviews.csv',
+        'test-url-dataset.pickle', final_dataset_name
+    ]
 
     for name in filenames:
         if os.path.exists(name):
             os.remove(name)
 
-def test_init_name(dataset):
+
+def test_init_webmd(dataset):
     """Test the name is lowercased during init"""
     assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'WebMD'
+
+def test_init_drugs():
+    """Test the name is lowercased during init"""
+    dataset = ReviewDataset('test', 'Drugs')
+    assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'Drugs'
+
+def test_init_drugratingz():
+    """Test the name is lowercased during init"""
+    dataset = ReviewDataset('test', 'DrugRatingz')
+    assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'DrugRatingz'
+
+def test_init_everydayhealth():
+    """Test the name is lowercased during init"""
+    dataset = ReviewDataset('test', 'EverydayHealth')
+    assert dataset.drug_name == 'test'
+    assert dataset.scraper == 'EverydayHealth'
 
 def test_save(dataset):
     """Test save"""
     dataset.drug_name = "doxil"
-    dataset.collect('https://www.webmd.com/drugs/drugreview-12120-Doxil-intravenous.aspx?drugid=12120&drugname=Doxil-intravenous', True)
+    dataset.collect(
+        'https://www.webmd.com/drugs/drugreview-12120-Doxil-intravenous.aspx?drugid=12120&drugname=Doxil-intravenous',
+        True)
     dataset.save()
     assert os.path.exists('doxil-dataset.pickle')
+    assert dataset.meta['drugs'] == ['doxil']
+    assert dataset.meta['startTimestamp']
+    assert dataset.meta['endTimestamp']
+    assert not dataset.meta['locked']
+
+
+def test_final_save(dataset):
+    """Test final save"""
+    dataset.drug_name = 'doxil'
+    dataset.final_save()
+    assert os.path.exists('doxil-dataset-' + str(date.today()) + '.pickle')
+
 
 def test_load(dataset):
     """Test load"""
@@ -42,17 +82,20 @@ def test_load(dataset):
     dataset.load()
     assert dataset.reviews
 
+
 def test_write_file_json(dataset):
     """Test write json file"""
     dataset.drug_name = 'doxil'
     dataset.write_file('json')
     assert os.path.exists('doxil-reviews.json')
-    
+
+
 def test_write_file_csv(dataset):
     """Test write csv file"""
     dataset.drug_name = 'doxil'
     dataset.write_file('csv')
     assert os.path.exists('doxil-reviews.csv')
+
 
 def test_remove_empty_comments(dataset):
     """Test remove empty comments"""
@@ -65,30 +108,64 @@ def test_remove_empty_comments(dataset):
 
     assert empty_comments == 0
 
-def test_balance(dataset):
-    """Test balance"""
-    dataset.generate_rating()
-    positive_reviews = 0
-    negative_reviews = 0
 
-    for review in dataset.reviews:
-        if review['rating'] == 5:
-            positive_reviews += 1
-        elif review['rating'] <= 2:
-            negative_reviews += 1
+def test_print_meta(dataset):
+    """Test the meta print"""
+    dataset.print_meta()
 
-    least_reviews = min([positive_reviews, negative_reviews])
+def test_meta(dataset):
+    """Test that meta data has been created properly"""
+    dataset.load()
+    assert dataset.meta['drugs'] == ['test']
+    assert dataset.meta['startTimestamp']
+    assert dataset.meta['endTimestamp']
+    assert not dataset.meta['locked']
 
-    dataset.balance()
+def test_lock(dataset):
+    """Test that final datasets are properly locked"""
+    reviews = dataset.reviews
+    dataset.meta['locked'] = True
+    dataset.drug_name = "doxil"
 
-    positive_reviews = 0
-    negative_reviews = 0
+    dataset.collect(
+        'https://www.webmd.com/drugs/drugreview-12120-Doxil-intravenous.aspx?drugid=12120&drugname=Doxil-intravenous'
+    )
+    dataset.save()
+    dataset.final_save()
 
-    for review in dataset.reviews:
-        if review['rating'] == 5:
-            positive_reviews += 1
-        elif review['rating'] <= 2:
-            negative_reviews += 1
+    assert reviews == dataset.reviews
+    assert not os.path.exists('doxil-dataset.pickle')
+    assert not os.path.exists('doxil-dataset-' + str(date.today) + '.pickle')
 
-    assert positive_reviews == least_reviews
-    assert negative_reviews == least_reviews
+def test_collect_webmd_urls(dataset):
+    """Test collect urls"""
+    dataset.drug_name = 'test-url'
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('test-url-dataset.pickle')
+
+def test_collect_drugs_urls():
+    """Test collect urls"""
+    dataset = ReviewDataset('test-url', 'Drugs')
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('testurl-dataset.pickle')
+    os.remove('testurl-dataset.pickle')
+
+def test_collect_drugratingz_urls():
+    """Test collect urls"""
+    dataset = ReviewDataset('test-url', 'DrugRatingz')
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('testurl-dataset.pickle')
+    os.remove('testurl-dataset.pickle')
+
+def test_collect_everydayhealth_urls():
+    """Test collect urls"""
+    dataset = ReviewDataset('test-url', 'EverydayHealth')
+    dataset.collect_urls('test-urls.csv')
+    assert os.path.exists('testurl-dataset.pickle')
+    os.remove('testurl-dataset.pickle')
+
+def test_collect_urls_continue(dataset):
+    """Test collect urls when continuing"""
+    dataset.drug_name = 'test-url'
+    dataset.collect_urls('test-urls.csv', 1)
+    assert os.path.exists('test-url-dataset.pickle')

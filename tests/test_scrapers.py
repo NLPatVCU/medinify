@@ -4,15 +4,14 @@ Tests for all drug review scrapers
 
 import os
 from medinify.scrapers import WebMDScraper
-from medinify.scrapers import IodineScraper
 from medinify.scrapers import DrugRatingzScraper
-from medinify.scrapers import DrugsScraper
+from medinify.scrapers import DrugsScraper, EverydayHealthScraper
 
 def test_webmd_max_pages():
     """Test webmd max pages"""
     input_url = 'https://www.webmd.com/drugs/drugreview-151652-banzel.aspx?drugid=151652&drugname=banzel'
     webmd_scraper = WebMDScraper()
-    assert webmd_scraper.max_pages(input_url) == 2
+    assert webmd_scraper.max_pages(input_url) == 3
 
 
 def test_webmd_scrape_page():
@@ -42,6 +41,7 @@ def test_webmd_scrape():
     assert 'ease of use' in keys
     assert 'satisfaction' in keys
 
+
 def test_iodine_scrape():
     """Test iodine scrape"""
     input_url = 'https://www.iodine.com/drug/adderall/reviews'
@@ -50,14 +50,19 @@ def test_iodine_scrape():
     assert os.path.exists('test.csv')
     os.remove('test.csv')
 
-
 def test_drugratingz_scrape():
     """Test drug ratingz scrape"""
-    url = 'https://www.drugratingz.com/reviews/75/Drug-Adderall-XR.html'
+    input_url = 'https://www.drugratingz.com/reviews/75/Drug-Adderall-XR.html'
     drug_scraper = DrugRatingzScraper()
-    drug_scraper.scrape(url, 'test.csv')
-    assert os.path.exists('test.csv')
-    os.remove('test.csv')
+    review_list = drug_scraper.scrape(input_url)
+    assert len(review_list) > 5
+
+    keys = list(review_list[-1].keys())
+    assert 'comment' in keys
+    assert 'effectiveness' in keys
+    assert 'no side effects' in keys
+    assert 'convenience' in keys
+    assert 'value' in keys
 
 def test_drugs_max_pages():
     """Test drugs.com max pages"""
@@ -71,3 +76,48 @@ def test_drugs_scrape():
     drugs_scraper = DrugsScraper()
     drugs_scraper.scrape(url, 1)
     assert len(drugs_scraper.review_list) > 5
+
+    """Test drugs scrape"""
+    input_url = 'https://www.drugs.com/comments/dabigatran/'
+    drugs_scraper = DrugsScraper()
+    review_list = drugs_scraper.scrape(input_url)
+    assert len(review_list) > 5
+
+    keys = list(review_list[-1].keys())
+    assert 'comment' in keys
+    assert 'rating' in keys
+
+def test_everydayhealth_scrape():
+    """Test everydayhealth scrape"""
+    input_url = 'https://www.everydayhealth.com/drugs/citalopram/reviews'
+    everydayhealth_scraper = EverydayHealthScraper()
+    review_list = everydayhealth_scraper.scrape(input_url)
+    assert len(review_list) > 5
+
+    keys = list(review_list[-1].keys())
+    assert 'comment' in keys
+    assert 'rating' in keys
+
+def test_get_drug_urls_webmd():
+    scraper = WebMDScraper()
+    scraper.get_drug_urls('test-drug-names.csv', 'urls.csv')
+    assert os.path.exists('urls.csv')
+    os.remove('urls.csv')
+
+def test_get_drug_urls_drugs():
+    scraper = DrugsScraper()
+    scraper.get_drug_urls('test-drug-names.csv', 'urls.csv')
+    assert os.path.exists('urls.csv')
+    os.remove('urls.csv')
+
+def test_get_drug_urls_everydayhealth():
+    scraper = EverydayHealthScraper()
+    scraper.get_drug_urls('test-drug-names.csv', 'urls.csv')
+    assert os.path.exists('urls.csv')
+    os.remove('urls.csv')
+
+def test_get_drug_urls_drugratingz():
+    scraper = WebMDScraper()
+    scraper.get_drug_urls('test-drug-names.csv', 'urls.csv')
+    assert os.path.exists('urls.csv')
+    os.remove('urls.csv')
