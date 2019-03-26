@@ -48,7 +48,7 @@ class ReviewClassifier():
     def __init__(self, classifier_type=None):
         self.classifier_type = classifier_type
 
-    def build_dataset(self, reviews_filename):
+    def create_dataset(self, reviews_filename):
         """ Builds dataset of labelled positive and negative reviews
 
         :param reviews_filename: CSV file with comments and ratings
@@ -96,8 +96,10 @@ class ReviewClassifier():
 
         dataset = positive_comments + negative_comments
 
-        if self.classifier_type == 'nb' or self.classifier_type == 'dt' or self.evaluating:
-            return dataset
+        return dataset
+
+    def split_data_target(self, dataset):
+        """Builds train_data and train_target given dataset"""
 
         # Vectorize the BOW with sentiment reviews
         self.vectorizer = DictVectorizer(sparse=False)
@@ -111,6 +113,12 @@ class ReviewClassifier():
         self.encoder = process.LabelEncoder()
         train_target = self.encoder.fit_transform(target)
 
+        return train_data, train_target
+
+    def build_dataset(self, reviews_filename):
+        """Given reviews file, builds train_data and train_target datasets"""
+        dataset = self.create_dataset(reviews_filename)
+        train_data, train_target = self.split_data_target(dataset)
         return train_data, train_target
 
     def create_trained_model(self,
@@ -175,7 +183,7 @@ class ReviewClassifier():
             reviews_filename: CSV file of reviews with ratings
         """
         if self.classifier_type == 'nb' or self.classifier_type == 'dt':
-            dataset = self.build_dataset(reviews_filename)
+            dataset = self.create_dataset(reviews_filename)
             self.model = self.create_trained_model(dataset)
         elif self.classifier_type in ['nn', 'rf', 'svm']:
             train_data, train_target = self.build_dataset(reviews_filename)
@@ -196,7 +204,7 @@ class ReviewClassifier():
         ratings = []
 
         if self.classifier_type == 'nb' or self.classifier_type == 'dt':
-            dataset = self.build_dataset(reviews_filename)
+            dataset = self.create_dataset(reviews_filename)
             comments = [x[0] for x in dataset]
             ratings = [x[1] for x in dataset]
         elif self.classifier_type in ['nn', 'rf', 'svm']:
@@ -323,9 +331,8 @@ class ReviewClassifier():
             os.remove('trained_nn_vec_encoder.pickle')
 
         else:
-            self.evaluating = True
 
-            dataset = self.build_dataset(file_trained_on)
+            dataset = self.create_dataset(file_trained_on)
             self.vectorizer = DictVectorizer(sparse=False)
 
             data_frame = pd.DataFrame(dataset)
@@ -337,8 +344,6 @@ class ReviewClassifier():
             target = np.array(data_frame['target'])
             self.encoder = process.LabelEncoder()
             self.encoder.fit_transform(target)
-
-            self.evaluating = False
 
             if self.classifier_type in ['rf', 'svm']:
                 if pickle_file:
@@ -453,15 +458,13 @@ class ReviewClassifier():
         score = 0
 
         if self.classifier_type == 'nb':
-            dataset = self.build_dataset(test_filename)
+            dataset = self.create_dataset(test_filename)
             score = nltk.classify.util.accuracy(self.model, dataset)
             self.model.show_most_informative_features()
 
         elif self.classifier_type in ['rf', 'svm', 'nn']:
 
-            self.evaluating = True
-
-            dataset = self.build_dataset(test_filename)
+            dataset = self.create_dataset(test_filename)
             data_frame = pd.DataFrame(dataset)
             data_frame.columns = ['data', 'target']
 
@@ -470,8 +473,6 @@ class ReviewClassifier():
 
             evaluate_target = np.array(data_frame['target'])
             test_target = self.encoder.fit_transform(evaluate_target)
-
-            self.evaluating = False
 
             if self.classifier_type in ['rf', 'svm']:
                 score = self.model.score(test_data, test_target)
