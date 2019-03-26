@@ -66,11 +66,11 @@ def test_drugs_scrape():
     review_list = drugs_scraper.scrape(input_url)
     assert len(review_list) > 5
 
-# def test_get_drug_urls():
-#    scraper = WebMDScraper()
-#    scraper.get_drug_urls('test-drug-names.csv', 'test-drug-urls.csv')
-#    assert os.path.exists('test-drug-urls.csv')
-#    os.remove('test-drug-urls.csv')
+def test_get_drug_urls():
+   scraper = WebMDScraper()
+   scraper.get_drug_urls('test-drug-names.csv', 'test-drug-urls.csv')
+   assert os.path.exists('test-drug-urls.csv')
+   os.remove('test-drug-urls.csv')
 
 def test_everydayhealth_max_pages():
     """Test everydayhealth max pages"""
