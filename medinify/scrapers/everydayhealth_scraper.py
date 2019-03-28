@@ -11,17 +11,16 @@ class EverydayHealthScraper():
     """Scrapes EverydayHealth.com for drug reviews.
     """
 
-    def scrape(self, url, pages=1):  # fix pages setup once added max pages method
+    def scrape(self, url):  # fix pages setup once added max pages method
         """Scrape for drug reviews.
 
         Args:
             url: EverydayHealth.com page to scrape
-            pages (int): Number of pages to scrape
         """
 
         review_list = []
 
-        for i in range(pages):
+        for i in range(self.max_pages(url)):
             new_url = url + '?page=' + str(i+1)
             page = requests.get(new_url)
             soup = BeautifulSoup(page.text, 'html.parser')
@@ -42,7 +41,8 @@ class EverydayHealthScraper():
                 comment = comment.encode('utf-8')
                 review_for = review_for.encode('utf-8')
                 
-                review_list.append({'comment': comment, 'for': review_for, 'rating': rating})
+                review_list.append({'comment': comment.decode("utf-8"),
+                                    'for': review_for.decode("utf-8"), 'rating': rating})
 
         print("Number of reviews scraped: " + str(len(review_list)))
         return review_list
@@ -62,8 +62,10 @@ class EverydayHealthScraper():
                 # Case if no reviews available
                 
                 break
-
-        total_reviews_head = soup.find('div', {'class': 'review-details clearfix'}).find('h5').find('span', {'itemprop': 'reviewCount'}).text
+        if soup.find('div', {'class': 'review-details clearfix'}):
+            total_reviews_head = soup.find('div', {'class': 'review-details clearfix'}).find('h5').find('span', {'itemprop': 'reviewCount'}).text
+        else:
+            return 0
         total_reviews = int(total_reviews_head)
 
         max_pages_foot = soup.find('div', {'class': 'review-pagination'}).find('section', {'class': 'review-pagination__section--info'}).text.split()

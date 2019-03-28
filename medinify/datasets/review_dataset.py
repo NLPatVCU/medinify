@@ -146,10 +146,10 @@ class ReviewDataset():
 
     @staticmethod
     def collect_all_nanodrugs():
-        webmd_dataset = ReviewDataset('nano', 'WebMD')
-        drugs_dataset = ReviewDataset('nano', 'Drugs')
-        drugratingz_dataset = ReviewDataset('nano', 'DrugRatingz')
-        everydayhealth_dataset = ReviewDataset('nano', 'EverydayHealth')
+        webmd_dataset = ReviewDataset('webmd_nano', 'WebMD')
+        drugs_dataset = ReviewDataset('drugs_nano', 'Drugs')
+        drugratingz_dataset = ReviewDataset('drugratingz_nano', 'DrugRatingz')
+        everydayhealth_dataset = ReviewDataset('everyday_nano', 'EverydayHealth')
 
         webmd_dataset.collect_drug_names('nanodrug_names.csv', 'nano_webmd.csv')
         drugs_dataset.collect_drug_names('nanodrug_names.csv', 'nano_drugs.csv')
@@ -161,10 +161,10 @@ class ReviewDataset():
         drugratingz_dataset.collect_urls('nano_drugratingz.csv')
         everydayhealth_dataset.collect_urls('nano_everydayhealth.csv')
 
-        webmd_dataset.write_file('csv', 'nano_urls_webmd.csv')
-        drugs_dataset.write_file('csv', 'nano_urls_drugs.csv')
-        drugratingz_dataset.write_file('csv', 'nano_urls_drugratingz.csv')
-        everydayhealth_dataset.write_file('csv', 'nano_urls_everydayhealth.csv')
+        webmd_dataset.write_file('csv', 'nano_reviews_webmd.csv')
+        drugs_dataset.write_file('csv', 'nano_reviews_drugs.csv')
+        drugratingz_dataset.write_file('csv', 'nano_reviews_drugratingz.csv')
+        everydayhealth_dataset.write_file('csv', 'nano_reviews_everydayhealth.csv')
 
         os.remove('nano_webmd.csv')
         os.remove('nano_drugs.csv')
