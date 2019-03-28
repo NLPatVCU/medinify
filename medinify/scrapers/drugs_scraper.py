@@ -28,7 +28,13 @@ class DrugsScraper():
         """
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        table_footer = soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
+        table_footer = None
+        if soup.find('table', {'class': 'data-list ddc-table-sortable'}):
+            if soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot'):
+                table_footer = soup.find('table', {
+                'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
+        if not table_footer:
+            return 0
         total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
 
         max_pages = total_reviews // 25
