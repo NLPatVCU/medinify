@@ -158,10 +158,13 @@ class ReviewDataset():
 
         webmd_dataset.collect_urls('nano_webmd.csv')
         webmd_dataset.remove_empty_comments()
+        webmd_dataset.generate_rating_webmd()
         drugs_dataset.collect_urls('nano_drugs.csv')
         drugs_dataset.remove_empty_comments()
+        drugs_dataset.generate_ratings_drugs()
         drugratingz_dataset.collect_urls('nano_drugratingz.csv')
         drugratingz_dataset.remove_empty_comments()
+        drugratingz_dataset.generate_ratings_drugratingz()
         everydayhealth_dataset.collect_urls('nano_everydayhealth.csv')
         everydayhealth_dataset.remove_empty_comments()
 
