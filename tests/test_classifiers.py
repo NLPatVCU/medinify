@@ -6,21 +6,27 @@ import os
 from medinify.sentiment import ReviewClassifier
 import pytest
 
-def test_build_dataset_nn():
-    """Test build_dataset for neural network"""
+def test_create_dataset():
+    classifier = ReviewClassifier('nb')
+    dataset = classifier.create_dataset('test-reviews.csv')
+    assert list(dataset[0][0].values())[0]
+    assert dataset[0][1] == 'pos'
+    assert dataset[-1][1] == 'neg'
+
+def test_split_data_target():
+    classifier = ReviewClassifier('nn')
+    dataset = classifier.create_dataset('test-reviews.csv')
+    train_data, train_target = classifier.split_data_target(dataset)
+    assert len(train_data) == len(train_target)
+    assert train_data[0][0] in [0, 1]
+    assert train_target[0] in [0, 1]
+
+def test_build_dataset():
     classifier = ReviewClassifier('nn')
     train_data, train_target = classifier.build_dataset('test-reviews.csv')
     assert len(train_data) == len(train_target)
     assert train_data[0][0] in [0, 1]
     assert train_target[0] in [0, 1]
-
-def test_build_dataset_nb():
-    """Test build_dataset for naive bayes"""
-    classifier = ReviewClassifier('nb')
-    dataset = classifier.build_dataset('test-reviews.csv')
-    assert list(dataset[0][0].values())[0]
-    assert dataset[0][1] == 'pos'
-    assert dataset[-1][1] == 'neg'
 
 def test_create_trained_model_nn():
     """Test create trained model for neural network"""
@@ -32,7 +38,7 @@ def test_create_trained_model_nn():
 def test_create_trained_model_nb():
     """Test create train model for naive bayes"""
     classifier = ReviewClassifier('nb')
-    dataset = classifier.build_dataset('test-reviews.csv')
+    dataset = classifier.create_dataset('test-reviews.csv')
     model = classifier.create_trained_model(dataset=dataset)
     assert model
 
