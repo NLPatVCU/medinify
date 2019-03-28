@@ -145,16 +145,16 @@ class ReviewDataset():
         print('\nAll urls scraped!')
 
     @staticmethod
-    def collect_all_nanodrugs():
+    def collect_all_nanodrugs(drugname_input_file):
         webmd_dataset = ReviewDataset('webmd_nano', 'WebMD')
         drugs_dataset = ReviewDataset('drugs_nano', 'Drugs')
         drugratingz_dataset = ReviewDataset('drugratingz_nano', 'DrugRatingz')
         everydayhealth_dataset = ReviewDataset('everyday_nano', 'EverydayHealth')
 
-        webmd_dataset.collect_drug_names('nanodrug_names.csv', 'nano_webmd.csv')
-        drugs_dataset.collect_drug_names('nanodrug_names.csv', 'nano_drugs.csv')
-        drugratingz_dataset.collect_drug_names('nanodrug_names.csv', 'nano_drugratingz.csv')
-        everydayhealth_dataset.collect_drug_names('nanodrug_names.csv', 'nano_everydayhealth.csv')
+        webmd_dataset.collect_drug_names(drugname_input_file, 'nano_webmd.csv')
+        drugs_dataset.collect_drug_names(drugname_input_file, 'nano_drugs.csv')
+        drugratingz_dataset.collect_drug_names(drugname_input_file, 'nano_drugratingz.csv')
+        everydayhealth_dataset.collect_drug_names(drugname_input_file, 'nano_everydayhealth.csv')
 
         webmd_dataset.collect_urls('nano_webmd.csv')
         webmd_dataset.remove_empty_comments()
