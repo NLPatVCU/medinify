@@ -10,18 +10,55 @@ class DrugsScraper():
     """Scrapes Drugs.com for drug reviews.
     """
 
+
+    all_pages = True
+    pages = 1
+
+    def __init__(self, all_pages=True, pages=1):
+        self.all_pages = all_pages
+        self.pages = pages
+
+    def max_pages(self, drug_url):
+        """Finds number of review pages for this drug.
+
+        Args:
+            drug_url: URL for the first page of reviews.
+        Returns:
+            (int) Highest page number
+        """
+        page = requests.get(drug_url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        table_footer = soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
+        total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
+
+        max_pages = total_reviews // 25
+        if (total_reviews % 25 != 0):
+            max_pages += 1
+
+        print('Found ' + str(total_reviews) + ' reviews.')
+        print('Scraping ' + str(max_pages) + ' pages...')
+        return max_pages
+
+      
     def scrape(self, drug_url, pages=1):
         """Scrape for drug reviews.
 
         Args:
             drug_url: Drugs.com page to scrape
-            output_path: Path to the file where the output should be sent
+            
             pages (int): Number of pages to scrape
         """
 
-        review_list = []
+        print('Scraping Drugs.com...')
 
-        for i in range(pages):
+        review_list = []
+        
+        if self.all_pages:
+            num_pages = self.max_pages(drug_url)
+        else:
+            num_pages = pages
+
+        for i in range(num_pages):
             url = drug_url + '?page=' + str(i+1)
             page = requests.get(url)
             soup = BeautifulSoup(page.text, 'html.parser')
@@ -32,8 +69,10 @@ class DrugsScraper():
 
                 if review.find('div', {'class': 'rating-score'}):
                     rating = float(review.find('div', {'class': 'rating-score'}).text)
-                    review_list.append({'comment': comment, 'rating': rating})
-
+                
+                review_list.append({'comment': comment, 'rating': rating})
+ 
+    
         print('Reviews scraped: ' + str(len(review_list)))
         return review_list
 
@@ -90,3 +129,4 @@ class DrugsScraper():
             writer.writerows(review_urls)
 
         print('Finished writing!')
+
