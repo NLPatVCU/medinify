@@ -41,7 +41,7 @@ class EverydayHealthScraper():
                 comment = comment.encode('utf-8')
                 review_for = review_for.encode('utf-8')
                 
-                review_list.append({'comment': comment.decode("utf-8"),
+                review_list.append({'comment': comment.decode("utf-8").strip(),
                                     'for': review_for.decode("utf-8"), 'rating': rating})
 
         print("Number of reviews scraped: " + str(len(review_list)))

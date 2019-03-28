@@ -157,9 +157,13 @@ class ReviewDataset():
         everydayhealth_dataset.collect_drug_names('nanodrug_names.csv', 'nano_everydayhealth.csv')
 
         webmd_dataset.collect_urls('nano_webmd.csv')
+        webmd_dataset.remove_empty_comments()
         drugs_dataset.collect_urls('nano_drugs.csv')
+        drugs_dataset.remove_empty_comments()
         drugratingz_dataset.collect_urls('nano_drugratingz.csv')
+        drugratingz_dataset.remove_empty_comments()
         everydayhealth_dataset.collect_urls('nano_everydayhealth.csv')
+        everydayhealth_dataset.remove_empty_comments()
 
         webmd_dataset.write_file('csv', 'nano_reviews_webmd.csv')
         drugs_dataset.write_file('csv', 'nano_reviews_drugs.csv')
