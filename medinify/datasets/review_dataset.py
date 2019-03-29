@@ -146,6 +146,11 @@ class ReviewDataset():
 
     @staticmethod
     def collect_all_nanodrugs(drugname_input_file):
+        """Collect all reviews for all nano drugs across WebMD, Drugs.com, and DrugRatingsz
+
+        Args:
+            drugname_input_file: File with list of drug names
+        """
         webmd_dataset = ReviewDataset('webmd_nano', 'WebMD')
         drugs_dataset = ReviewDataset('drugs_nano', 'Drugs')
         drugratingz_dataset = ReviewDataset('drugratingz_nano', 'DrugRatingz')
@@ -158,7 +163,7 @@ class ReviewDataset():
 
         webmd_dataset.collect_urls('nano_webmd.csv')
         webmd_dataset.remove_empty_comments()
-        webmd_dataset.generate_rating_webmd()
+        webmd_dataset.generate_ratings()
         drugs_dataset.collect_urls('nano_drugs.csv')
         drugs_dataset.remove_empty_comments()
         drugs_dataset.generate_ratings_drugs()
@@ -262,18 +267,49 @@ class ReviewDataset():
         print('{} empty comments removed.'.format(empty_comments_removed))
         self.reviews = updated_reviews
 
-    def generate_rating_webmd(self):
-        """Generate rating based for webmd
+    def generate_ratings(self):
+        """Generate final rating based on config file
         """
         updated_reviews = []
 
+        with open('../dataset-settings.json', 'r') as config_file:
+            config = json.load(config_file)
+
         if self.scraper == 'WebMD':
+            using_rating = config['reviews']['webmd']['use_rating']
+            ratings_being_used = 0
+
+            # Counter number of ratings being combined
+            for type_of_rating in using_rating:
+                if using_rating[type_of_rating]:
+                    ratings_being_used += 1
+
             for review in self.reviews:
-                review['rating'] = review['effectiveness']
-                del review['effectiveness']
+                rating = 0
+
+                # If the rating is being used, add it to the final rating, else remove it
+                for type_of_rating, using in using_rating.items():
+                    if using:
+                        rating += review[type_of_rating]
+                    del review[type_of_rating]
+
+                # Get average of ratings being used
+                # TODO (Jorge): Change all logic to use floats
+                review['rating'] = int(rating / ratings_being_used)
+
                 updated_reviews.append(review)
 
             self.reviews = updated_reviews
+
+        # Rest of scrapers have not been updated to use config yet
+        elif self.scraper == 'DrugRatingsz':
+            self.generate_ratings_drugratingz()
+
+        elif self.scraper == 'Drugs':
+            self.generate_ratings_drugs()
+
+        else:
+            raise ValueError('Scraper "{}" does not exist'.format(self.scraper))
 
     def generate_ratings_drugratingz(self):
         """Generate rating based for drugratingz
