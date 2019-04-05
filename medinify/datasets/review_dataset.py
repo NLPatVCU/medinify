@@ -284,68 +284,58 @@ class ReviewDataset():
     def generate_ratings(self):
         """Generate final rating based on config file
         """
+        settings = self.config['all']
+        scraper_settings = self.config[self.scraper.lower()]
         updated_reviews = []
 
-        if self.scraper == 'WebMD':
-            using_rating = self.config['webmd']['use_rating']
-            ratings_being_used = 0
+        if not settings['multiple_ratings']:
+            if self.scraper == 'WebMD' or self.scraper == 'DrugRatingz':
+                rating_type = scraper_settings['rating_type']
+                rating_types = scraper_settings['rating_types'].keys()
 
-            # Counter number of ratings being combined
-            for type_of_rating in using_rating:
-                if using_rating[type_of_rating]:
-                    ratings_being_used += 1
+                for review in self.reviews:
+                    review['rating'] = review[rating_type]
 
-            for review in self.reviews:
-                rating = 0
+                    for r_type in rating_types:
+                        del review[r_type]
 
-                # If the rating is being used, add it to the final rating, else remove it
-                for type_of_rating, using in using_rating.items():
-                    if using:
-                        rating += review[type_of_rating]
-                    del review[type_of_rating]
+                    updated_reviews.append(review)
 
-                # Get average of ratings being used
-                # TODO (Jorge): Change all logic to use floats
-                review['rating'] = int(rating / ratings_being_used)
+                self.reviews = updated_reviews
 
-                updated_reviews.append(review)
+            elif self.scraper == 'Drugs':
+                print('"rating" is only rating for Drugs.com. Ratings already generated.')
 
-            self.reviews = updated_reviews
-
-        # Rest of scrapers have not been updated to use config yet
-        elif self.scraper == 'DrugRatingsz':
-            self.generate_ratings_drugratingz()
-
-        elif self.scraper == 'Drugs':
-            self.generate_ratings_drugs()
+            else:
+                raise ValueError('Scraper "{}" does not exist'.format(self.scraper))
 
         else:
-            raise ValueError('Scraper "{}" does not exist'.format(self.scraper))
+            print('Multiple ratings are not implemented yet. Using single rating selection...')
 
-    def generate_ratings_drugratingz(self):
-        """Generate rating based for drugratingz
-        """
-        updated_reviews = []
+            # if self.scraper == 'WebMD':
+            #     using_rating = self.config['webmd']['rating_types']
+            #     ratings_being_used = 0
 
-        if self.scraper == 'DrugRatingz':
-            for review in self.reviews:
-                review['rating'] = review['effectiveness']
-                del review['effectiveness']
-                updated_reviews.append(review)
+            #     # Counter number of ratings being combined
+            #     for type_of_rating in using_rating:
+            #         if using_rating[type_of_rating]:
+            #             ratings_being_used += 1
 
-            self.reviews = updated_reviews
+            #     for review in self.reviews:
+            #         rating = 0
 
-    def generate_ratings_drugs(self):
-        """Generate rating based for drugs
-        """
-        updated_reviews = []
+            #         # If the rating is being used, add it to the final rating, else remove it
+            #         for type_of_rating, using in using_rating.items():
+            #             if using:
+            #                 rating += review[type_of_rating]
+            #             del review[type_of_rating]
 
-        if self.scraper == 'Drugs':
-            for review in self.reviews:
-                review['rating'] = review['rating'] / 2.0
-                updated_reviews.append(review)
+            #         # Get average of ratings being used
+            #         review['rating'] = int(rating / ratings_being_used)
 
-            self.reviews = updated_reviews
+            #         updated_reviews.append(review)
+
+            #     self.reviews = updated_reviews
 
     def run_preprocessing(self):
         """Run the various preprocessing functions depending on config
