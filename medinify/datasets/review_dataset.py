@@ -24,12 +24,18 @@ class ReviewDataset():
     drug_name = ''
     meta = {'locked': False}
     scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz
+    config = {}
 
     def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
         drug_name = ''.join(char for char in drug_name if char.isalnum())
         self.drug_name = drug_name
         self.scraper = scraper
+
+        with open('../dataset-config.json', 'r') as config_file:
+            config = json.load(config_file)
+        self.config = config['reviews']
+
         print('Created object for {}'.format(self.drug_name))
 
     def collect(self, url, testing=False):
@@ -162,16 +168,13 @@ class ReviewDataset():
         everydayhealth_dataset.collect_drug_names(drugname_input_file, 'nano_everydayhealth.csv')
 
         webmd_dataset.collect_urls('nano_webmd.csv')
-        webmd_dataset.remove_empty_comments()
-        webmd_dataset.generate_ratings()
+        webmd_dataset.run_preprocessing()
         drugs_dataset.collect_urls('nano_drugs.csv')
-        drugs_dataset.remove_empty_comments()
-        drugs_dataset.generate_ratings_drugs()
+        drugs_dataset.run_preprocessing()
         drugratingz_dataset.collect_urls('nano_drugratingz.csv')
-        drugratingz_dataset.remove_empty_comments()
-        drugratingz_dataset.generate_ratings_drugratingz()
+        drugratingz_dataset.run_preprocessing()
         everydayhealth_dataset.collect_urls('nano_everydayhealth.csv')
-        everydayhealth_dataset.remove_empty_comments()
+        everydayhealth_dataset.run_preprocessing()
 
         webmd_dataset.write_file('csv', 'nano_reviews_webmd.csv')
         drugs_dataset.write_file('csv', 'nano_reviews_drugs.csv')
@@ -250,6 +253,17 @@ class ReviewDataset():
 
         print('Done!')
 
+    def scale_ratings(self):
+        """Scale ratings so that multiple sources can use equivalent ratings
+        """
+        # settings = self.config['all']
+
+        if self.reviews[-1]['rating']:
+            print('Scale Ratings has not been implemented. Skipping...')
+        else:
+            print('Ratings not generated. Skipping scale ratings...')
+
+
     def remove_empty_comments(self):
         """Remove reviews with empty comments
         """
@@ -272,11 +286,8 @@ class ReviewDataset():
         """
         updated_reviews = []
 
-        with open('../dataset-settings.json', 'r') as config_file:
-            config = json.load(config_file)
-
         if self.scraper == 'WebMD':
-            using_rating = config['reviews']['webmd']['use_rating']
+            using_rating = self.config['webmd']['use_rating']
             ratings_being_used = 0
 
             # Counter number of ratings being combined
@@ -335,6 +346,20 @@ class ReviewDataset():
                 updated_reviews.append(review)
 
             self.reviews = updated_reviews
+
+    def run_preprocessing(self):
+        """Run the various preprocessing functions depending on config
+        """
+        settings = self.config['all']
+
+        if settings['remove_empty_comments']:
+            self.remove_empty_comments()
+        
+        if settings['generate_ratings']:
+            self.generate_ratings()
+
+        if settings['scale_ratings']:
+            self.scale_ratings()
 
     def print_stats(self):
         """Print relevant stats about the dataset
