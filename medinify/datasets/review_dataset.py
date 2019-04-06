@@ -24,12 +24,18 @@ class ReviewDataset():
     drug_name = ''
     meta = {'locked': False}
     scraper = None  # WebMD, EverydayHealth, Drugs, DrugRatingz
+    config = {}
 
     def __init__(self, drug_name, scraper):
         drug_name = ''.join(drug_name.lower().split())
         drug_name = ''.join(char for char in drug_name if char.isalnum())
         self.drug_name = drug_name
         self.scraper = scraper
+
+        with open('../dataset-config.json', 'r') as config_file:
+            config = json.load(config_file)
+        self.config = config['reviews']
+
         print('Created object for {}'.format(self.drug_name))
 
     def collect(self, url, testing=False):
@@ -146,6 +152,11 @@ class ReviewDataset():
 
     @staticmethod
     def collect_all_nanodrugs(drugname_input_file):
+        """Collect all reviews for all nano drugs across WebMD, Drugs.com, and DrugRatingsz
+
+        Args:
+            drugname_input_file: File with list of drug names
+        """
         webmd_dataset = ReviewDataset('webmd_nano', 'WebMD')
         drugs_dataset = ReviewDataset('drugs_nano', 'Drugs')
         drugratingz_dataset = ReviewDataset('drugratingz_nano', 'DrugRatingz')
@@ -157,16 +168,13 @@ class ReviewDataset():
         everydayhealth_dataset.collect_drug_names(drugname_input_file, 'nano_everydayhealth.csv')
 
         webmd_dataset.collect_urls('nano_webmd.csv')
-        webmd_dataset.remove_empty_comments()
-        webmd_dataset.generate_rating_webmd()
+        webmd_dataset.run_preprocessing()
         drugs_dataset.collect_urls('nano_drugs.csv')
-        drugs_dataset.remove_empty_comments()
-        drugs_dataset.generate_ratings_drugs()
+        drugs_dataset.run_preprocessing()
         drugratingz_dataset.collect_urls('nano_drugratingz.csv')
-        drugratingz_dataset.remove_empty_comments()
-        drugratingz_dataset.generate_ratings_drugratingz()
+        drugratingz_dataset.run_preprocessing()
         everydayhealth_dataset.collect_urls('nano_everydayhealth.csv')
-        everydayhealth_dataset.remove_empty_comments()
+        everydayhealth_dataset.run_preprocessing()
 
         webmd_dataset.write_file('csv', 'nano_reviews_webmd.csv')
         drugs_dataset.write_file('csv', 'nano_reviews_drugs.csv')
@@ -245,6 +253,17 @@ class ReviewDataset():
 
         print('Done!')
 
+    def scale_ratings(self):
+        """Scale ratings so that multiple sources can use equivalent ratings
+        """
+        # settings = self.config['all']
+
+        if self.reviews[-1]['rating']:
+            print('Scale Ratings has not been implemented. Skipping...')
+        else:
+            print('Ratings not generated. Skipping scale ratings...')
+
+
     def remove_empty_comments(self):
         """Remove reviews with empty comments
         """
@@ -262,43 +281,75 @@ class ReviewDataset():
         print('{} empty comments removed.'.format(empty_comments_removed))
         self.reviews = updated_reviews
 
-    def generate_rating_webmd(self):
-        """Generate rating based for webmd
+    def generate_ratings(self):
+        """Generate final rating based on config file
         """
+        settings = self.config['all']
+        scraper_settings = self.config[self.scraper.lower()]
         updated_reviews = []
 
-        if self.scraper == 'WebMD':
-            for review in self.reviews:
-                review['rating'] = review['effectiveness']
-                del review['effectiveness']
-                updated_reviews.append(review)
+        if not settings['multiple_ratings']:
+            if self.scraper == 'WebMD' or self.scraper == 'DrugRatingz':
+                rating_type = scraper_settings['rating_type']
+                rating_types = scraper_settings['rating_types'].keys()
 
-            self.reviews = updated_reviews
+                for review in self.reviews:
+                    review['rating'] = review[rating_type]
 
-    def generate_ratings_drugratingz(self):
-        """Generate rating based for drugratingz
+                    for r_type in rating_types:
+                        del review[r_type]
+
+                    updated_reviews.append(review)
+
+                self.reviews = updated_reviews
+
+            elif self.scraper == 'Drugs':
+                print('"rating" is only rating for Drugs.com. Ratings already generated.')
+
+            else:
+                raise ValueError('Scraper "{}" does not exist'.format(self.scraper))
+
+        else:
+            print('Multiple ratings are not implemented yet. Using single rating selection...')
+
+            # if self.scraper == 'WebMD':
+            #     using_rating = self.config['webmd']['rating_types']
+            #     ratings_being_used = 0
+
+            #     # Counter number of ratings being combined
+            #     for type_of_rating in using_rating:
+            #         if using_rating[type_of_rating]:
+            #             ratings_being_used += 1
+
+            #     for review in self.reviews:
+            #         rating = 0
+
+            #         # If the rating is being used, add it to the final rating, else remove it
+            #         for type_of_rating, using in using_rating.items():
+            #             if using:
+            #                 rating += review[type_of_rating]
+            #             del review[type_of_rating]
+
+            #         # Get average of ratings being used
+            #         review['rating'] = int(rating / ratings_being_used)
+
+            #         updated_reviews.append(review)
+
+            #     self.reviews = updated_reviews
+
+    def run_preprocessing(self):
+        """Run the various preprocessing functions depending on config
         """
-        updated_reviews = []
+        settings = self.config['all']
 
-        if self.scraper == 'DrugRatingz':
-            for review in self.reviews:
-                review['rating'] = review['effectiveness']
-                del review['effectiveness']
-                updated_reviews.append(review)
+        if settings['remove_empty_comments']:
+            self.remove_empty_comments()
+        
+        if settings['generate_ratings']:
+            self.generate_ratings()
 
-            self.reviews = updated_reviews
-
-    def generate_ratings_drugs(self):
-        """Generate rating based for drugs
-        """
-        updated_reviews = []
-
-        if self.scraper == 'Drugs':
-            for review in self.reviews:
-                review['rating'] = review['rating'] / 2.0
-                updated_reviews.append(review)
-
-            self.reviews = updated_reviews
+        if settings['scale_ratings']:
+            self.scale_ratings()
 
     def print_stats(self):
         """Print relevant stats about the dataset
