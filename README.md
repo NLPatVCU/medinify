@@ -92,7 +92,7 @@ review_classifier.classify('neutral.txt')
     cd medinify
     ```
 
-2. Create a branch (off the main project development branch) to contain your changes:
+2. Create a branch off of develop to contain your changes:
 
     ```bash
     git checkout -b <new-branch-name>
@@ -137,15 +137,15 @@ git push
 
 ### Making Pull Requests
 
-After following the steps above, you can make a pull request directly on the Medinify GitHub.
+After following the steps above, you can make a pull request directly on the Medinify GitHub. It should be a pull request to merge your new branch into develop.
 
-Add a title, a description, and then press the “Create pull request” button. If you are closing an issue, put "closes #14," if you had issue 14.
+Add a title, a description, and then press the “Create pull request” button. If you are closing an issue, put "closes #14", if you had issue 14.
 
-Navigate to the reviewers tab and request Jorge Vargas to review the PR.
+Navigate to the reviewers tab and request a reviewer to review the PR.
 
 ### Authors
 
-Bridget McInnes, Jorge Vargas, Nathan West, Gabby Gurdin, Mark Groves
+Bridget McInnes, Jorge Vargas, Gabby Gurdin, Nathan West, Mark Groves
 
 ## More Info
 
