@@ -193,20 +193,6 @@ class SentimentNetwork(Module):
 
         return weights_matrix
 
-    """
-    I think this method is unused
-    
-    def create_emb_layer(self):
-        
-        weights_matrix = self.create_weight_matrix()
-        num_embeddings = len(weights_matrix)
-        embedding_dim = len(weights_matrix[0])
-        embed = nn.Embedding(num_embeddings, embedding_dim)
-        embed.weight = weights_matrix
-
-        return embed, num_embeddings, embedding_dim
-    """
-
     def forward(self, t):
         """
         Performs forward pass on CNN
