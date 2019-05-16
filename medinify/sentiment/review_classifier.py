@@ -24,7 +24,6 @@ from keras.models import model_from_json
 from keras.layers import Dense, Dropout
 import tarfile
 import os
-from gensim.models import Word2Vec, KeyedVectors
 
 class ReviewClassifier():
     """For performing sentiment analysis on drug reviews
@@ -98,34 +97,6 @@ class ReviewClassifier():
         dataset = positive_comments + negative_comments
 
         return dataset
-
-    def train_word_embeddings(self, dataset, output_file):
-        """trains word embeddings from dataset"""
-
-        sentences = []
-        for bow in dataset:
-            words = list(bow[0].keys())
-            sentences.append(words)
-        if not self.w2v_model:
-            self.w2v_model = Word2Vec(sentences)
-        self.w2v_model.build_vocab(sentences, update=True)
-        print('Training word embeddings...')
-        self.w2v_model.train(sentences, total_examples=len(sentences),
-                             total_words=len(self.w2v_model.wv.vocab), epochs=10)
-        print('Finished training!')
-        if os.path.exists(output_file):
-            os.remove(output_file)
-        self.w2v_model.save(output_file)
-
-    def create_word_embeddings(self, input_files, output_file):
-        """Given list of input files, trains word embeddings
-        given that data"""
-        num_file = 1
-        for file in input_files:
-            print('Training input file #' + str(num_file))
-            dataset = self.create_dataset(file)
-            self.train_word_embeddings(dataset, output_file)
-            num_file = num_file + 1
 
     def split_data_target(self, dataset):
         """Builds train_data and train_target given dataset"""
@@ -205,7 +176,7 @@ class ReviewClassifier():
 
         return model
 
-    def train(self, reviews_filename):
+    def train(self, reviews_filename, validation_reviews):
         """ Trains a new naive bayes model or decision tree model
 
         Args:
@@ -218,6 +189,10 @@ class ReviewClassifier():
             train_data, train_target = self.build_dataset(reviews_filename)
             self.model = self.create_trained_model(
                 train_data=train_data, train_target=train_target)
+        elif self.classifier_type == 'cnn':
+            train_dataset = self.create_dataset(reviews_filename)
+            validation_dataset = self.create_dataset(validation_reviews)
+            self.model = self.create_cnn_model(train_dataset, validation_dataset)
 
     def evaluate_average_accuracy(self, reviews_filename):
         """ Use stratified k fold to calculate average accuracy of models
@@ -511,26 +486,3 @@ class ReviewClassifier():
 
         self.log("%s accuracy: %.2f%%" % (self.classifier_type, score * 100))
         return score
-
-    """
-    This function is meant to print the most important features for a rf model
-    
-    def print_top_features(self):
-        if not self.model:
-            print('Must train a model')
-            return
-        if self.classifier_type == 'rf':
-            word_features = self.vectorizer.feature_names_
-            feature_importances = self.model.feature_importances_
-            most_important = nlargest(5, feature_importances)
-
-            important_words = []
-            importances = feature_importances.tolist()
-            for feature in most_important:
-                index = importances.index(feature)
-                important_word = word_features[index]
-                important_words.append(important_word)
-
-            print('Most important words: ' + str(important_words))
-    """
-
