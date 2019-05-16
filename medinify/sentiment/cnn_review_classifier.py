@@ -1,6 +1,7 @@
 
 import sklearn.preprocessing as process
 import numpy as np
+import random
 
 # Word Embeddings
 from gensim.models import Word2Vec, KeyedVectors
@@ -62,7 +63,7 @@ class CNNReviewClassifier():
 
         self.embeddings = KeyedVectors.load_word2vec_format(embeddings_file)
 
-    def create_data_loader(self, dataset_file):
+    def create_data_loader(self, dataset, batch_size):
 
         """Generates data_loader for CNN
         Parameter:
@@ -70,9 +71,8 @@ class CNNReviewClassifier():
             w2v_model_path - path to w2v model
         """
 
-        classifier = ReviewClassifier()
-        dataset = classifier.create_dataset(dataset_file)
         comments = [list(comment[0].keys()) for comment in dataset]
+        print('\n\nComments: ' + str(comments[:5]))
         ratings = [review[1] for review in dataset]
 
         averaged_embeddings = []
@@ -84,6 +84,9 @@ class CNNReviewClassifier():
                     comment_tensors.append(torch.FloatTensor(self.embeddings[word]))
                 else:
                     comment_tensors.append(torch.zeros(100))
+
+            if len(comment_tensors) < 1:
+                comment_tensors.append(torch.zeros(100))
 
             comment_tensors = torch.stack(comment_tensors).mean(dim=0, dtype=torch.float64)
             averaged_embeddings.append(comment_tensors)
@@ -98,7 +101,7 @@ class CNNReviewClassifier():
 
         train_set = torch.utils.data.TensorDataset(train, target)
 
-        data_loader = torch.utils.data.DataLoader(train_set, batch_size=10)
+        data_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size)
         return data_loader
 
     def create_cnn_model(self, train_file, validation_file, n_epochs=10, learning_rating=0.001):
@@ -106,8 +109,8 @@ class CNNReviewClassifier():
         Creates and trains a CNN
         """
 
-        train_data_loader = self.create_data_loader(train_file)
-        valid_data_loader = self.create_data_loader(validation_file)
+        train_data_loader = self.create_data_loader(train_file, 10)
+        valid_data_loader = self.create_data_loader(validation_file, 100)
 
         network = SentimentNetwork()
         self.train(network, n_epochs, learning_rating, train_data_loader, valid_data_loader)
@@ -155,7 +158,26 @@ class CNNReviewClassifier():
 
         preds = network(comments)
         print(preds)
-        print(labels)
+        print(preds.argmax(dim=1))
+        print(len(labels))
+        print(labels.eq(preds.argmax(dim=1)).sum())
+
+    def generate_balanced_dataset(self, file):
+        classifier = ReviewClassifier()
+        dataset = classifier.create_dataset(file)
+        pos = []
+        neg = []
+        for review in dataset:
+            if review[1] == 'pos':
+                pos.append(review)
+            elif review[1] == 'neg':
+                neg.append(review)
+        random_pos = random.sample(pos, len(neg))
+        dataset = random_pos + neg
+        random.shuffle(dataset)
+
+        return dataset
+
 
 class SentimentNetwork(Module):
     """
