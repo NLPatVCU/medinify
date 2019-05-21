@@ -17,6 +17,12 @@ from torch.nn import functional as F
 import torch.utils.data
 import torch.optim as optim
 
+# TorchText
+from torchtext import data
+from torchtext.data import Example, Dataset, Iterator
+from torchtext.vocab import Vectors
+
+
 class CNNReviewClassifier():
     """For performing sentiment analysis on drug reviews
         Using a PyTorch Convolutional Neural Network
@@ -27,7 +33,9 @@ class CNNReviewClassifier():
     """
 
     embeddings = None
-    encoder = None
+    comment_field = None
+    optimizer = None
+    loss = nn.BCEWithLogitsLoss()
 
     def train_word_embeddings(self, datasets, output_file, training_epochs):
         """trains word embeddings from data files (csvs)
@@ -58,178 +66,174 @@ class CNNReviewClassifier():
         self.embeddings = w2v_model.wv
         w2v_model.wv.save_word2vec_format(output_file)
 
-    def load_embeddings(self, embeddings_file):
-        """Loads word embeddings from file"""
+    def generate_data_loaders(self, train_file, valid_file, train_batch_size, valid_batch_size, w2v_file):
 
-        self.embeddings = KeyedVectors.load_word2vec_format(embeddings_file)
-
-    def create_data_loader(self, dataset, batch_size):
-
-        """Generates data_loader for CNN
-        Parameter:
-            dataset_file - csv file with dataset
-            w2v_model_path - path to w2v model
-        """
-
-        comments = [list(comment[0].keys()) for comment in dataset]
-        print('\n\nComments: ' + str(comments[:5]))
-        ratings = [review[1] for review in dataset]
-
-        averaged_embeddings = []
-
-        for comment in comments:
-            comment_tensors = []
-            for word in comment:
-                if word in list(self.embeddings.vocab):
-                    comment_tensors.append(torch.FloatTensor(self.embeddings[word]))
-                else:
-                    comment_tensors.append(torch.zeros(100))
-
-            if len(comment_tensors) < 1:
-                comment_tensors.append(torch.zeros(100))
-
-            comment_tensors = torch.stack(comment_tensors).mean(dim=0, dtype=torch.float64)
-            averaged_embeddings.append(comment_tensors)
-
-        train = torch.stack(averaged_embeddings)
-
-        target = np.array(ratings)
-        self.encoder = process.LabelEncoder()
-        target = self.encoder.fit_transform(target)
-        target = torch.tensor(target, dtype=torch.long)
-        target.unsqueeze(dim=1)
-
-        train_set = torch.utils.data.TensorDataset(train, target)
-
-        data_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size)
-        return data_loader
-
-    def create_cnn_model(self, train_file, validation_file, n_epochs=10, learning_rating=0.001):
-        """
-        Creates and trains a CNN
-        """
-
-        train_data_loader = self.create_data_loader(train_file, 10)
-        valid_data_loader = self.create_data_loader(validation_file, 100)
-
-        network = SentimentNetwork()
-        self.train(network, n_epochs, learning_rating, train_data_loader, valid_data_loader)
-
-    def train(self, network, n_epochs, learning_rate, train_loader, valid_loader):
-        """
-        Trains and validates CNN
-        """
-
-        loss = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(network.parameters(), lr=learning_rate)
-
-        for epoch in range(n_epochs):
-
-            running_loss = 0.0
-            total_train_loss = 0
-            for i, data in enumerate(train_loader, 0):
-                inputs, labels = data
-                inputs = inputs.unsqueeze(dim=1)
-                inputs = inputs.unsqueeze(dim=1)
-
-                # zero the parameter gradients
-                optimizer.zero_grad()
-
-                # Forward pass, backward pass, optimize
-                outputs = network(inputs)
-                loss_size = loss(outputs, labels)
-                loss_size.backward()
-                optimizer.step()
-
-                # Print statistics
-                running_loss += loss_size.data.item()
-                print('Running loss: ' + str(running_loss))
-                running_loss = 0.0
-                if epoch % 5 == 0:
-                    total_train_loss += loss_size.data.item()
-                    print('Total loss: ' + str(total_train_loss))
-
-            print('Finished Training')
-
-        sample = next(iter(valid_loader))
-        comments, labels = sample
-        comments = comments.unsqueeze(dim=1)
-        comments = comments.unsqueeze(dim=1)
-
-        preds = network(comments)
-        print(preds)
-        print(preds.argmax(dim=1))
-        print(len(labels))
-        print(labels.eq(preds.argmax(dim=1)).sum())
-
-    def generate_balanced_dataset(self, file):
         classifier = ReviewClassifier()
-        dataset = classifier.create_dataset(file)
-        pos = []
-        neg = []
-        for review in dataset:
-            if review[1] == 'pos':
-                pos.append(review)
-            elif review[1] == 'neg':
-                neg.append(review)
-        random_pos = random.sample(pos, len(neg))
-        dataset = random_pos + neg
-        random.shuffle(dataset)
+        train_data = classifier.create_dataset(train_file)
+        valid_data = classifier.create_dataset(valid_file)
 
-        return dataset
+        comment_field = data.Field(tokenize='spacy', dtype=torch.float64)
+        rating_field = data.LabelField(dtype=torch.float64)
 
+        train_examples = []
+        valid_examples = []
+
+        for review in train_data:
+            comment = ' '.join(list(review[0].keys()))
+            rating = review[1]
+            review = {'comment': comment, 'rating': rating}
+            ex = Example.fromdict(data=review,
+                                  fields={'comment': ('comment', comment_field), 'rating': ('rating', rating_field)})
+            train_examples.append(ex)
+
+        for review in valid_data:
+            comment = ' '.join(list(review[0].keys()))
+            rating = review[1]
+            review = {'comment': comment, 'rating': rating}
+            ex = Example.fromdict(data=review,
+                                  fields={'comment': ('comment', comment_field), 'rating': ('rating', rating_field)})
+            valid_examples.append(ex)
+
+        train_dataset = Dataset(examples=train_examples,
+                                fields={'comment': comment_field, 'rating': rating_field})
+        valid_dataset = Dataset(examples=valid_examples,
+                                fields={'comment': comment_field, 'rating': rating_field})
+
+        vectors = Vectors(w2v_file)
+
+        comment_field.build_vocab(train_dataset.comment, valid_dataset.comment, vectors=vectors)
+        rating_field.build_vocab(['pos', 'neg'])
+
+        self.embeddings = comment_field.vocab.vectors
+        self.comment_field = comment_field
+
+        train_loader = Iterator(train_dataset, train_batch_size, sort_key=lambda x: len(x))
+        valid_loader = Iterator(valid_dataset, valid_batch_size, sort_key=lambda x: len(x))
+
+        return train_loader, valid_loader
+
+    def train(self, network, train_loader, n_epochs):
+
+        self.optimizer = torch.optim.Adam(network.parameters(), lr=0.001)
+
+        num_epoch = 1
+        for x in range(n_epochs):
+            self.loss.zero_grad()
+
+            print('Starting Epoch ' + str(num_epoch))
+
+            epoch_loss = 0
+
+            network.train()
+
+            batch_num = 1
+            for batch in train_loader:
+                if batch_num % 25 == 0:
+                    print('On batch ' + str(batch_num) + ' of ' + str(len(train_loader)))
+
+                self.optimizer.zero_grad()
+                if batch.comment.shape[0] < 4:
+                    num_epoch = num_epoch + 1
+                    continue
+                predictions = network(batch.comment).squeeze(1).to(torch.float64)
+                loss = self.loss(predictions, batch.rating)
+                loss.backward()
+                self.optimizer.step()
+
+                epoch_loss += loss.item()
+
+                batch_num = batch_num + 1
+
+            print('Epoch Loss: ' + str(epoch_loss))
+            num_epoch = num_epoch + 1
+
+    def evaluate(self, network, valid_loader):
+
+        network.eval()
+
+        accuracies = []
+        num_sample = 1
+        with torch.no_grad():
+
+            for sample in valid_loader:
+
+                comments = sample.comment
+                ratings = sample.rating.to(torch.float64)
+                predictions = network(comments)
+
+                predictions = torch.round(torch.sigmoid(predictions)).to(torch.float64).squeeze(1)
+
+                batch_accuracy = ((torch.eq(predictions, ratings).sum().item() * 1.0) / len(predictions)) * 100
+
+                print('Batch #' + str(num_sample) + ' Accuracy: ' + str(batch_accuracy) + '%')
+                accuracies.append(batch_accuracy)
+
+                num_sample = num_sample + 1
+
+            print('Average Accuracy: ' + str(sum(accuracies) / len(accuracies)) + '%')
 
 class SentimentNetwork(Module):
     """
     A PyTorch Convolutional Neural Network for the sentiment analysis of drug reviews
     """
 
-    def __init__(self):
+    def __init__(self, vocab_size, embeddings):
         super(SentimentNetwork, self).__init__()
 
+        self.embed = nn.Embedding(vocab_size, 100, padding_idx=1)
+        self.embed.weight.data.copy_(embeddings)
+
         # convolutional layers
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=6, kernel_size=(1, 5)).double()
-        self.conv2 = nn.Conv2d(in_channels=6, out_channels=12, kernel_size=(1, 2)).double()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()
+        self.conv2 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(3, 100)).double()
+        self.conv3 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(4, 100)).double()
 
-        # linear layers
-        self.fc1 = nn.Linear(in_features=288, out_features=120).double()
-        self.fc2 = nn.Linear(in_features=120, out_features=60).double()
+        self.dropout = nn.Dropout(0.5)
 
-        # output layer
-        self.out = nn.Linear(in_features=60, out_features=2).double()
-
-    def create_weight_matrix(self):
-        """
-        Generates a weights matrix from embeddings
-        """
-        matrix_len = len(self.embeddings.index2word)
-        weights_matrix = np.zeros((matrix_len, 100))
-        words_found = 0
-
-        for i, word in enumerate(self.embeddings.index2word):
-            try:
-                weights_matrix[i] = self.embeddings[word]
-                words_found += 1
-            except KeyError:
-                weights_matrix[i] = np.random.normal(scale=0.6, size=100)
-
-        return weights_matrix
+        self.fc1 = nn.Linear(3 * 100, 200).float()
+        self.fc2 = nn.Linear(200, 100).float()
+        self.fc3 = nn.Linear(100, 25).float()
+        self.out = nn.Linear(25, 1).float()
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, t):
         """
         Performs forward pass on CNN
         """
-        t = self.conv1(t)
-        t = F.relu(t)
-        t = F.max_pool2d(t, kernel_size=2, stride=2)
 
-        t = t.reshape(-1, 288)
-        t = self.fc1(t)
-        t = F.relu(t)
+        # reshape to [1, batch sentence length]
+        t = t.permute(1, 0).to(torch.long)
 
-        t = self.fc2(t)
-        t = F.relu(t)
+        # turn words into embeddings
+        embedded = self.embed(t)
 
-        t = self.out(t)
+        # reshape to [batch size, sentence length, embed dimension]
+        embedded = embedded.permute(0, 1, 2)
+        embedded = embedded.unsqueeze(1).to(torch.double)
 
-        return t
+        # convolve embedded outputs three times
+        # to find bigrams, tri-grams, and 4-grams (or different by adjusting kernel sizes)
+        convolved1 = self.conv1(embedded).squeeze(3)
+        convolved1 = F.relu(convolved1)
+
+        convolved2 = self.conv2(embedded).squeeze(3)
+        convolved2 = F.relu(convolved2)
+        # print(convolved2.shape[2])
+
+        convolved3 = self.conv3(embedded).squeeze(3)
+        convolved3 = F.relu(convolved3)
+
+        pooled_1 = F.max_pool1d(convolved1, convolved1.shape[2]).squeeze(2)
+        pooled_2 = F.max_pool1d(convolved2, convolved2.shape[2]).squeeze(2)
+        pooled_3 = F.max_pool1d(convolved3, convolved3.shape[2]).squeeze(2)
+
+        cat = self.dropout(torch.cat((pooled_1, pooled_2, pooled_3), dim=1)).to(torch.float32)
+
+        linear = self.fc1(cat)
+        linear = F.relu(linear)
+        linear = self.fc2(linear)
+        linear = F.relu(linear)
+        linear = self.fc3(linear)
+        linear = F.relu(linear)
+        return self.out(linear)
+
