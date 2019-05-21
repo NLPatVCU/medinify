@@ -33,7 +33,9 @@ class CNNReviewClassifier():
     """
 
     embeddings = None
+    model = None
     comment_field = None
+    rating_field = None
     optimizer = None
     loss = nn.BCEWithLogitsLoss()
 
@@ -66,111 +68,230 @@ class CNNReviewClassifier():
         self.embeddings = w2v_model.wv
         w2v_model.wv.save_word2vec_format(output_file)
 
-    def generate_data_loaders(self, train_file, valid_file, train_batch_size, valid_batch_size, w2v_file):
-
+    def generate_datasets(self, dataset_file):
+        """
+        Given a dataset file, generates a torchtext dataset
+        :param dataset_file: csv file with dataset
+        :return: a torchtext dataset
+        """
+        # generate Medinify-structured dataset
         classifier = ReviewClassifier()
-        train_data = classifier.create_dataset(train_file)
-        valid_data = classifier.create_dataset(valid_file)
+        dataset = classifier.create_dataset(dataset_file)
 
-        comment_field = data.Field(tokenize='spacy', dtype=torch.float64)
-        rating_field = data.LabelField(dtype=torch.float64)
+        # seperate out comments and ratings
+        # The default tokenize is just string.split(), but spacy tokenizer is also built in
+        self.comment_field = data.Field(tokenize='spacy', lower=True, dtype=torch.float64)
+        self.rating_field = data.LabelField(dtype=torch.float64)
 
-        train_examples = []
-        valid_examples = []
+        # iterate through dataset and generate examples with comment_field and rating_field
+        examples = []
 
-        for review in train_data:
+        for review in dataset:
             comment = ' '.join(list(review[0].keys()))
             rating = review[1]
             review = {'comment': comment, 'rating': rating}
             ex = Example.fromdict(data=review,
-                                  fields={'comment': ('comment', comment_field), 'rating': ('rating', rating_field)})
-            train_examples.append(ex)
+                                  fields={'comment': ('comment', self.comment_field),
+                                          'rating': ('rating', self.rating_field)})
+            examples.append(ex)
 
-        for review in valid_data:
-            comment = ' '.join(list(review[0].keys()))
-            rating = review[1]
-            review = {'comment': comment, 'rating': rating}
-            ex = Example.fromdict(data=review,
-                                  fields={'comment': ('comment', comment_field), 'rating': ('rating', rating_field)})
-            valid_examples.append(ex)
+        dataset = Dataset(examples=examples,
+                          fields={'comment': self.comment_field, 'rating': self.rating_field})
 
-        train_dataset = Dataset(examples=train_examples,
-                                fields={'comment': comment_field, 'rating': rating_field})
-        valid_dataset = Dataset(examples=valid_examples,
-                                fields={'comment': comment_field, 'rating': rating_field})
+        self.comment_field.build_vocab(dataset.comment)
+        self.rating_field.build_vocab(['pos', 'neg'])
 
-        vectors = Vectors(w2v_file)
+        return dataset
 
-        comment_field.build_vocab(train_dataset.comment, valid_dataset.comment, vectors=vectors)
-        rating_field.build_vocab(['pos', 'neg'])
+    def generate_data_loaders(self, train_file, valid_file, train_batch_size, valid_batch_size):
+        """
+        This function generates TorchText dataloaders for training and validation datasets
+        :param train_file: path to training dataset
+        :param valid_file: path to validation dataset
+        :param train_batch_size: size of training batch
+        :param valid_batch_size: size of validation batch
+        :param w2v_file: path to trained word embeddings
+        :return: train data loader and validation data loader
+        """
 
-        self.embeddings = comment_field.vocab.vectors
-        self.comment_field = comment_field
+        # generate torchtext datasets for train and validation data
+        train_dataset = self.generate_datasets(train_file)
+        valid_dataset = self.generate_datasets(valid_file)
 
+        # build comment_field and rating_field vocabularies
+        #self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment)
+        #self.rating_field.build_vocab(['pos', 'neg'])
+
+        # create torchtext iterators for train data and validation data
         train_loader = Iterator(train_dataset, train_batch_size, sort_key=lambda x: len(x))
         valid_loader = Iterator(valid_dataset, valid_batch_size, sort_key=lambda x: len(x))
 
         return train_loader, valid_loader
 
-    def train(self, network, train_loader, n_epochs):
+    def load_embeddings(self, w2v_file):
+        """
+        Load word embeddings for embedding layer
+        :param w2v_file: word embeddings file
+        """
+        vectors = Vectors(w2v_file)
+        self.embeddings = vectors.vectors
 
+    def batch_accuracy(self, predictions, ratings):
+        """
+        Calculates the accuracy of the network's outputs
+        :param predictions: network outputs
+        :param ratings: actual sentiment labels
+        :return: average accuracy
+        """
+
+        rounded_preds = torch.round(torch.sigmoid(predictions)).to(torch.float64)
+        return torch.eq(rounded_preds, ratings).sum().item() / len(ratings)
+
+    def batch_precision(self, predictions, ratings):
+
+        rounded_preds = torch.round(torch.sigmoid(predictions))
+
+        preds = rounded_preds.to(torch.int64).numpy()
+        ratings = ratings.to(torch.int64).numpy()
+
+        model_positive = sum(preds)
+
+        true_positive = 0
+        i = 0
+        while i < len(ratings):
+            if preds[i] == 1 and ratings[i] == 1:
+                true_positive = true_positive + 1
+            i = i + 1
+
+        return (true_positive * 1.0) / (model_positive * 1.0)
+
+    def batch_recall(self, predictions, ratings):
+
+        rounded_preds = torch.round(torch.sigmoid(predictions))
+
+        preds = rounded_preds.to(torch.int64).numpy()
+        ratings = ratings.to(torch.int64).numpy()
+
+        true_positive = 0
+        false_negative = 0
+        i = 0
+        while i < len(ratings):
+            if preds[i] == 1 and ratings[i] == 1:
+                true_positive = true_positive + 1
+            elif preds[i] == 0 and ratings[i] == 1:
+                false_negative = false_negative + 1
+            i = i + 1
+
+        return (true_positive * 1.0) / (true_positive + false_negative)
+
+    def train(self, network, train_loader, n_epochs):
+        """
+        Trains network on training data
+        :param network: CNN for sentiment analysis
+        :param train_loader: train data iterator
+        :param n_epochs: number of training epochs
+        :return: trained network
+        """
+        # optimizer for network
         self.optimizer = torch.optim.Adam(network.parameters(), lr=0.001)
 
+        # counter for printing current epoch to console
         num_epoch = 1
+        # training loop
         for x in range(n_epochs):
-            self.loss.zero_grad()
-
             print('Starting Epoch ' + str(num_epoch))
 
             epoch_loss = 0
+            epoch_accuracy = 0
+            epoch_precision = 0
+            epoch_recall = 0
+            calculated_accuracies = 0
 
             network.train()
 
             batch_num = 1
+            # iterate through batches
             for batch in train_loader:
+                """
                 if batch_num % 25 == 0:
                     print('On batch ' + str(batch_num) + ' of ' + str(len(train_loader)))
-
+                """
                 self.optimizer.zero_grad()
+                # if the sentences are shorter than the largest kernel, continue to next batch
                 if batch.comment.shape[0] < 4:
                     num_epoch = num_epoch + 1
                     continue
                 predictions = network(batch.comment).squeeze(1).to(torch.float64)
+                accuracy = self.batch_accuracy(predictions, batch.rating)
+                precision = self.batch_precision(predictions, batch.rating)
+                recall = self.batch_recall(predictions, batch.rating)
                 loss = self.loss(predictions, batch.rating)
                 loss.backward()
                 self.optimizer.step()
 
                 epoch_loss += loss.item()
+                epoch_accuracy += accuracy
+                epoch_precision += precision
+                epoch_recall += recall
+                calculated_accuracies = calculated_accuracies + 1
 
                 batch_num = batch_num + 1
 
+            epoch_accuracy = epoch_accuracy / calculated_accuracies
+            epoch_precision = epoch_precision / calculated_accuracies
+            epoch_recall = epoch_recall / calculated_accuracies
             print('Epoch Loss: ' + str(epoch_loss))
+            print('Epoch Accuracy: ' + str(epoch_accuracy * 100) + '%')
+            print('Epoch Precision: ' + str(epoch_precision * 100) + '%')
+            print('Epoch Recall: ' + str(epoch_recall * 100) + '%' + '\n')
             num_epoch = num_epoch + 1
 
-    def evaluate(self, network, valid_loader):
+        self.model = network
+        return network
 
-        network.eval()
+    def evaluate(self, valid_loader):
+        """
+        Evaluates the accuracy of a model with validation data
+        :param valid_loader: validation data iterator
+        """
+        self.model.eval()
 
-        accuracies = []
+        total_loss = 0
+        total_accuracy = 0
+        total_precision = 0
+        total_recall = 0
+        calculated_accuracies = 0
+
         num_sample = 1
+
         with torch.no_grad():
 
             for sample in valid_loader:
 
-                comments = sample.comment
-                ratings = sample.rating.to(torch.float64)
-                predictions = network(comments)
+                predictions = self.model(sample.comment).squeeze(1)
+                sample_loss = self.loss(predictions.to(torch.double),
+                                        sample.rating.to(torch.double))
 
-                predictions = torch.round(torch.sigmoid(predictions)).to(torch.float64).squeeze(1)
+                accuracy = self.batch_accuracy(predictions, sample.rating)
+                precision = self.batch_precision(predictions, sample.rating)
+                recall = self.batch_recall(predictions, sample.rating)
 
-                batch_accuracy = ((torch.eq(predictions, ratings).sum().item() * 1.0) / len(predictions)) * 100
-
-                print('Batch #' + str(num_sample) + ' Accuracy: ' + str(batch_accuracy) + '%')
-                accuracies.append(batch_accuracy)
+                total_accuracy += accuracy
+                total_precision += precision
+                total_recall += recall
+                calculated_accuracies = calculated_accuracies + 1
+                total_loss += sample_loss
 
                 num_sample = num_sample + 1
+                print('Batch #{} Loss: {}\tAccuracy: {}\tPrecision: {}\tRecall: {}'.format(
+                    num_sample, sample_loss, accuracy, precision, recall))
 
-            print('Average Accuracy: ' + str(sum(accuracies) / len(accuracies)) + '%')
+            average_accuracy = (total_accuracy / calculated_accuracies) * 100
+            average_precision = (total_precision / calculated_accuracies) * 100
+            average_recall = (total_recall / calculated_accuracies) * 100
+            print('\nTotal Loss: {}\tAverage Accuracy: {}%\nAverage Precision: {}%\tAverage Recall: {}%'.format(
+                total_loss, average_accuracy, average_precision, average_recall))
+
 
 class SentimentNetwork(Module):
     """
@@ -180,35 +301,37 @@ class SentimentNetwork(Module):
     def __init__(self, vocab_size, embeddings):
         super(SentimentNetwork, self).__init__()
 
+        # embedding layer
         self.embed = nn.Embedding(vocab_size, 100, padding_idx=1)
         self.embed.weight.data.copy_(embeddings)
 
         # convolutional layers
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()
-        self.conv2 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(3, 100)).double()
-        self.conv3 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(4, 100)).double()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()  # bigrams
+        self.conv2 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(3, 100)).double()  # trigrams
+        self.conv3 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(4, 100)).double()  # 4-grams
 
+        # dropout layer
         self.dropout = nn.Dropout(0.5)
 
+        # fully-connected layers
         self.fc1 = nn.Linear(3 * 100, 200).float()
-        self.fc2 = nn.Linear(200, 100).float()
-        self.fc3 = nn.Linear(100, 25).float()
-        self.out = nn.Linear(25, 1).float()
-        self.softmax = nn.Softmax(dim=1)
+        self.fc2 = nn.Linear(200, 50).float()
+        self.out = nn.Linear(50, 1).float()
 
     def forward(self, t):
         """
-        Performs forward pass on CNN
+        Performs forward pass for data batch on CNN
         """
 
-        # reshape to [1, batch sentence length]
+        # t starts as batch of shape [sentences length, batch size] with each word
+        # represented as integer index
+        # reshape to [batch size, sentence length]
         t = t.permute(1, 0).to(torch.long)
 
-        # turn words into embeddings
+        # run indexes through embedding layer and get tensor of shape [batch size, sentence length, embed dimension]
         embedded = self.embed(t)
 
-        # reshape to [batch size, sentence length, embed dimension]
-        embedded = embedded.permute(0, 1, 2)
+        # Add fourth dimension (input channel) before convolving
         embedded = embedded.unsqueeze(1).to(torch.double)
 
         # convolve embedded outputs three times
@@ -218,22 +341,22 @@ class SentimentNetwork(Module):
 
         convolved2 = self.conv2(embedded).squeeze(3)
         convolved2 = F.relu(convolved2)
-        # print(convolved2.shape[2])
 
         convolved3 = self.conv3(embedded).squeeze(3)
         convolved3 = F.relu(convolved3)
 
+        # maxpool convolved outputs
         pooled_1 = F.max_pool1d(convolved1, convolved1.shape[2]).squeeze(2)
         pooled_2 = F.max_pool1d(convolved2, convolved2.shape[2]).squeeze(2)
         pooled_3 = F.max_pool1d(convolved3, convolved3.shape[2]).squeeze(2)
 
+        # concatenate maxpool outputs and dropout
         cat = self.dropout(torch.cat((pooled_1, pooled_2, pooled_3), dim=1)).to(torch.float32)
 
+        # fully connected layers
         linear = self.fc1(cat)
         linear = F.relu(linear)
         linear = self.fc2(linear)
-        linear = F.relu(linear)
-        linear = self.fc3(linear)
         linear = F.relu(linear)
         return self.out(linear)
 
