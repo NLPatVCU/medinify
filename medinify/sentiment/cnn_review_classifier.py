@@ -123,64 +123,38 @@ class CNNReviewClassifier():
 
         return train_loader, valid_loader
 
-    def load_embeddings(self, w2v_file):
+    def batch_confusion_matrix(self, predictions, ratings):
         """
-        Load word embeddings for embedding layer
-        :param w2v_file: word embeddings file
+        Calculates true positive, false positive, true negative, and false negative
+        given a batch's predictions and actual ratings
+        :param predictions: model predictions
+        :param ratings: actual ratings
+        :return: number of fp, tp, tn, and fn
         """
-        vectors = Vectors(w2v_file)
-        self.embeddings = vectors.vectors
-
-    def batch_accuracy(self, predictions, ratings):
-        """
-        Calculates the accuracy of the network's outputs
-        :param predictions: network outputs
-        :param ratings: actual sentiment labels
-        :return: average accuracy
-        """
-
-        rounded_preds = torch.round(torch.sigmoid(predictions)).to(torch.float64)
-        return torch.eq(rounded_preds, ratings).sum().item() / len(ratings)
-
-    def batch_precision(self, predictions, ratings):
 
         rounded_preds = torch.round(torch.sigmoid(predictions))
 
         preds = rounded_preds.to(torch.int64).numpy()
         ratings = ratings.to(torch.int64).numpy()
 
-        model_positive = sum(preds)
+        true_pos = 0
+        false_pos = 0
+        true_neg = 0
+        false_neg = 0
 
-        true_positive = 0
         i = 0
-        while i < len(ratings):
-            if preds[i] == 1 and ratings[i] == 1:
-                true_positive = true_positive + 1
-            i = i + 1
-
-        return (true_positive * 1.0) / (model_positive * 1.0)
-
-    def batch_recall(self, predictions, ratings):
-
-        rounded_preds = torch.round(torch.sigmoid(predictions))
-
-        preds = rounded_preds.to(torch.int64).numpy()
-        ratings = ratings.to(torch.int64).numpy()
-
-        true_positive = 0
-        false_negative = 0
-        i = 0
-        while i < len(ratings):
-            if preds[i] == 1 and ratings[i] == 1:
-                true_positive = true_positive + 1
+        while (i < len(preds)):
+            if preds[i] == 0 and ratings[i] == 0:
+                true_neg += 1
             elif preds[i] == 0 and ratings[i] == 1:
-                false_negative = false_negative + 1
-            i = i + 1
+                false_neg += 1
+            elif preds[i] == 1 and ratings[i] == 1:
+                true_pos += 1
+            elif preds[i] == 1 and ratings[i] == 0:
+                false_pos += 1
+            i += 1
 
-        if true_positive + false_negative == 0:
-            return 0
-
-        return (true_positive * 1.0) / (true_positive + false_negative)
+        return true_pos, false_pos, true_neg, false_neg
 
     def train(self, network, train_loader, n_epochs):
         """
@@ -200,10 +174,12 @@ class CNNReviewClassifier():
             print('Starting Epoch ' + str(num_epoch))
 
             epoch_loss = 0
-            epoch_accuracy = 0
-            epoch_precision = 0
-            epoch_recall = 0
-            calculated_accuracies = 0
+            total_tp = 0
+            total_fp = 0
+            total_tn = 0
+            total_fn = 0
+
+            calculated = 0
 
             network.train()
 
@@ -220,28 +196,29 @@ class CNNReviewClassifier():
                     num_epoch = num_epoch + 1
                     continue
                 predictions = network(batch.comment).squeeze(1).to(torch.float64)
-                accuracy = self.batch_accuracy(predictions, batch.rating)
-                precision = self.batch_precision(predictions, batch.rating)
-                recall = self.batch_recall(predictions, batch.rating)
+                tp, fp, tn, fn = self.batch_confusion_matrix(predictions, batch.rating)
+                total_tp += tp
+                total_tn += tn
+                total_fn += fn
+                total_fp += fp
                 loss = self.loss(predictions, batch.rating)
                 loss.backward()
                 self.optimizer.step()
 
                 epoch_loss += loss.item()
-                epoch_accuracy += accuracy
-                epoch_precision += precision
-                epoch_recall += recall
-                calculated_accuracies = calculated_accuracies + 1
+                calculated = calculated + 1
 
                 batch_num = batch_num + 1
 
-            epoch_accuracy = epoch_accuracy / calculated_accuracies
-            epoch_precision = epoch_precision / calculated_accuracies
-            epoch_recall = epoch_recall / calculated_accuracies
-            print('Epoch Loss: ' + str(epoch_loss))
+            epoch_accuracy = (total_tp + total_tn) * 1.0 / (total_tp + total_tn + total_fp + total_fn)
+            epoch_precision = total_tp * 1.0 / (total_tp + total_fp)
+            epoch_recall = total_tp * 1.0 / (total_tp + total_fn)
+            print('\nEpoch Loss: ' + str(epoch_loss))
             print('Epoch Accuracy: ' + str(epoch_accuracy * 100) + '%')
             print('Epoch Precision: ' + str(epoch_precision * 100) + '%')
-            print('Epoch Recall: ' + str(epoch_recall * 100) + '%' + '\n')
+            print('Epoch Recall: ' + str(epoch_recall * 100) + '%')
+            print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
+                total_tp, total_tn, total_fp, total_fn))
             num_epoch = num_epoch + 1
 
         self.model = network
@@ -255,10 +232,11 @@ class CNNReviewClassifier():
         self.model.eval()
 
         total_loss = 0
-        total_accuracy = 0
-        total_precision = 0
-        total_recall = 0
-        calculated_accuracies = 0
+        total_tp = 0
+        total_tn = 0
+        total_fp = 0
+        total_fn = 0
+        calculated = 0
 
         num_sample = 1
 
@@ -270,25 +248,25 @@ class CNNReviewClassifier():
                 sample_loss = self.loss(predictions.to(torch.double),
                                         sample.rating.to(torch.double))
 
-                accuracy = self.batch_accuracy(predictions, sample.rating)
-                precision = self.batch_precision(predictions, sample.rating)
-                recall = self.batch_recall(predictions, sample.rating)
+                tp, fp, tn, fn = self.batch_confusion_matrix(predictions, sample.rating)
 
-                total_accuracy += accuracy
-                total_precision += precision
-                total_recall += recall
-                calculated_accuracies = calculated_accuracies + 1
+                total_tp += tp
+                total_tn += tn
+                total_fp += fp
+                total_fn += fn
+                calculated += 1
                 total_loss += sample_loss
 
                 num_sample = num_sample + 1
-                print('Batch #{} Loss: {}\tAccuracy: {}\tPrecision: {}\tRecall: {}'.format(
-                    num_sample, sample_loss, accuracy, precision, recall))
 
-            average_accuracy = (total_accuracy / calculated_accuracies) * 100
-            average_precision = (total_precision / calculated_accuracies) * 100
-            average_recall = (total_recall / calculated_accuracies) * 100
+            average_accuracy = ((total_tp + total_tn) * 1.0 / (total_tp + total_tn + total_fp + total_fn)) * 100
+            average_precision = (total_tp * 1.0 / (total_tp + total_fp)) * 100
+            average_recall = (total_tp * 1.0 / (total_tp + total_fn)) * 100
+            print('Evaluation Metrics:')
             print('\nTotal Loss: {}\tAverage Accuracy: {}%\nAverage Precision: {}%\tAverage Recall: {}%'.format(
                 total_loss, average_accuracy, average_precision, average_recall))
+            print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
+                total_tp, total_tn, total_fp, total_fn))
 
         return average_accuracy, average_precision, average_recall
 
