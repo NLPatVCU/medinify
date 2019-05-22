@@ -1,10 +1,9 @@
 
-import sklearn.preprocessing as process
-import numpy as np
-import random
+# Evaluation
+from sklearn.model_selection import StratifiedKFold
 
 # Word Embeddings
-from gensim.models import Word2Vec, KeyedVectors
+from gensim.models import Word2Vec
 
 # Medinify
 from medinify.sentiment.review_classifier import ReviewClassifier
@@ -68,42 +67,7 @@ class CNNReviewClassifier():
         self.embeddings = w2v_model.wv
         w2v_model.wv.save_word2vec_format(output_file)
 
-    def generate_datasets(self, dataset_file):
-        """
-        Given a dataset file, generates a torchtext dataset
-        :param dataset_file: csv file with dataset
-        :return: a torchtext dataset
-        """
-        # generate Medinify-structured dataset
-        classifier = ReviewClassifier()
-        dataset = classifier.create_dataset(dataset_file)
-
-        # seperate out comments and ratings
-        # The default tokenize is just string.split(), but spacy tokenizer is also built in
-        self.comment_field = data.Field(tokenize='spacy', lower=True, dtype=torch.float64)
-        self.rating_field = data.LabelField(dtype=torch.float64)
-
-        # iterate through dataset and generate examples with comment_field and rating_field
-        examples = []
-
-        for review in dataset:
-            comment = ' '.join(list(review[0].keys()))
-            rating = review[1]
-            review = {'comment': comment, 'rating': rating}
-            ex = Example.fromdict(data=review,
-                                  fields={'comment': ('comment', self.comment_field),
-                                          'rating': ('rating', self.rating_field)})
-            examples.append(ex)
-
-        dataset = Dataset(examples=examples,
-                          fields={'comment': self.comment_field, 'rating': self.rating_field})
-
-        self.comment_field.build_vocab(dataset.comment)
-        self.rating_field.build_vocab(['pos', 'neg'])
-
-        return dataset
-
-    def generate_data_loaders(self, train_file, valid_file, train_batch_size, valid_batch_size):
+    def generate_data_loaders(self, train_dataset, valid_dataset, train_batch_size, valid_batch_size, w2v_file):
         """
         This function generates TorchText dataloaders for training and validation datasets
         :param train_file: path to training dataset
@@ -114,13 +78,44 @@ class CNNReviewClassifier():
         :return: train data loader and validation data loader
         """
 
-        # generate torchtext datasets for train and validation data
-        train_dataset = self.generate_datasets(train_file)
-        valid_dataset = self.generate_datasets(valid_file)
+        # seperate out comments and ratings
+        # The default tokenize is just string.split(), but spacy tokenizer is also built in
+        self.comment_field = data.Field(tokenize='spacy', lower=True, dtype=torch.float64)
+        self.rating_field = data.LabelField(dtype=torch.float64)
+
+        # iterate through dataset and generate examples with comment_field and rating_field
+        train_examples = []
+        valid_examples = []
+
+        for review in train_dataset:
+            comment = ' '.join(list(review[0].keys()))
+            rating = review[1]
+            review = {'comment': comment, 'rating': rating}
+            ex = Example.fromdict(data=review,
+                                  fields={'comment': ('comment', self.comment_field),
+                                          'rating': ('rating', self.rating_field)})
+            train_examples.append(ex)
+
+        for review in valid_dataset:
+            comment = ' '.join(list(review[0].keys()))
+            rating = review[1]
+            review = {'comment': comment, 'rating': rating}
+            ex = Example.fromdict(data=review,
+                                  fields={'comment': ('comment', self.comment_field),
+                                          'rating': ('rating', self.rating_field)})
+            valid_examples.append(ex)
+
+        train_dataset = Dataset(examples=train_examples,
+                          fields={'comment': self.comment_field, 'rating': self.rating_field})
+        valid_dataset = Dataset(examples=valid_examples,
+                          fields={'comment': self.comment_field, 'rating': self.rating_field})
 
         # build comment_field and rating_field vocabularies
-        #self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment)
-        #self.rating_field.build_vocab(['pos', 'neg'])
+        vectors = Vectors(w2v_file)
+        self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment,
+                                       max_size=10000, vectors=vectors)
+        self.rating_field.build_vocab(['pos', 'neg'])
+        self.embeddings = self.comment_field.vocab.vectors
 
         # create torchtext iterators for train data and validation data
         train_loader = Iterator(train_dataset, train_batch_size, sort_key=lambda x: len(x))
@@ -182,6 +177,9 @@ class CNNReviewClassifier():
                 false_negative = false_negative + 1
             i = i + 1
 
+        if true_positive + false_negative == 0:
+            return 0
+
         return (true_positive * 1.0) / (true_positive + false_negative)
 
     def train(self, network, train_loader, n_epochs):
@@ -193,7 +191,7 @@ class CNNReviewClassifier():
         :return: trained network
         """
         # optimizer for network
-        self.optimizer = torch.optim.Adam(network.parameters(), lr=0.001)
+        self.optimizer = optim.Adam(network.parameters(), lr=0.001)
 
         # counter for printing current epoch to console
         num_epoch = 1
@@ -212,10 +210,10 @@ class CNNReviewClassifier():
             batch_num = 1
             # iterate through batches
             for batch in train_loader:
-                """
+
                 if batch_num % 25 == 0:
                     print('On batch ' + str(batch_num) + ' of ' + str(len(train_loader)))
-                """
+
                 self.optimizer.zero_grad()
                 # if the sentences are shorter than the largest kernel, continue to next batch
                 if batch.comment.shape[0] < 4:
@@ -291,6 +289,44 @@ class CNNReviewClassifier():
             average_recall = (total_recall / calculated_accuracies) * 100
             print('\nTotal Loss: {}\tAverage Accuracy: {}%\nAverage Precision: {}%\tAverage Recall: {}%'.format(
                 total_loss, average_accuracy, average_precision, average_recall))
+
+        return average_accuracy, average_precision, average_recall
+
+    def evaluate_k_fold(self, input_file, num_folds):
+        """
+        Evaluates CNN's accuracy using stratified k-fold validation
+        :param input_file: dataset file
+        :param num_folds: number of k-folds
+        """
+        classifier = ReviewClassifier()
+        dataset = classifier.create_dataset(input_file)
+
+        comments = [review[0] for review in dataset]
+        ratings = [review[1] for review in dataset]
+
+        skf = StratifiedKFold(n_splits=num_folds)
+
+        total_accuracy = 0
+        total_precision = 0
+        total_recall = 0
+
+        for train, test in skf.split(comments, ratings):
+            train_data = [dataset[x] for x in train]
+            test_data = [dataset[x] for x in test]
+            train_loader, valid_loader = self.generate_data_loaders(train_data, test_data, 25, 25, 'examples/w2v.model')
+            network = SentimentNetwork(len(self.comment_field.vocab), self.embeddings)
+            self.train(network, train_loader, 10)
+            fold_accuracy, fold_precision, fold_recall = self.evaluate(valid_loader)
+            total_accuracy += fold_accuracy
+            total_precision += fold_precision
+            total_recall += fold_recall
+
+        average_accuracy = total_accuracy / 5
+        average_precision = total_precision / 5
+        average_recall = total_recall / 5
+        print('Average Accuracy: ' + str(average_accuracy))
+        print('Average Precision: ' + str(average_precision))
+        print('Average Recall: ' + str(average_recall))
 
 
 class SentimentNetwork(Module):
