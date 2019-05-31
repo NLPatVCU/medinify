@@ -79,8 +79,8 @@ class CNNReviewClassifier():
         """
 
         # seperate out comments and ratings
-        # The default tokenize is just string.split(), but spacy tokenizer is also built in
-        self.comment_field = data.Field(tokenize='spacy', lower=True, dtype=torch.float64)
+        # The default tokenize is just string.split()
+        self.comment_field = data.Field(lower=True, dtype=torch.float64)
         self.rating_field = data.LabelField(dtype=torch.float64)
         self.character_field = data.Field(dtype=torch.float64)
 
@@ -307,7 +307,8 @@ class CNNReviewClassifier():
             train_data = [dataset[x] for x in train]
             test_data = [dataset[x] for x in test]
             train_loader, valid_loader = self.generate_data_loaders(train_data, test_data, 25, 25, 'examples/w2v.model', 'examples/w2v_char_embeddings.txt')
-            network = SentimentNetwork(char_vocab_size=len(self.character_field.vocab), char_embeddings=self.char_embeddings)
+
+            network = SentimentNetwork(vocab_size=len(self.comment_field.vocab), embeddings=self.word_embeddings)
             self.train(network, train_loader, 10)
             fold_accuracy, fold_precision, fold_recall = self.evaluate(valid_loader)
             total_accuracy += fold_accuracy
@@ -334,8 +335,8 @@ class SentimentNetwork(Module):
         self.embed = nn.Embedding(vocab_size, 100, padding_idx=1)
         self.embed.weight.data.copy_(embeddings)
 
-        self.embed_chars = nn.Embedding(char_vocab_size, 100, padding_idx=0)
-        self.embed_chars.weight.data.copy_(char_embeddings)
+        # self.embed_chars = nn.Embedding(char_vocab_size, 100, padding_idx=0)
+        # self.embed_chars.weight.data.copy_(char_embeddings)
 
         # convolutional layers
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()  # bigrams
