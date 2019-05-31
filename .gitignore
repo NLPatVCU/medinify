@@ -10,6 +10,7 @@
 *.json
 *.bin
 *.pickle
+!cnn_config.json
 !depression_drugs.csv
 !common_drugs.csv
 !cancer_drugs.csv

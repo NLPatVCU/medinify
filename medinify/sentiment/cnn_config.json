@@ -1,0 +1,8 @@
+{
+  "use_c2v": false,
+  "use_w2v": true,
+  "w2v_file": "examples/w2v.model",
+  "c2v_file": "examples/w2v_char_embeddings.txt",
+  "train_batch": 5,
+  "valid_batch": 5
+}
