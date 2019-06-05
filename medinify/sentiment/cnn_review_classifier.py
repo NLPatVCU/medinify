@@ -23,6 +23,7 @@ from torchtext.vocab import Vectors
 
 # Misc
 import json
+import os
 
 
 class CNNReviewClassifier():
@@ -212,7 +213,7 @@ class CNNReviewClassifier():
         train_loader, valid_loader = self.get_data_loaders(train_file, valid_file)
         self.train(train_loader, valid_loader, n_epochs)
 
-    def train(self, train_loader, valid_loader, n_epochs):
+    def train(self, train_loader, valid_loader, n_epochs, path):
         """
         Trains network on training data
         :param train_loader: train data iterator
@@ -236,13 +237,20 @@ class CNNReviewClassifier():
         network = SentimentNetwork(vocab_size=vocab_size, embeddings=word_embeddings,
                                    char_vocab_size=char_vocab_size, char_embeddings=char_embeddings,
                                    use_w2v=self.use_w2v, use_c2v=self.use_c2v)
+        self.model = network
 
         # optimizer for network
         self.optimizer = optim.Adam(network.parameters(), lr=0.001)
-
         num_epoch = 1
+
+        if os.path.exists(path):
+            info = torch.load(path)
+            self.model.load_state_dict(info['model_state'])
+            self.optimizer.load_state_dict(info['optimizer_state'])
+            num_epoch = info['epoch']
+
         # training loop
-        for x in range(n_epochs):
+        for epoch in range(num_epoch, n_epochs + 1):
             print('Starting Epoch ' + str(num_epoch))
 
             epoch_loss = 0
@@ -297,6 +305,11 @@ class CNNReviewClassifier():
 
             num_epoch = num_epoch + 1
 
+            torch.save({'model_state': network.state_dict(),
+                        'optimizer_state': self.optimizer.state_dict(),
+                        'epoch': num_epoch},
+                       path)
+
         return network
 
     def evaluate(self, valid_loader):
@@ -345,7 +358,7 @@ class CNNReviewClassifier():
 
         return average_accuracy, average_precision, average_recall
 
-    def evaluate_k_fold(self, input_file, num_folds, num_epochs):
+    def evaluate_k_fold(self, input_file, num_folds, num_epochs, path):
         """
         Evaluates CNN's accuracy using stratified k-fold validation
         :param input_file: dataset file
@@ -365,34 +378,22 @@ class CNNReviewClassifier():
 
         num_fold = 1
         for train, test in skf.split(comments, ratings):
+
             print('Fold #' + str(num_fold))
             train_data = [dataset[x] for x in train]
             test_data = [dataset[x] for x in test]
+
             train_loader, valid_loader = self.generate_data_loaders(train_data, test_data)
 
-            vocab_size = 0
-            char_vocab_size = 0
-            word_embeddings = None
-            char_embeddings = None
-
-            if self.use_w2v:
-                vocab_size = len(self.comment_field.vocab)
-                word_embeddings = self.word_embeddings
-            if self.use_c2v:
-                char_vocab_size = len(self.character_field.vocab)
-                char_embeddings = self.char_embeddings
-
-            network = SentimentNetwork(vocab_size=vocab_size, embeddings=word_embeddings,
-                                       char_vocab_size=char_vocab_size, char_embeddings=char_embeddings,
-                                       use_w2v=self.use_w2v, use_c2v=self.use_c2v)
-
-            self.train(train_loader, valid_loader, num_epochs)
+            self.train(train_loader, valid_loader, num_epochs, path)
             fold_accuracy, fold_precision, fold_recall = self.evaluate(valid_loader)
             total_accuracy += fold_accuracy
             total_precision += fold_precision
             total_recall += fold_recall
 
             num_fold += 1
+
+            os.remove(path)
 
         average_accuracy = total_accuracy / 5
         average_precision = total_precision / 5
