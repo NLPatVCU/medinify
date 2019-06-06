@@ -21,22 +21,21 @@ from torchtext import data
 from torchtext.data import Example, Dataset, Iterator
 from torchtext.vocab import Vectors
 
-# Misc
-import json
-import os
 
-
-class CNNReviewClassifier():
+class CNNReviewClassifier:
     """For performing sentiment analysis on drug reviews
         Using a PyTorch Convolutional Neural Network
 
     Attributes:
-        embeddings (Word2VecKeyedVectors): wv for word2vec, trained on forums
-        encoder - encoder for label tensors
+        vectors - TorchText word embedding vectors
+        embeddings: torch tensor of word2vec embeddings
+        model - CNN
+        comment_field - TorchText data field for comments
+        rating_field - TorchText LabelField for ratings
+        optimizer - CNN optimizer
+        loss - CNN loss function
     """
 
-    valid_batch = 25
-    train_batch = 25
     vectors = None
     embeddings = None
     model = None
@@ -56,6 +55,7 @@ class CNNReviewClassifier():
         Generates data_loaders given file names
         :param train_file: file with train data
         :param valid_file: file with validation data
+        :param batch_size: the loaders' batch sizes
         :return: data loaders
         """
 
@@ -70,6 +70,7 @@ class CNNReviewClassifier():
         This function generates TorchText dataloaders for training and validation datasets
         :param train_dataset: training dataset
         :param valid_dataset: validation dataset
+        :param batch_size: the loaders' batch sizes
         :return: train data loader and validation data loader
         """
 
@@ -168,7 +169,6 @@ class CNNReviewClassifier():
         :param train_loader: train data iterator
         :param valid_loader: validation loader
         :param n_epochs: number of training epochs
-        :return: trained network
         """
 
         # optimizer for network
@@ -281,6 +281,7 @@ class CNNReviewClassifier():
         Evaluates CNN's accuracy using stratified k-fold validation
         :param input_file: dataset file
         :param num_folds: number of k-folds
+        :param num_epochs: number of epochs per fold
         """
         classifier = ReviewClassifier()
         dataset = classifier.create_dataset(input_file)
@@ -342,9 +343,10 @@ class CNNReviewClassifier():
         w2v_model = Word2Vec(comments)
         print('Training word embeddings...')
         w2v_model.train(comments, total_examples=len(comments),
-                             total_words=len(w2v_model.wv.vocab), epochs=training_epochs)
+                        total_words=len(w2v_model.wv.vocab),
+                        epochs=training_epochs)
         print('Finished training!')
-        self.word_embeddings = w2v_model.wv
+        self.embeddings = w2v_model.wv
         w2v_model.wv.save_word2vec_format(output_file)
 
 
