@@ -17,9 +17,10 @@ def main():
     # review_classifier.classify('neutral.txt')
 
     input_file = sys.argv[1]
+    num_epochs = int(sys.argv[2])
 
-    sent = CNNReviewClassifier()
-    sent.evaluate_k_fold(input_file, 5)
+    sent = CNNReviewClassifier(config_file='medinify/sentiment/cnn_config.json')
+    sent.evaluate_k_fold(input_file, num_folds=5, num_epochs=num_epochs)
 
 if __name__ == "__main__":
     main()
