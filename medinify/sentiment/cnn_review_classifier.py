@@ -35,40 +35,23 @@ class CNNReviewClassifier():
         encoder - encoder for label tensors
     """
 
-    use_c2v = True
-    use_w2v = True
-    c2v_file = None
-    w2v_file = None
     valid_batch = 25
     train_batch = 25
-    word_embeddings = None
-    char_embeddings = None
+    vectors = None
+    embeddings = None
     model = None
     comment_field = None
     rating_field = None
-    character_field = None
     optimizer = None
     loss = nn.BCEWithLogitsLoss()
 
-    def __init__(self, config_file=None):
+    def __init__(self, w2v_file):
 
-        config = {}
-        try:
-            with open(config_file, 'r') as cf:
-                config = json.load(cf)
-        except TypeError:
-            print('No Configuration Specified')
+        vectors = Vectors(w2v_file)
+        self.vectors = vectors
+        self.model = SentimentNetwork(vocab_size=len(vectors.stoi), embeddings=self.embeddings)
 
-        self.use_w2v = config['use_w2v']
-        self.use_c2v = config['use_c2v']
-        self.w2v_file = config['w2v_file']
-        self.c2v_file = config['c2v_file']
-        if config['valid_batch']:
-            self.valid_batch = int(config['valid_batch'])
-        if config['train_batch']:
-            self.train_batch = int(config['train_batch'])
-
-    def get_data_loaders(self, train_file, valid_file):
+    def get_data_loaders(self, train_file, valid_file, batch_size):
         """
         Generates data_loaders given file names
         :param train_file: file with train data
@@ -80,9 +63,9 @@ class CNNReviewClassifier():
         train_data = dataset_maker.create_dataset(train_file)
         valid_data = dataset_maker.create_dataset(valid_file)
 
-        return self.generate_data_loaders(train_data, valid_data)
+        return self.generate_data_loaders(train_data, valid_data, batch_size)
 
-    def generate_data_loaders(self, train_dataset, valid_dataset):
+    def generate_data_loaders(self, train_dataset, valid_dataset, batch_size):
         """
         This function generates TorchText dataloaders for training and validation datasets
         :param train_dataset: training dataset
@@ -91,10 +74,7 @@ class CNNReviewClassifier():
         """
 
         # create TorchText fields
-        if self.use_w2v:
-            self.comment_field = data.Field(lower=True, dtype=torch.float64)
-        if self.use_c2v:
-            self.character_field = data.Field(dtype=torch.float64)
+        self.comment_field = data.Field(lower=True, dtype=torch.float64)
         rating_field = data.LabelField(dtype=torch.float64)
 
         # iterate through dataset and generate examples with comment_field and rating_field
@@ -106,20 +86,9 @@ class CNNReviewClassifier():
             rating = review[1]
             characters = list(comment)
             review = {'comment': comment, 'characters': characters, 'rating': rating}
-            ex = None
-            if self.use_w2v and self.use_c2v:
-                ex = Example.fromdict(data=review,
-                                      fields={'comment': ('comment', self.comment_field),
-                                              'characters': ('characters', self.character_field),
-                                              'rating': ('rating', rating_field)})
-            elif self.use_w2v:
-                ex = Example.fromdict(data=review,
-                                      fields={'comment': ('comment', self.comment_field),
-                                              'rating': ('rating', rating_field)})
-            elif self.use_c2v:
-                ex = Example.fromdict(data=review,
-                                      fields={'characters': ('characters', self.character_field),
-                                              'rating': ('rating', rating_field)})
+            ex = Example.fromdict(data=review,
+                                  fields={'comment': ('comment', self.comment_field),
+                                          'rating': ('rating', rating_field)})
             train_examples.append(ex)
 
         for review in valid_dataset:
@@ -127,48 +96,28 @@ class CNNReviewClassifier():
             rating = review[1]
             characters = list(comment)
             review = {'comment': comment, 'characters': characters, 'rating': rating}
-            ex = None
-            if self.use_w2v and self.use_c2v:
-                ex = Example.fromdict(data=review,
-                                      fields={'comment': ('comment', self.comment_field),
-                                              'characters': ('characters', self.character_field),
-                                              'rating': ('rating', rating_field)})
-            elif self.use_w2v:
-                ex = Example.fromdict(data=review,
-                                      fields={'comment': ('comment', self.comment_field),
-                                              'rating': ('rating', rating_field)})
-            elif self.use_c2v:
-                ex = Example.fromdict(data=review,
-                                      fields={'characters': ('characters', self.character_field),
-                                              'rating': ('rating', rating_field)})
+            ex = Example.fromdict(data=review,
+                                  fields={'comment': ('comment', self.comment_field),
+                                          'rating': ('rating', rating_field)})
             valid_examples.append(ex)
 
         train_dataset = Dataset(examples=train_examples,
                                 fields={'comment': self.comment_field,
-                                        'characters': self.character_field,
                                         'rating': rating_field})
         valid_dataset = Dataset(examples=valid_examples,
                                 fields={'comment': self.comment_field,
-                                        'characters': self.character_field,
                                         'rating': rating_field})
 
         # build comment_field and rating_field vocabularies
-        if self.use_w2v:
-            word_vectors = Vectors(self.w2v_file)
-            self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment,
-                                           max_size=10000, vectors=word_vectors)
-            self.word_embeddings = self.comment_field.vocab.vectors
-        if self.use_c2v:
-            char_vectors = Vectors(self.c2v_file)
-            self.character_field.build_vocab(list(char_vectors.stoi.keys()),
-                                             vectors=char_vectors)
-            self.char_embeddings = self.character_field.vocab.vectors
+        self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment,
+                                       max_size=10000, vectors=self.vectors)
+        self.embeddings = self.comment_field.vocab.vectors
 
         rating_field.build_vocab(['pos', 'neg'])
 
         # create torchtext iterators for train data and validation data
-        train_loader = Iterator(train_dataset, self.train_batch, sort_key=lambda x: len(x))
-        valid_loader = Iterator(valid_dataset, self.valid_batch, sort_key=lambda x: len(x))
+        train_loader = Iterator(train_dataset, batch_size, sort_key=lambda x: len(x))
+        valid_loader = Iterator(valid_dataset, batch_size, sort_key=lambda x: len(x))
 
         return train_loader, valid_loader
 
@@ -205,12 +154,12 @@ class CNNReviewClassifier():
 
         return true_pos, false_pos, true_neg, false_neg
 
-    def train_from_files(self, train_file, valid_file, n_epochs):
+    def train_from_files(self, train_file, valid_file, n_epochs, batch_size):
         """
         Trains a model given train file and validation file
         """
 
-        train_loader, valid_loader = self.get_data_loaders(train_file, valid_file)
+        train_loader, valid_loader = self.get_data_loaders(train_file, valid_file, batch_size)
         self.train(train_loader, valid_loader, n_epochs)
 
     def train(self, train_loader, valid_loader, n_epochs):
@@ -222,36 +171,10 @@ class CNNReviewClassifier():
         :return: trained network
         """
 
-        vocab_size = 0
-        char_vocab_size = 0
-        word_embeddings = None
-        char_embeddings = None
-
-        if self.use_w2v:
-            vocab_size = len(self.comment_field.vocab)
-            word_embeddings = self.word_embeddings
-        if self.use_c2v:
-            char_vocab_size = len(self.character_field.vocab)
-            char_embeddings = self.char_embeddings
-
-        network = SentimentNetwork(vocab_size=vocab_size, embeddings=word_embeddings,
-                                   char_vocab_size=char_vocab_size, char_embeddings=char_embeddings,
-                                   use_w2v=self.use_w2v, use_c2v=self.use_c2v)
-        self.model = network
-
         # optimizer for network
-        self.optimizer = optim.Adam(network.parameters(), lr=0.001)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+
         num_epoch = 1
-
-        """
-        if os.path.exists(path):
-            info = torch.load(path)
-            self.model.load_state_dict(info['model_state'])
-            self.optimizer.load_state_dict(info['optimizer_state'])
-            num_epoch = info['epoch']
-        """
-
-        # training loop
         for epoch in range(num_epoch, n_epochs + 1):
             print('Starting Epoch ' + str(num_epoch))
 
@@ -263,21 +186,22 @@ class CNNReviewClassifier():
 
             calculated = 0
 
-            network.train()
+            self.model.train()
 
             batch_num = 1
-            # iterate through batches
             for batch in train_loader:
 
                 if batch_num % 25 == 0:
                     print('On batch ' + str(batch_num) + ' of ' + str(len(train_loader)))
 
                 self.optimizer.zero_grad()
+
                 # if the sentences are shorter than the largest kernel, continue to next batch
                 if batch.comment.shape[0] < 4:
                     num_epoch = num_epoch + 1
                     continue
-                predictions = network(batch).squeeze(1).to(torch.float64)
+
+                predictions = self.model(batch).squeeze(1).to(torch.float64)
                 tp, fp, tn, fn = self.batch_confusion_matrix(predictions, batch.rating)
                 total_tp += tp
                 total_tn += tn
@@ -302,19 +226,9 @@ class CNNReviewClassifier():
             print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
                 total_tp, total_tn, total_fp, total_fn))
 
-            self.model = network
             self.evaluate(valid_loader)
 
             num_epoch = num_epoch + 1
-
-            """
-            torch.save({'model_state': network.state_dict(),
-                        'optimizer_state': self.optimizer.state_dict(),
-                        'epoch': num_epoch},
-                       path)
-            """
-
-        return network
 
     def evaluate(self, valid_loader):
         """
@@ -442,22 +356,12 @@ class SentimentNetwork(Module):
     use_w2v = False
     use_c2v = False
 
-    def __init__(self, vocab_size=None, char_vocab_size=None,
-                 embeddings=None, char_embeddings=None,
-                 use_w2v=None, use_c2v=None):
+    def __init__(self, vocab_size=None, embeddings=None):
         super(SentimentNetwork, self).__init__()
 
-        self.use_w2v = use_w2v
-        self.use_c2v = use_c2v
-
-        # embedding layers
-        if use_w2v:
-            self.embed_words = nn.Embedding(vocab_size, 100, padding_idx=1)
-            self.embed_words.weight = nn.Parameter(embeddings)
-
-        if use_c2v:
-            self.embed_chars = nn.Embedding(char_vocab_size, 100, padding_idx=0)
-            self.embed_chars.weight.data.copy_(char_embeddings)
+        # embedding layer
+        self.embed_words = nn.Embedding(vocab_size, 100, padding_idx=1)
+        self.embed_words.weight = nn.Parameter(embeddings)
 
         # convolutional layers
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()  # bigrams
@@ -479,17 +383,8 @@ class SentimentNetwork(Module):
         # t starts as batch of shape [sentences length, batch size] with each word
         # represented as integer index
         # reshape to [batch size, sentence length]
-        embedded_words = None
-        if self.use_w2v:
-            comments = t.comment.permute(1, 0).to(torch.long)
-            embedded_words = self.embed_words(comments).unsqueeze(1).to(torch.double)
-        if self.use_c2v:
-            print('Not set up to use character embeddings')
-            exit()
-
-        # run indexes through embedding layer and get tensor of shape [batch size, sentence length, embed dimension]
-
-        embedded = embedded_words
+        comments = t.comment.permute(1, 0).to(torch.long)
+        embedded = self.embed_words(comments).unsqueeze(1).to(torch.double)
 
         # convolve embedded outputs three times
         # to find bigrams, tri-grams, and 4-grams (or different by adjusting kernel sizes)
