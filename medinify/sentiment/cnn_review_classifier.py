@@ -48,7 +48,7 @@ class CNNReviewClassifier:
 
         vectors = Vectors(w2v_file)
         self.vectors = vectors
-        self.model = SentimentNetwork(vocab_size=len(vectors.stoi), embeddings=self.embeddings)
+        self.model = SentimentNetwork(vocab_size=len(vectors.stoi), embeddings=self.vectors.vectors)
 
     def get_data_loaders(self, train_file, valid_file, batch_size):
         """
@@ -76,7 +76,7 @@ class CNNReviewClassifier:
 
         # create TorchText fields
         self.comment_field = data.Field(lower=True, dtype=torch.float64)
-        rating_field = data.LabelField(dtype=torch.float64)
+        self.rating_field = data.LabelField(dtype=torch.float64)
 
         # iterate through dataset and generate examples with comment_field and rating_field
         train_examples = []
@@ -89,7 +89,7 @@ class CNNReviewClassifier:
             review = {'comment': comment, 'characters': characters, 'rating': rating}
             ex = Example.fromdict(data=review,
                                   fields={'comment': ('comment', self.comment_field),
-                                          'rating': ('rating', rating_field)})
+                                          'rating': ('rating', self.rating_field)})
             train_examples.append(ex)
 
         for review in valid_dataset:
@@ -99,22 +99,22 @@ class CNNReviewClassifier:
             review = {'comment': comment, 'characters': characters, 'rating': rating}
             ex = Example.fromdict(data=review,
                                   fields={'comment': ('comment', self.comment_field),
-                                          'rating': ('rating', rating_field)})
+                                          'rating': ('rating', self.rating_field)})
             valid_examples.append(ex)
 
         train_dataset = Dataset(examples=train_examples,
                                 fields={'comment': self.comment_field,
-                                        'rating': rating_field})
+                                        'rating': self.rating_field})
         valid_dataset = Dataset(examples=valid_examples,
                                 fields={'comment': self.comment_field,
-                                        'rating': rating_field})
+                                        'rating': self.rating_field})
 
         # build comment_field and rating_field vocabularies
         self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment,
                                        max_size=10000, vectors=self.vectors)
         self.embeddings = self.comment_field.vocab.vectors
 
-        rating_field.build_vocab(['pos', 'neg'])
+        self.rating_field.build_vocab(['pos', 'neg'])
 
         # create torchtext iterators for train data and validation data
         train_loader = Iterator(train_dataset, batch_size, sort_key=lambda x: len(x))
@@ -173,6 +173,7 @@ class CNNReviewClassifier:
 
         # optimizer for network
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+        self.model.train()
 
         num_epoch = 1
         for epoch in range(num_epoch, n_epochs + 1):
@@ -355,14 +356,11 @@ class SentimentNetwork(Module):
     A PyTorch Convolutional Neural Network for the sentiment analysis of drug reviews
     """
 
-    use_w2v = False
-    use_c2v = False
-
     def __init__(self, vocab_size=None, embeddings=None):
         super(SentimentNetwork, self).__init__()
 
         # embedding layer
-        self.embed_words = nn.Embedding(vocab_size, 100, padding_idx=1)
+        self.embed_words = nn.Embedding(vocab_size, 100)
         self.embed_words.weight = nn.Parameter(embeddings)
 
         # convolutional layers
