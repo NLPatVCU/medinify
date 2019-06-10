@@ -1,4 +1,6 @@
 
+import numpy as np
+
 # Evaluation
 from sklearn.model_selection import StratifiedKFold
 
@@ -29,26 +31,21 @@ class CNNReviewClassifier:
     Attributes:
         vectors - TorchText word embedding vectors
         embeddings: torch tensor of word2vec embeddings
-        model - CNN
         comment_field - TorchText data field for comments
         rating_field - TorchText LabelField for ratings
-        optimizer - CNN optimizer
         loss - CNN loss function
     """
 
     vectors = None
     embeddings = None
-    model = None
     comment_field = None
     rating_field = None
-    optimizer = None
     loss = nn.BCEWithLogitsLoss()
 
     def __init__(self, w2v_file):
 
         vectors = Vectors(w2v_file)
         self.vectors = vectors
-        self.model = SentimentNetwork(vocab_size=len(vectors.stoi), embeddings=self.vectors.vectors)
 
     def get_data_loaders(self, train_file, valid_file, batch_size):
         """
@@ -122,7 +119,7 @@ class CNNReviewClassifier:
 
         return train_loader, valid_loader
 
-    def batch_confusion_matrix(self, predictions, ratings):
+    def batch_metrics(self, predictions, ratings):
         """
         Calculates true positive, false positive, true negative, and false negative
         given a batch's predictions and actual ratings
@@ -161,19 +158,24 @@ class CNNReviewClassifier:
         """
 
         train_loader, valid_loader = self.get_data_loaders(train_file, valid_file, batch_size)
-        self.train(train_loader, valid_loader, n_epochs)
+        network = SentimentNetwork(len(self.vectors.stoi), self.vectors.vectors)
+        self.train(network=network, train_loader=train_loader,
+                   valid_loader=valid_loader, n_epochs=n_epochs)
 
-    def train(self, train_loader, valid_loader, n_epochs):
+    def train(self, network, train_loader, n_epochs, valid_loader=None, evaluate=True):
         """
         Trains network on training data
+        :param network: network being trained
         :param train_loader: train data iterator
-        :param valid_loader: validation loader
         :param n_epochs: number of training epochs
+        :param valid_loader: validation loader
+        :param evaluate: whether or not to evaluate validation set after each epoch
+                (set to false during cross-validation)
         """
 
-        # optimizer for network
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
-        self.model.train()
+        optimizer = optim.Adam(network.parameters(), lr=0.001)
+
+        network.train()
 
         num_epoch = 1
         for epoch in range(num_epoch, n_epochs + 1):
@@ -187,30 +189,28 @@ class CNNReviewClassifier:
 
             calculated = 0
 
-            self.model.train()
-
             batch_num = 1
             for batch in train_loader:
 
                 if batch_num % 25 == 0:
                     print('On batch ' + str(batch_num) + ' of ' + str(len(train_loader)))
 
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
 
                 # if the sentences are shorter than the largest kernel, continue to next batch
                 if batch.comment.shape[0] < 4:
                     num_epoch = num_epoch + 1
                     continue
 
-                predictions = self.model(batch).squeeze(1).to(torch.float64)
-                tp, fp, tn, fn = self.batch_confusion_matrix(predictions, batch.rating)
+                predictions = network(batch).squeeze(1).to(torch.float64)
+                tp, fp, tn, fn = self.batch_metrics(predictions, batch.rating)
                 total_tp += tp
                 total_tn += tn
                 total_fn += fn
                 total_fp += fp
                 loss = self.loss(predictions, batch.rating)
                 loss.backward()
-                self.optimizer.step()
+                optimizer.step()
 
                 epoch_loss += loss.item()
                 calculated = calculated + 1
@@ -227,16 +227,21 @@ class CNNReviewClassifier:
             print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
                 total_tp, total_tn, total_fp, total_fn))
 
-            self.evaluate(valid_loader)
+            if evaluate:
+                self.evaluate(network, valid_loader)
 
             num_epoch = num_epoch + 1
 
-    def evaluate(self, valid_loader):
+        return network
+
+    def evaluate(self, network, valid_loader):
         """
         Evaluates the accuracy of a model with validation data
+        :param network: network being evaluated
         :param valid_loader: validation data iterator
         """
-        self.model.eval()
+
+        network.eval()
 
         total_loss = 0
         total_tp = 0
@@ -251,11 +256,11 @@ class CNNReviewClassifier:
 
             for sample in valid_loader:
 
-                predictions = self.model(sample).squeeze(1)
+                predictions = network(sample).squeeze(1)
                 sample_loss = self.loss(predictions.to(torch.double),
                                         sample.rating.to(torch.double))
 
-                tp, fp, tn, fn = self.batch_confusion_matrix(predictions, sample.rating)
+                tp, fp, tn, fn = self.batch_metrics(predictions, sample.rating)
 
                 total_tp += tp
                 total_tn += tn
@@ -277,6 +282,18 @@ class CNNReviewClassifier:
 
         return average_accuracy, average_precision, average_recall
 
+    def set_weights(self, network):
+        """
+        Randomly initializes weights for neural network
+        :param network: network being initialized
+        :return: initialized network
+        """
+        if type(network) == nn.Conv2d or type(network) == nn.Linear:
+            torch.nn.init.xavier_uniform_(network.weight)
+            network.bias.data.fill_(0.01)
+
+        return network
+
     def evaluate_k_fold(self, input_file, num_folds, num_epochs):
         """
         Evaluates CNN's accuracy using stratified k-fold validation
@@ -284,6 +301,7 @@ class CNNReviewClassifier:
         :param num_folds: number of k-folds
         :param num_epochs: number of epochs per fold
         """
+
         classifier = ReviewClassifier()
         dataset = classifier.create_dataset(input_file)
 
@@ -296,22 +314,20 @@ class CNNReviewClassifier:
         total_precision = 0
         total_recall = 0
 
-        num_fold = 1
         for train, test in skf.split(comments, ratings):
-
-            print('Fold #' + str(num_fold))
             train_data = [dataset[x] for x in train]
             test_data = [dataset[x] for x in test]
 
-            train_loader, valid_loader = self.generate_data_loaders(train_data, test_data)
+            train_loader, valid_loader = self.generate_data_loaders(train_data, test_data, 25)
+            network = SentimentNetwork(vocab_size=len(self.comment_field.vocab), embeddings=self.embeddings)
 
-            self.train(train_loader, valid_loader, num_epochs)
-            fold_accuracy, fold_precision, fold_recall = self.evaluate(valid_loader)
+            network.apply(self.set_weights)
+
+            self.train(network, train_loader, num_epochs, evaluate=False)
+            fold_accuracy, fold_precision, fold_recall = self.evaluate(network, valid_loader)
             total_accuracy += fold_accuracy
             total_precision += fold_precision
             total_recall += fold_recall
-
-            num_fold += 1
 
         average_accuracy = total_accuracy / 5
         average_precision = total_precision / 5
@@ -369,7 +385,7 @@ class SentimentNetwork(Module):
         self.conv3 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(4, 100)).double()  # 4-grams
 
         # dropout layer
-        self.dropout = nn.Dropout(0.6)
+        self.dropout = nn.Dropout(0.5)
 
         # fully-connected layers
         self.fc1 = nn.Linear(300, 50).float()
