@@ -11,11 +11,6 @@
 *.bin
 *.pickle
 !cnn_config.json
-!depression_drugs.csv
-!common_drugs.csv
-!cancer_drugs.csv
-!diabetes_drugs.csv
-!heart_drugs.csv
 !test-dataset.pickle
 !test-reviews.csv
 !test-urls.csv

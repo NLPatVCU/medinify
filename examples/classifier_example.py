@@ -18,7 +18,7 @@ def main():
 
     input_file = sys.argv[1]
 
-    sent = CNNReviewClassifier('examples/w2v.model')
+    sent = CNNReviewClassifier('examples/word2vec.model')
     sent.evaluate_k_fold(input_file=input_file, num_folds=5, num_epochs=10)
 
 if __name__ == "__main__":
