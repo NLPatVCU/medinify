@@ -43,7 +43,10 @@ class CNNReviewClassifier:
     loss = nn.BCEWithLogitsLoss()
 
     def __init__(self, w2v_file):
-
+        """
+        Initializes CNNReviewClassifier
+        :param w2v_file: embedding file
+        """
         vectors = Vectors(w2v_file)
         self.vectors = vectors
 
@@ -373,6 +376,11 @@ class SentimentNetwork(Module):
     """
 
     def __init__(self, vocab_size=None, embeddings=None):
+        """
+        Creates pytorch convnet for training
+        :param vocab_size: size of embedding vocab
+        :param embeddings: word embeddings
+        """
         super(SentimentNetwork, self).__init__()
 
         # embedding layer

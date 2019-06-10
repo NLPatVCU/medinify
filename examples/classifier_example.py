@@ -2,7 +2,7 @@
 Examples for how to use the Medinify package
 """
 
-from medinify.sentiment import ReviewClassifier, CNNReviewClassifier, SentimentNetwork
+from medinify.sentiment import ReviewClassifier, CNNReviewClassifier
 import sys
 
 def main():
