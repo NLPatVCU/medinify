@@ -2,7 +2,7 @@
 Examples for how to use the Medinify package
 """
 
-from medinify.sentiment import ReviewClassifier, CNNReviewClassifier
+from medinify.sentiment import ReviewClassifier, CNNReviewClassifier, SentimentNetwork
 import sys
 
 def main():
@@ -17,10 +17,9 @@ def main():
     # review_classifier.classify('neutral.txt')
 
     input_file = sys.argv[1]
-    num_epochs = int(sys.argv[2])
 
-    sent = CNNReviewClassifier(config_file='medinify/sentiment/cnn_config.json')
-    sent.evaluate_k_fold(input_file, num_folds=5, num_epochs=num_epochs)
+    sent = CNNReviewClassifier('examples/w2v.model')
+    sent.evaluate_k_fold(input_file=input_file, num_folds=5, num_epochs=10)
 
 if __name__ == "__main__":
     main()
