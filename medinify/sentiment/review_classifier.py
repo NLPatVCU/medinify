@@ -392,6 +392,7 @@ def metrics(actual_ratings, predicted_ratings):
 
 """
 This is the code for the command line tool. It's not yet up and running yet, but it will be soon!
+# TODO finish command line tool
 
 def main():
 
