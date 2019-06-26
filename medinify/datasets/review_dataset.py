@@ -32,7 +32,7 @@ class ReviewDataset():
         self.drug_name = drug_name
         self.scraper = scraper
 
-        with open('../dataset-config.json', 'r') as config_file:
+        with open('medinify/datasets/dataset-config.json', 'r') as config_file:
             config = json.load(config_file)
         self.config = config['reviews']
 
