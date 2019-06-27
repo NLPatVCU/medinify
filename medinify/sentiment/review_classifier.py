@@ -83,7 +83,7 @@ class ReviewClassifier:
         if positive_threshold:
             self.positive_threshold = positive_threshold
 
-    def preprocess(self, reviews_filename, remove_stop_words=True):
+    def preprocess(self, reviews_filename, num=2, remove_stop_words=True):
         """
         Transforms reviews (comments and ratings) into numerical representations (vectors)
         Comments are vectorized into bag-of-words representation
@@ -105,26 +105,75 @@ class ReviewClassifier:
 
         reviews, target = [], []
         num_pos, num_neg, num_neut = 0, 0, 0
-
-        for review in df.values.tolist():
-            if type(review[0]) == float:
-                continue
-            if self.negative_threshold < review[1] < self.positive_threshold:
-                num_neut += 1
-                continue
-            elif review[1] <= self.negative_threshold:
-                num_neg += 1
-                rating = 0
-            else:
-                num_pos += 1
-                rating = 1
-            target.append(rating)
-            if remove_stop_words:
-                reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])
-                                        if word not in stop_words))
-            else:
-                reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
-
+        if num == 3:
+            for review in df.values.tolist():
+                #print('---')
+                #print(review[1])
+                if type(review[0]) == float:
+                    continue
+                if self.negative_threshold < review[1] < self.positive_threshold:
+                    num_neut += 1
+                    rating = 1
+                elif review[1] <= self.negative_threshold:
+                    num_neg += 1
+                    rating = 0
+                else:
+                    num_pos += 1
+                    rating = 2
+                #print(rating)
+                #print('---')
+                target.append(rating)
+                if remove_stop_words:
+                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])
+                                            if word not in stop_words))
+                else:
+                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
+        elif num == 2:
+            for review in df.values.tolist():
+                # print(review[1])
+                if type(review[0]) == float:
+                    continue
+                if self.negative_threshold < review[1] < self.positive_threshold:
+                    num_neut += 1
+                    continue
+                elif review[1] <= self.negative_threshold:
+                    num_neg += 1
+                    rating = 0
+                else:
+                    num_pos += 1
+                    rating = 1
+                target.append(rating)
+                if remove_stop_words:
+                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])
+                                            if word not in stop_words))
+                else:
+                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
+        elif num == 5:
+            for review in df.values.tolist():
+                if type(review[0]) == float:
+                    continue
+                if review[1] == 1.0:
+                    num_neg += 1
+                    rating = 1
+                elif review[1] == 2.0:
+                    num_neg += 1
+                    rating = 2
+                elif review[1] == 3.0:
+                    num_neut += 1
+                    rating = 3
+                elif review[1] == 4.0:
+                    num_pos += 1
+                    rating = 4
+                else:
+                    num_pos += 1
+                    rating = 5
+                print(rating)
+                target.append(rating)
+                if remove_stop_words:
+                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])
+                                            if word not in stop_words))
+                else:
+                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
         self.vectorizer.fit(reviews)
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
         info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
@@ -161,7 +210,8 @@ class ReviewClassifier:
         self.model = model
         return model
 
-    def evaluate_accuracy(self, data, target, model=None, verbose=False):
+
+    def evaluate_accuracy(self, data, target, num, model=None, verbose=False):
         """Evaluate accuracy of current model on new data
 
         Args:
@@ -173,12 +223,17 @@ class ReviewClassifier:
 
         if model:
             preds = model.predict(data)
+            # print(list(preds))
         else:
             preds = self.model.predict(data)
+            # print(list(preds))
+        if num == 2:
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, preds)
+        if num == 3:
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = metrics(target, preds, num=3)
+        # if num == 5:
 
-        accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, preds)
-
-        if verbose:
+        if verbose and num == 2:
             print('Evaluation Metrics:')
             print('Accuracy: {}%'.format(accuracy * 100))
             print('Positive Precision: {}%'.format(precision1 * 100))
@@ -187,16 +242,33 @@ class ReviewClassifier:
             print('Negative Precision: {}%'.format(precision2 * 100))
             print('Negative Recall: {}%'.format(recall2 * 100))
             print('Negative F1-Score: {}%'.format(f1_2 * 100))
+        elif verbose and num == 3:
+            print('Evaluation Metrics:')
+            print('Accuracy: {}%'.format(accuracy * 100))
+            print('Positive Precision: {}%'.format(precision1 * 100))
+            print('Positive Recall: {}%'.format(recall1 * 100))
+            print('Positive F1-Score: {}%'.format(f1_1 * 100))
+            print('Negative Precision: {}%'.format(precision2 * 100))
+            print('Negative Recall: {}%'.format(recall2 * 100))
+            print('Negative F1-Score: {}%'.format(f1_2 * 100))
+            print('Neutral Precision: {}%'.format(precision3 * 100))
+            print('Neutral Recall: {}%'.format(recall3 * 100))
+            print('Neutral F1-Score: {}%'.format(f1_3 * 100))
+        # elif verbose and num == 5:
 
         """
         if self.classifier_type == 'nn':
             score = self.model.evaluate(
                 test_data, np.array(test_target), verbose=0)[1]
         """
+        if num == 2:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
+        if num == 3:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
+        # if num == 5:
+        # return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
 
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
-
-    def evaluate_average_accuracy(self, reviews_filename, n_folds, verbose=False):
+    def evaluate_average_accuracy(self, reviews_filename, n_folds, num=2, verbose=False):
         """ Use stratified k fold to calculate average accuracy of models
 
         Args:
@@ -205,12 +277,14 @@ class ReviewClassifier:
             verbose: Whether or not to print evaluation metrics to console
         """
 
-        data, target, info = self.preprocess(reviews_filename)
+        data, target, info = self.preprocess(reviews_filename, num)
         splits = StratifiedKFold(n_splits=n_folds)
 
         accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
         class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
-
+        if num == 3:
+            class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
+        # if num == 5:
         for train, test in splits.split(data, target):
             x_train = [data[x] for x in train]
             y_train = [target[x] for x in train]
@@ -219,9 +293,13 @@ class ReviewClassifier:
 
             model = self.generate_model()
             model.fit(x_train, y_train)
-
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = self.evaluate_accuracy(x_test,
-                                                                                                    y_test,
+            if num == 2:
+                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = self.evaluate_accuracy(x_test,
+                                                                                                    y_test, num,
+                                                                                                    model=model)
+            if num == 3:
+                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = self.evaluate_accuracy(x_test,
+                                                                                                    y_test, num,
                                                                                                     model=model)
             accuracies.append(accuracy)
             class_1_precisions.append(precision1)
@@ -230,6 +308,10 @@ class ReviewClassifier:
             class_2_recalls.append(recall2)
             class_1_f1s.append(f1_1)
             class_2_f1s.append(f1_2)
+            if num == 3:
+                class_3_precisions.append(precision3)
+                class_3_recalls.append(recall3)
+                class_3_f1s.append(f1_3)
 
         average_accuracy = np.mean(np.array(accuracies)) * 100
         average_precision1 = np.mean(np.array(class_1_precisions)) * 100
@@ -238,16 +320,29 @@ class ReviewClassifier:
         average_recall2 = np.mean(np.array(class_2_recalls)) * 100
         average_f1_1 = np.mean(np.array(class_1_f1s)) * 100
         average_f1_2 = np.mean(np.array(class_2_f1s)) * 100
+        if num == 3:
+            average_precision3 = np.mean(np.array(class_3_precisions)) * 100
+            average_recall3 = np.mean(np.array(class_3_recalls)) * 100
+            average_f1_3 = np.mean(np.array(class_3_f1s)) * 100
 
-        metrics_ = {'accuracies': accuracies, 'positive_precisions': class_1_precisions,
-                    'positive_recalls': class_1_recalls, 'positive_f1_scores': class_1_f1s,
-                    'negative_precisions': class_2_precisions, 'negative_recalls': class_2_recalls,
-                    'negative_f1_scores': class_2_f1s, 'average_accuracy': average_accuracy,
-                    'average_positive_precision': average_precision1, 'average_positive_recall': average_recall1,
-                    'average_positive_f1_score': average_f1_1, 'average_negative_precision': average_precision2,
-                    'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2}
-
-        if verbose:
+        if num == 2:
+            metrics_ = {'accuracies': accuracies, 'positive_precisions': class_1_precisions,
+                        'positive_recalls': class_1_recalls, 'positive_f1_scores': class_1_f1s,
+                        'negative_precisions': class_2_precisions, 'negative_recalls': class_2_recalls,
+                        'negative_f1_scores': class_2_f1s, 'average_accuracy': average_accuracy,
+                        'average_positive_precision': average_precision1, 'average_positive_recall': average_recall1,
+                        'average_positive_f1_score': average_f1_1, 'average_negative_precision': average_precision2,
+                        'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2}
+        if num == 3:
+            metrics_ = {'accuracies': accuracies, 'positive_precisions': class_1_precisions,
+                        'positive_recalls': class_1_recalls, 'positive_f1_scores': class_1_f1s,
+                        'negative_precisions': class_2_precisions, 'negative_recalls': class_2_recalls,
+                        'negative_f1_scores': class_2_f1s, 'average_accuracy': average_accuracy,
+                        'average_positive_precision': average_precision1, 'average_positive_recall': average_recall1,
+                        'average_positive_f1_score': average_f1_1, 'average_negative_precision': average_precision2,
+                        'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2, 'average_neutral_precision': average_precision3,
+                        'average_neutral_recall': average_recall3, 'average_neutral_f1_score': average_f1_3}    
+        if verbose and num == 2:
             print('Validation Metrics:')
             print('Average Accuracy: {}%'.format(average_accuracy))
             print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
@@ -256,10 +351,22 @@ class ReviewClassifier:
             print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
             print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
             print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
+        if verbose and num == 3:
+            print('Validation Metrics:')
+            print('Average Accuracy: {}%'.format(average_accuracy))
+            print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
+            print('Average Class 1 (Positive) Recall: {}%'.format(average_recall1))
+            print('Average Class 1 (Positive) F1-Score: {}%'.format(average_f1_1))
+            print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
+            print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
+            print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
+            print('Average Class 3 (Neutral) Precision: {}%'.format(average_precision3))
+            print('Average Class 3 (Neutral) Recall: {}%'.format(average_recall3))
+            print('Average Class 3 (Neutral) F1-Score: {}%'.format(average_f1_3))
 
         return metrics_
 
-    def classify(self, output_file, csv_file=None, text_file=None, evaluate=False):
+    def classify(self, output_file, num=2, csv_file=None, text_file=None, evaluate=False):
         """Classifies a list of comments as positive or negative
 
         Args:
@@ -284,17 +391,32 @@ class ReviewClassifier:
         comments = []
         target = []
 
-        for review in df.itertuples():
-            if type(review.comment) == float or self.negative_threshold < review.rating < self.positive_threshold:
-                continue
-            elif review.rating <= self.negative_threshold:
-                rating = 0
-            else:
-                rating = 1
-            comments.append(review.comment)
-            clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
-                                           if word not in stop_words))
-            target.append(rating)
+        if num == 2:
+            for review in df.itertuples():
+                if type(review.comment) == float or self.negative_threshold < review.rating < self.positive_threshold:
+                    continue
+                elif review.rating <= self.negative_threshold:
+                    rating = 0
+                else:
+                    rating = 1
+                comments.append(review.comment)
+                clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
+                                            if word not in stop_words))
+                target.append(rating)
+        if num == 3:
+            for review in df.itertuples():
+                if type(review.comment) == float:
+                    continue
+                elif self.negative_threshold < review.rating < self.positive_threshold:
+                    rating = 1
+                elif review.rating <= self.negative_threshold:
+                    rating = 0
+                else:
+                    rating = 2
+                comments.append(review.comment)
+                clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
+                                            if word not in stop_words))
+                target.append(rating)
 
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in clean_comments]).squeeze(1)
         predictions = self.model.predict(data)
@@ -377,17 +499,30 @@ class ReviewClassifier:
         """
 
 
-def metrics(actual_ratings, predicted_ratings):
+def metrics(actual_ratings, predicted_ratings, num=2):
+    if num == 2:
+        matrix = confusion_matrix(actual_ratings, predicted_ratings)
+        tn, fp, fn, tp = matrix[0][0], matrix[0, 1], matrix[1, 0], matrix[1][1]
+        accuracy = (tp + tn) * 1.0 / (tp + tn + fp + fn)
+        precision1, precision2 = (tp * 1.0) / (tp + fp), (tn * 1.0) / (tn + fn)
+        recall1, recall2 = (tp * 1.0) / (tp + fn), (tn * 1.0) / (tn + fp)
+        f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
+        f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
 
-    matrix = confusion_matrix(actual_ratings, predicted_ratings)
-    tn, fp, fn, tp = matrix[0][0], matrix[0, 1], matrix[1, 0], matrix[1][1]
-    accuracy = (tp + tn) * 1.0 / (tp + tn + fp + fn)
-    precision1, precision2 = (tp * 1.0) / (tp + fp), (tn * 1.0) / (tn + fn)
-    recall1, recall2 = (tp * 1.0) / (tp + fn), (tn * 1.0) / (tn + fp)
-    f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
-    f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
+        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
+    if num == 3:
+        matrix = confusion_matrix(actual_ratings, predicted_ratings)
+        tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = matrix[0][0], matrix[1, 1], matrix[2, 2], matrix[1, 0], matrix[1, 2], matrix[0, 1], matrix[2][1], matrix[2,0], matrix[0,2]
+        # print(tpPos + tpNeg + tpNeu)
+        accuracy = ((tpPos + tpNeg + tpNeu) * 1.0) / (tpPos + tpNeg + tpNeu + fBA + fBC + fAB + fCB + fCA + fAC)
+        precision1, precision2, precision3 = (tpPos * 1.0) / (tpPos + fBA + fCA), (tpNeg * 1.0) / (tpNeg + fAB + fCB), (tpNeu * 1.0) / (tpNeu + fBC + fAC)
+        recall1, recall2, recall3 = (tpPos * 1.0) / (tpPos + fAB + fAC), (tpNeg * 1.0) / (tpNeg + fBA + fBC), (tpNeu * 1.0) / (tpNeu + fCA + fCB) 
+        f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
+        f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
+        f1_3 = 2 * ((precision3 * recall3) / (precision3 + recall3))
 
-    return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
+        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
+
 
 
 """
