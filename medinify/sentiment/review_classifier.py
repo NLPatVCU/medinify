@@ -128,6 +128,10 @@ class ReviewClassifier:
                                             if word not in stop_words))
                 else:
                     reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
+            # print(num_pos)
+            # print(num_neg)
+            # print(num_neut)
+            # print(num_pos + num_neg + num_neut)
         elif num == 2:
             for review in df.values.tolist():
                 # print(review[1])
@@ -148,6 +152,8 @@ class ReviewClassifier:
                                             if word not in stop_words))
                 else:
                     reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
+            # print(num_pos)
+            # print(num_neg)
         elif num == 5:
             onecount = 0
             twocount = 0
@@ -235,7 +241,6 @@ class ReviewClassifier:
             model: trained model to evaluate (if none, the class attribute 'model' will be evaluated)
             verbose: Whether or not to print formatted results to console
         """
-
         if model:
             preds = model.predict(data)
             # print(list(preds))
@@ -243,11 +248,11 @@ class ReviewClassifier:
             preds = self.model.predict(data)
             # print(list(preds))
         if num == 2:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, preds)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = metrics(target, preds)
         if num == 3:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = metrics(target, preds, num=3)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = metrics(target, preds, num=3)
         if num == 5:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5 = metrics(target, preds, num=5)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = metrics(target, preds, num=5)
         if verbose and num == 2:
             print('Evaluation Metrics:')
             print('Accuracy: {}%'.format(accuracy * 100))
@@ -294,11 +299,11 @@ class ReviewClassifier:
                 test_data, np.array(test_target), verbose=0)[1]
         """
         if num == 2:
-            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
         if num == 3:
-            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
         if num == 5:
-            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
 
     def evaluate_average_accuracy(self, reviews_filename, n_folds, num=2, verbose=False):
         """ Use stratified k fold to calculate average accuracy of models
@@ -319,6 +324,12 @@ class ReviewClassifier:
             class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
             class_4_precisions, class_4_recalls, class_4_f1s = [], [], []
             class_5_precisions, class_5_recalls, class_5_f1s = [], [], []
+        if num == 2:
+            sumtn, sumfp, sumfn, sumtp = 0,0,0,0
+        if num == 3:
+            sumtpPos, sumtpNeg, sumtpNeu, sumfBA, sumfBC, sumfAB, sumfCB, sumfCA, sumfAC = 0,0,0,0,0,0,0,0,0
+        if num == 5:
+            sumtpOneStar, sumtpTwoStar, sumtpThreeStar, sumtpFourStar, sumtpFiveStar, sumfAB, sumfAC, sumfAD, sumfAE, sumfBA, sumfBC, sumfBD, sumfBE, sumfCA, sumfCB, sumfCD, sumfCE, sumfDA, sumfDB, sumfDC, sumfDE, sumfEA, sumfEB, sumfEC, sumfED = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0    
         for train, test in splits.split(data, target):
             x_train = [data[x] for x in train]
             y_train = [target[x] for x in train]
@@ -328,17 +339,55 @@ class ReviewClassifier:
             model = self.generate_model()
             model.fit(x_train, y_train)
             if num == 2:
-                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = self.evaluate_accuracy(x_test,
+                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.evaluate_accuracy(x_test,
                                                                                                     y_test, num,
                                                                                                     model=model)
+                sumtn += tn
+                sumfn += fn
+                sumfp += fp
+                sumtp += tp
             if num == 3:
-                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = self.evaluate_accuracy(x_test,
+                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = self.evaluate_accuracy(x_test,
                                                                                                     y_test, num,
                                                                                                     model=model)
+                sumtpPos += tpPos
+                sumtpNeg += tpNeg
+                sumtpNeu += tpNeu
+                sumfBA += fBA
+                sumfBC += fBC
+                sumfAB += fAB
+                sumfCB += fCB
+                sumfCA += fCA
+                sumfAC += fAC
             if num == 5:
-                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5 = self.evaluate_accuracy(x_test,
+                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = self.evaluate_accuracy(x_test,
                                                                                                                                                             y_test, num,
                                                                                                                                                             model=model)
+                sumtpOneStar += tpOneStar
+                sumtpTwoStar += tpTwoStar
+                sumtpThreeStar += tpThreeStar
+                sumtpFourStar += tpFourStar
+                sumtpFiveStar += tpFiveStar 
+                sumfAB += fAB
+                sumfAC += fAC
+                sumfAD += fAD
+                sumfAE += fAE
+                sumfBA += fBA
+                sumfBC += fBC
+                sumfBD += fBD
+                sumfBE += fBE
+                sumfCA += fCA
+                sumfCB += fCB
+                sumfCD += fCD
+                sumfCE += fCE
+                sumfDA += fDA
+                sumfDB += fDB
+                sumfDC += fDC
+                sumfDE += fDE
+                sumfEA += fEA
+                sumfEB += fEB
+                sumfEC += fEC
+                sumfED += fED                                                                                                                                        
             accuracies.append(accuracy)
             class_1_precisions.append(precision1)
             class_2_precisions.append(precision2)
@@ -412,43 +461,69 @@ class ReviewClassifier:
                         'average_fivestar_recall': average_recall5, 'average_fivestar_f1_score': average_f1_5}
         if verbose and num == 2:
             print('Validation Metrics:')
-            print('Average Accuracy: {}%'.format(average_accuracy))
-            print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
-            print('Average Class 1 (Positive) Recall: {}%'.format(average_recall1))
-            print('Average Class 1 (Positive) F1-Score: {}%'.format(average_f1_1))
-            print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
-            print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
-            print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
+            print('Average Accuracy: {:.4f}%'.format(average_accuracy))
+            print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2) / 2))
+            print('Average Recall: {:.4f}%'.format((average_recall1 + average_recall2) / 2))
+            print('Average F1-Score: {:.4f}%'.format((average_f1_1 + average_f1_2) / 2))
+            print('Average Class 1 (Positive) Precision: {:.4f}%'.format(average_precision1))
+            print('Average Class 1 (Positive) Recall: {:.4f}%'.format(average_recall1))
+            print('Average Class 1 (Positive) F1-Score: {:.4f}%'.format(average_f1_1))
+            print('Average Class 2 (Negative) Precision: {:.4f}%'.format(average_precision2))
+            print('Average Class 2 (Negative) Recall: {:.4f}%'.format(average_recall2))
+            print('Average Class 2 (Negative) F1-Score: {:.4f}%'.format(average_f1_2))
+            print('Confusion Matrix: ')
+            print("\t" + "\t" + "Neg:" + "\t" + "Pos:")
+            print("Negative:" + "\t" + str(sumtn) + "\t" + str(sumfp))
+            print("Positive:" + "\t" + str(sumfn) + "\t" + str(sumtp))
         if verbose and num == 3:
             print('Validation Metrics:')
-            print('Average Accuracy: {}%'.format(average_accuracy))
-            print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
-            print('Average Class 1 (Positive) Recall: {}%'.format(average_recall1))
-            print('Average Class 1 (Positive) F1-Score: {}%'.format(average_f1_1))
-            print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
-            print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
-            print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
-            print('Average Class 3 (Neutral) Precision: {}%'.format(average_precision3))
-            print('Average Class 3 (Neutral) Recall: {}%'.format(average_recall3))
-            print('Average Class 3 (Neutral) F1-Score: {}%'.format(average_f1_3))
+            print('Average Accuracy: {:.4f}%'.format(average_accuracy))
+            print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3) / 3))
+            print('Average Recall: {:.4f}%'.format((average_recall1 + average_recall2 + average_recall3) / 3))
+            print('Average F1-Score: {:.4f}%'.format((average_f1_1 + average_f1_2 + average_f1_3) / 3))
+            print('Average Class 1 (Positive) Precision: {:.4f}%'.format(average_precision1))
+            print('Average Class 1 (Positive) Recall: {:.4f}%'.format(average_recall1))
+            print('Average Class 1 (Positive) F1-Score: {:.4f}%'.format(average_f1_1))
+            print('Average Class 2 (Negative) Precision: {:.4f}%'.format(average_precision2))
+            print('Average Class 2 (Negative) Recall: {:.4f}%'.format(average_recall2))
+            print('Average Class 2 (Negative) F1-Score: {:.4f}%'.format(average_f1_2))
+            print('Average Class 3 (Neutral) Precision: {:.4f}%'.format(average_precision3))
+            print('Average Class 3 (Neutral) Recall: {:.4f}%'.format(average_recall3))
+            print('Average Class 3 (Neutral) F1-Score: {:.4f}%'.format(average_f1_3))
+            print('Confusion Matrix: ')
+            print("\t" + "\t" + "Neg:" + "\t" + "Neu:" + "\t" + "Pos:")
+            print("Negative:" + "\t" + str(sumtpPos) + "\t" + str(sumfAB) + "\t" + str(sumfAC))
+            print("Neutral:" + "\t" + str(sumfBA) + "\t" + str(sumtpNeg) + "\t" + str(sumfBC))
+            print("Positive:" + "\t" + str(sumfCA) + "\t" + str(sumfCB) + "\t" + str(sumtpNeu))       
         if verbose and num == 5:
-            print('Evaluation Metrics:')
-            print('Average Accuracy: {}%'.format(average_accuracy))
-            print('Average One Star Precision: {}%'.format(average_precision1))
-            print('Average One Star Recall: {}%'.format(average_recall1))
-            print('Average One Star F1-Score: {}%'.format(average_f1_1))
-            print('Average Two Star Precision: {}%'.format(average_precision2))
-            print('Average Two Star Recall: {}%'.format(average_recall2))
-            print('Average Two Star F1-Score: {}%'.format(average_f1_2))
-            print('Average Three Star Precision: {}%'.format(average_precision3))
-            print('Average Three Star Recall: {}%'.format(average_recall3))
-            print('Average Three Star F1-Score: {}%'.format(average_f1_3))
-            print('Average Four Star Precision: {}%'.format(average_precision4))
-            print('Average Four Star Recall: {}%'.format(average_recall4))
-            print('Average Four Star F1-Score: {}%'.format(average_f1_4))
-            print('Average Five Star Precision: {}%'.format(average_precision5))
-            print('Average Five Star Recall: {}%'.format(average_recall5))
-            print('Average Five Star F1-Score: {}%'.format(average_f1_5))
+            print('Validation Metrics:')
+            print('Average Accuracy: {:.4f}%'.format(average_accuracy))
+            print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3 + average_precision4 + average_precision5) / 5))
+            print('Average Recall: {:.4f}%'.format((average_recall1 + average_recall2 + average_recall3 + average_recall4 + average_recall5) / 5))
+            print('Average F1-Score: {:.4f}%'.format((average_f1_1 + average_f1_2 + average_f1_3 + average_f1_4 + average_f1_5) / 5))
+            print('Average One Star Precision: {:.4f}%'.format(average_precision1))
+            print('Average One Star Recall: {:.4f}%'.format(average_recall1))
+            print('Average One Star F1-Score: {:.4f}%'.format(average_f1_1))
+            print('Average Two Star Precision: {:.4f}%'.format(average_precision2))
+            print('Average Two Star Recall: {:.4f}%'.format(average_recall2))
+            print('Average Two Star F1-Score: {:.4f}%'.format(average_f1_2))
+            print('Average Three Star Precision: {:.4f}%'.format(average_precision3))
+            print('Average Three Star Recall: {:.4f}%'.format(average_recall3))
+            print('Average Three Star F1-Score: {:.4f}%'.format(average_f1_3))
+            print('Average Four Star Precision: {:.4f}%'.format(average_precision4))
+            print('Average Four Star Recall: {:.4f}%'.format(average_recall4))
+            print('Average Four Star F1-Score: {:.4f}%'.format(average_f1_4))
+            print('Average Five Star Precision: {:.4f}%'.format(average_precision5))
+            print('Average Five Star Recall: {:.4f}%'.format(average_recall5))
+            print('Average Five Star F1-Score: {:.4f}%'.format(average_f1_5))
+            print('Confusion Matrix: ')
+            print("\t" + "\t" + "1-Star:" + "\t" + "2-Star:" + "\t" + "3-Star:" + "\t" + "4-Star:" + "\t" + "5-Star:")
+            print("One Star:" + "\t" + str(sumtpOneStar) + "\t" + str(sumfAB) + "\t" + str(sumfAC) + "\t" + str(sumfAD) + "\t" + str(sumfAE))
+            print("Two Star:" + "\t" + str(sumfBA) + "\t" + str(sumtpTwoStar) + "\t" + str(sumfBC) + "\t" + str(sumfBD) + "\t" + str(sumfBE))
+            print("Three Star:" + "\t" + str(sumfCA) + "\t" + str(sumfCB) + "\t" + str(sumtpThreeStar) + "\t" + str(sumfCD) + "\t" + str(sumfCE))
+            print("Four Star:" + "\t" + str(sumfDA) + "\t" + str(sumfDB) + "\t" + str(sumfDC) + "\t" + str(sumtpFourStar) + "\t" + str(sumfDE))
+            print("Five Star:" + "\t" + str(sumfEA) + "\t" + str(sumfEB) + "\t" + str(sumfEC) + "\t" + str(sumfED) + "\t" + str(sumtpFiveStar))
+            # tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
         return metrics_
 
     def classify(self, output_file, num=2, csv_file=None, text_file=None, evaluate=False):
@@ -673,8 +748,8 @@ def metrics(actual_ratings, predicted_ratings, num=2):
         recall1, recall2 = (tp * 1.0) / (tp + fn), (tn * 1.0) / (tn + fp)
         f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
         f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
-
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
+        
+        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
     if num == 3:
         matrix = confusion_matrix(actual_ratings, predicted_ratings)
         tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = matrix[0][0], matrix[1, 1], matrix[2, 2], matrix[1, 0], matrix[1, 2], matrix[0, 1], matrix[2][1], matrix[2,0], matrix[0,2]
@@ -686,7 +761,7 @@ def metrics(actual_ratings, predicted_ratings, num=2):
         f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
         f1_3 = 2 * ((precision3 * recall3) / (precision3 + recall3))
 
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
+        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
     if num == 5:
         matrix = confusion_matrix(actual_ratings, predicted_ratings)
         tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = matrix[0, 0], matrix[1, 1], matrix[2, 2], matrix[3, 3], matrix[4, 4],  matrix[0, 1], matrix[0, 2], matrix[0, 3], matrix[0, 4], matrix[1, 0], matrix[1, 2], matrix[1, 3], matrix[1, 4], matrix[2, 0], matrix[2, 1], matrix[2, 3], matrix[2, 4], matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 4], matrix[4, 0], matrix[4, 1], matrix[4, 2], matrix[4, 3]
@@ -707,7 +782,7 @@ def metrics(actual_ratings, predicted_ratings, num=2):
         f1_5 = 2 * ((precision5 * recall5) / (precision5 + recall5))
         
 
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5
+        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
 
 """
 This is the code for the command line tool. It's not yet up and running yet, but it will be soon!
