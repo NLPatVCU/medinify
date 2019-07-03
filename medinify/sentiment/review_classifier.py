@@ -649,7 +649,7 @@ class ReviewClassifier:
                     actual = 'Five Star'
                 classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred, actual))
         if evaluate and num == 2:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, predictions)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, predictions, counts=False)
             classifications_file.write('\nEvaluation Metrics:\n')
             classifications_file.write('Accuracy: {}%\nClass 1 (Positive) Precision: {}%\n'
                                        'Class 1 (Positive) Recall: {}%\nClass 1 (Positive) F1-Measure: {}%\n'
@@ -659,7 +659,7 @@ class ReviewClassifier:
                                                                                    precision2 * 100, recall2 * 100,
                                                                                    f1_2 * 100))
         if evaluate and num == 3:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = metrics(target, predictions)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = metrics(target, predictions, num=3, counts=False)
             classifications_file.write('\nEvaluation Metrics:\n')
             classifications_file.write('Accuracy: {}%\nClass 1 (Positive) Precision: {}%\n'
                                        'Class 1 (Positive) Recall: {}%\nClass 1 (Positive) F1-Measure: {}%\n'
@@ -670,7 +670,7 @@ class ReviewClassifier:
                                                                                    precision2 * 100, recall2 * 100,
                                                                                    f1_2 * 100, precision3 * 100, recall3 * 100, f1_3 * 100))
         if evaluate and num == 5:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5 = metrics(target, predictions)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5 = metrics(target, predictions, num=5, counts=False)
             classifications_file.write('\nEvaluation Metrics:\n')
             classifications_file.write('Accuracy: {}%\nOne Star Precision: {}%\n'
                                        'One Star Recall: {}%\nOne Star F1-Measure: {}%\n'
@@ -739,7 +739,7 @@ class ReviewClassifier:
         """
 
 
-def metrics(actual_ratings, predicted_ratings, num=2):
+def metrics(actual_ratings, predicted_ratings, num=2, counts=True):
     if num == 2:
         matrix = confusion_matrix(actual_ratings, predicted_ratings)
         tn, fp, fn, tp = matrix[0][0], matrix[0, 1], matrix[1, 0], matrix[1][1]
@@ -748,8 +748,10 @@ def metrics(actual_ratings, predicted_ratings, num=2):
         recall1, recall2 = (tp * 1.0) / (tp + fn), (tn * 1.0) / (tn + fp)
         f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
         f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
-        
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
+        if counts == True:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
+        else:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
     if num == 3:
         matrix = confusion_matrix(actual_ratings, predicted_ratings)
         tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = matrix[0][0], matrix[1, 1], matrix[2, 2], matrix[1, 0], matrix[1, 2], matrix[0, 1], matrix[2][1], matrix[2,0], matrix[0,2]
@@ -760,8 +762,10 @@ def metrics(actual_ratings, predicted_ratings, num=2):
         f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
         f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
         f1_3 = 2 * ((precision3 * recall3) / (precision3 + recall3))
-
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
+        if counts == True:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
+        else:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
     if num == 5:
         matrix = confusion_matrix(actual_ratings, predicted_ratings)
         tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = matrix[0, 0], matrix[1, 1], matrix[2, 2], matrix[3, 3], matrix[4, 4],  matrix[0, 1], matrix[0, 2], matrix[0, 3], matrix[0, 4], matrix[1, 0], matrix[1, 2], matrix[1, 3], matrix[1, 4], matrix[2, 0], matrix[2, 1], matrix[2, 3], matrix[2, 4], matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 4], matrix[4, 0], matrix[4, 1], matrix[4, 2], matrix[4, 3]
@@ -781,8 +785,10 @@ def metrics(actual_ratings, predicted_ratings, num=2):
         f1_4 = 2 * ((precision4 * recall4) / (precision4 + recall4))
         f1_5 = 2 * ((precision5 * recall5) / (precision5 + recall5))
         
-
-        return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
+        if counts == True: 
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
+        else:
+            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5
 
 """
 This is the code for the command line tool. It's not yet up and running yet, but it will be soon!
