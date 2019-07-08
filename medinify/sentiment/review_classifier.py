@@ -102,15 +102,13 @@ class ReviewClassifier:
             vectorized ratings
         """
 
-        stop_words = set(stopwords.words('english'))
-        """
-        nlp = spacy.load('en_core_web_sm')
-        txt = open(reviews_filename).read()
-        df = nlp.tokenizer(txt)
-        """
+        #stop_words = set(stopwords.words('english'))
+        stop_words = spacy.lang.en.stop_words.STOP_WORDS
+        sp = spacy.load('en_core_web_sm')
+        #txt = open(reviews_filename).read()
         df = pd.read_csv(reviews_filename)
         #for token in df:
-        #    print(token.text)
+            #print(token.text)
         reviews, target = [], []
         num_pos, num_neg, num_neut = 0, 0, 0
         if self.numclasses == 3:
@@ -128,10 +126,10 @@ class ReviewClassifier:
                     rating = 2
                 target.append(rating)
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in tokenizer(review[0])
+                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
                                             if word not in stop_words))
                 else:
-                    reviews.append(' '.join(word.lower() for word in tokenizer(review[0])))
+                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
         elif self.numclasses == 2:
             for review in df.values.tolist():
                 if type(review[0]) == float:
@@ -147,10 +145,10 @@ class ReviewClassifier:
                     rating = 1
                 target.append(rating)
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])
+                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
                                             if word not in stop_words))
                 else:
-                    reviews.append(' '.join(word.lower() for word in tokenizer.tokenize(review[0])))
+                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
         elif self.numclasses == 5:
             print("I made it!")
             onecount = 0
@@ -182,14 +180,13 @@ class ReviewClassifier:
                     rating = 5
                     fivecount += 1
                 target.append(rating)
-                nlp = spacy.load('en_core_web_sm')
-                txt = open(reviews_filename).read()
-                df = nlp.tokenizer(txt)
+                for tokens in sp.tokenizer(review[0]):
+                    print(tokens)
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in df
+                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
                                             if word not in stop_words))
                 else:
-                    reviews.append(' '.join(word.lower() for word in df))
+                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
         self.vectorizer.fit(reviews)
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
         info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
