@@ -102,10 +102,10 @@ class ReviewClassifier:
             vectorized ratings
         """
 
-        #stop_words = set(stopwords.words('english'))
-        stop_words = spacy.lang.en.stop_words.STOP_WORDS
+        stop_words = set(stopwords.words('english'))
+        #stop_words = spacy.lang.en.stop_words.STOP_WORDS
         sp = spacy.load('en_core_web_sm')
-        txt = open(reviews_filename).read()
+        #txt = open(reviews_filename).read()
         df = pd.read_csv(reviews_filename)
         #for token in df:
             #print(token.text)
@@ -191,13 +191,13 @@ class ReviewClassifier:
                                             if word not in stop_words))
                 else:
                     reviews.append(''.join(word.lower() for word in listoftokens))
-        
+        """
         count = 0
         while count < 5:
             for word in sp.tokenizer(review[0]):
                 print(word)
             count += 1
-        
+        """
         self.vectorizer.fit(reviews)
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
         info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
