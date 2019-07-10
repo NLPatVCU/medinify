@@ -362,12 +362,9 @@ class CNNReviewClassifier:
         for csv in datasets:
             dataset_num = dataset_num + 1
             print('Gathering comments from dataset #' + str(dataset_num))
-            dataset = classifier.create_dataset(csv)
-            dataset_comments = []
-            for comment in dataset:
-                dataset_comments.append(list(comment[0].keys()))
+            data_, target = classifier.preprocess(csv)
             print('\nFinished gathering dataset #' + str(dataset_num))
-            comments = comments + dataset_comments
+            comments = comments + data_
         print('\nGenerating Word2Vec model')
         w2v_model = Word2Vec(comments)
         print('Training word embeddings...')
