@@ -334,8 +334,10 @@ class ReviewClassifier:
         if self.numclasses == 5:
             sumtpOneStar, sumtpTwoStar, sumtpThreeStar, sumtpFourStar, sumtpFiveStar, sumfAB, sumfAC, sumfAD, \
             sumfAE, sumfBA, sumfBC, sumfBD, sumfBE, sumfCA, sumfCB, sumfCD, sumfCE, sumfDA, sumfDB, sumfDC, \
-            sumfDE, sumfEA, sumfEB, sumfEC, sumfED = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0    
+            sumfDE, sumfEA, sumfEB, sumfEC, sumfED = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
         for train, test in splits.split(data, target):
+
             x_train = [data[x] for x in train]
             y_train = [target[x] for x in train]
             x_test = [data[x] for x in test]
