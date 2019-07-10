@@ -155,7 +155,7 @@ class ReviewClassifier:
         self.model = model
         return model
 
-    def evaluate_accuracy(self, data, target, model=None):
+    def evaluate_accuracy(self, data, target, model=None, evaluating=False):
         """Evaluate accuracy of current model on new data
 
         Args:
@@ -171,14 +171,15 @@ class ReviewClassifier:
 
         accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, preds)
 
-        print('Evaluation Metrics:')
-        print('Accuracy: {}%'.format(accuracy * 100))
-        print('Positive Precision: {}%'.format(precision1 * 100))
-        print('Positive Recall: {}%'.format(recall1 * 100))
-        print('Positive F1-Score: {}%'.format(f1_1 * 100))
-        print('Negative Precision: {}%'.format(precision2 * 100))
-        print('Negative Recall: {}%'.format(recall2 * 100))
-        print('Negative F1-Score: {}%'.format(f1_2 * 100))
+        if not evaluating:
+            print('Evaluation Metrics:')
+            print('Accuracy: {}%'.format(accuracy * 100))
+            print('Positive Precision: {}%'.format(precision1 * 100))
+            print('Positive Recall: {}%'.format(recall1 * 100))
+            print('Positive F1-Score: {}%'.format(f1_1 * 100))
+            print('Negative Precision: {}%'.format(precision2 * 100))
+            print('Negative Recall: {}%'.format(recall2 * 100))
+            print('Negative F1-Score: {}%'.format(f1_2 * 100))
 
         """
         if self.classifier_type == 'nn':
@@ -213,7 +214,8 @@ class ReviewClassifier:
 
             accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = self.evaluate_accuracy(x_test,
                                                                                                     y_test,
-                                                                                                    model=model)
+                                                                                                    model=model,
+                                                                                                    evaluating=True)
             accuracies.append(accuracy)
             class_1_precisions.append(precision1)
             class_2_precisions.append(precision2)
@@ -223,12 +225,19 @@ class ReviewClassifier:
             class_2_f1s.append(f1_2)
 
         average_accuracy = np.mean(np.array(accuracies)) * 100
+        accuracy_std = np.std(accuracies) * 100
         average_precision1 = np.mean(np.array(class_1_precisions)) * 100
+        prec1_std = np.std(class_1_precisions) * 100
         average_precision2 = np.mean(np.array(class_2_precisions)) * 100
+        prec2_std = np.std(class_2_precisions) * 100
         average_recall1 = np.mean(np.array(class_1_recalls)) * 100
+        rec1_std = np.std(class_1_recalls) * 100
         average_recall2 = np.mean(np.array(class_2_recalls)) * 100
+        rec2_std = np.std(class_2_recalls) * 100
         average_f1_1 = np.mean(np.array(class_1_f1s)) * 100
+        f1_1_std = np.std(class_1_f1s) * 100
         average_f1_2 = np.mean(np.array(class_2_f1s)) * 100
+        f1_2_std = np.std(class_2_f1s)
 
         metrics_ = {'accuracies': accuracies, 'positive_precisions': class_1_precisions,
                     'positive_recalls': class_1_recalls, 'positive_f1_scores': class_1_f1s,
@@ -239,13 +248,13 @@ class ReviewClassifier:
                     'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2}
 
         print('Validation Metrics:')
-        print('Average Accuracy: {}%'.format(average_accuracy))
-        print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
-        print('Average Class 1 (Positive) Recall: {}%'.format(average_recall1))
-        print('Average Class 1 (Positive) F1-Score: {}%'.format(average_f1_1))
-        print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
-        print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
-        print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
+        print('Average Accuracy: {}% +/- {}%'.format(average_accuracy, accuracy_std))
+        print('Average Class 1 (Positive) Precision: {}% +/- {}%'.format(average_precision1, prec1_std))
+        print('Average Class 1 (Positive) Recall: {}% +/- {}%'.format(average_recall1, rec1_std))
+        print('Average Class 1 (Positive) F1-Score: {}% +/- {}%'.format(average_f1_1, f1_1_std))
+        print('Average Class 2 (Negative) Precision: {}% +/- {}%'.format(average_precision2, prec2_std))
+        print('Average Class 2 (Negative) Recall: {}% +/- {}%'.format(average_recall2, rec2_std))
+        print('Average Class 2 (Negative) F1-Score: {}% +/- {}%'.format(average_f1_2, f1_2_std))
 
         return metrics_
 
