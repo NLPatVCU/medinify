@@ -191,11 +191,15 @@ class ReviewClassifier:
                                             if word not in stop_words))
                 else:
                     reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+
         self.vectorizer.fit(reviews)
+
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
+
         info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
 
         return data, target, info
+
     def generate_model(self):
         """
         Creates model based on classifier type
@@ -225,7 +229,6 @@ class ReviewClassifier:
         model.fit(data, target)
         self.model = model
         return model
-
 
     def evaluate_accuracy(self, data, target, model=None, verbose=False):
         """Evaluate accuracy of current model on new data
@@ -314,7 +317,7 @@ class ReviewClassifier:
             verbose: Whether or not to print evaluation metrics to console
         """
 
-        data, target, info = self.preprocess(reviews_filename, self.numclasses)
+        data, target, info = self.preprocess(reviews_filename=reviews_filename)
         splits = StratifiedKFold(n_splits=n_folds)
         accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
         class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
@@ -325,7 +328,7 @@ class ReviewClassifier:
             class_4_precisions, class_4_recalls, class_4_f1s = [], [], []
             class_5_precisions, class_5_recalls, class_5_f1s = [], [], []
         if self.numclasses == 2:
-            sumtn, sumfp, sumfn, sumtp = 0,0,0,0
+            sumtn, sumfp, sumfn, sumtp = 0, 0, 0, 0
         if self.numclasses == 3:
             sumtpPos, sumtpNeg, sumtpNeu, sumfBA, sumfBC, sumfAB, sumfCB, sumfCA, sumfAC = 0,0,0,0,0,0,0,0,0
         if self.numclasses == 5:
@@ -739,8 +742,11 @@ class ReviewClassifier:
             os.remove('trained_nn_model.json')
             os.remove('trained_nn_weights.h5')
         """
+
     def metrics(self, actual_ratings, predicted_ratings, counts=True):
+
         if self.numclasses == 2:
+
             matrix = confusion_matrix(actual_ratings, predicted_ratings)
             tn, fp, fn, tp = matrix[0][0], matrix[0, 1], matrix[1, 0], matrix[1][1]
             accuracy = (tp + tn) * 1.0 / (tp + tn + fp + fn)
@@ -748,11 +754,14 @@ class ReviewClassifier:
             recall1, recall2 = (tp * 1.0) / (tp + fn), (tn * 1.0) / (tn + fp)
             f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
             f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
-            if counts == True:
+
+            if counts:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
             else:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
+
         if self.numclasses == 3:
+
             matrix = confusion_matrix(actual_ratings, predicted_ratings)
             tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = matrix[0][0], matrix[1, 1], matrix[2, 2], matrix[1, 0], matrix[1, 2], matrix[0, 1], \
             matrix[2][1], matrix[2,0], matrix[0,2]
@@ -762,11 +771,14 @@ class ReviewClassifier:
             f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
             f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
             f1_3 = 2 * ((precision3 * recall3) / (precision3 + recall3))
-            if counts == True:
+
+            if counts:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
             else:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
+
         if self.numclasses == 5:
+
             matrix = confusion_matrix(actual_ratings, predicted_ratings)
 
             tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, \
@@ -793,7 +805,7 @@ class ReviewClassifier:
             f1_4 = 2 * ((precision4 * recall4) / (precision4 + recall4))
             f1_5 = 2 * ((precision5 * recall5) / (precision5 + recall5))
             
-            if counts == True: 
+            if counts:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
             else:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5
