@@ -200,19 +200,25 @@ class ReviewClassifier:
         """
 
         data, target = self.preprocess(reviews_filename)
+        print('Processed')
         splits = StratifiedKFold(n_splits=n_folds)
 
         accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
         class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
 
+        print('Starting training loop')
         for train, test in splits.split(data, target):
             x_train = [data[x] for x in train]
             y_train = [target[x] for x in train]
             x_test = [data[x] for x in test]
             y_test = [target[x] for x in test]
 
+            print('Split data')
+
             model = self.generate_model()
+            print('Fitting model')
             model.fit(x_train, y_train)
+            print('Model Fit')
 
             accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = self.evaluate_accuracy(x_test,
                                                                                                     y_test,
