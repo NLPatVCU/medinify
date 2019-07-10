@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 
 # Classification
 from sklearn import svm
@@ -61,7 +61,7 @@ class ReviewClassifier:
     positive_threshold = 4.0
     vectorizer = None
 
-    def __init__(self, classifier_type=None, negative_threshold=None, positive_threshold=None, use_tfidf=False):
+    def __init__(self, classifier_type=None, negative_threshold=None, positive_threshold=None):
         """
         Initialize an instance of ReviewClassifier for the processing of review data into numerical
         representations, training machine-learning classifiers, and evaluating these classifiers' effectiveness
@@ -73,10 +73,7 @@ class ReviewClassifier:
         """
 
         self.classifier_type = classifier_type
-        if not use_tfidf:
-            self.vectorizer = CountVectorizer()
-        else:
-            self.vectorizer = TfidfVectorizer()
+        self.vectorizer = CountVectorizer()
 
         if negative_threshold:
             self.negative_threshold = negative_threshold
