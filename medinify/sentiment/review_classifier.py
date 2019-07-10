@@ -51,7 +51,7 @@ class ReviewClassifier:
         positive_threshold: float
             star-rating cutoff at with anything >= is labelled positive (default 4.0)
 
-        vectorizer: CountVectorizer or TfidfVectorizer
+        vectorizer: CountVectorizer
             object for turning dictionary of tokens into numerical representation (vector)
     """
 
@@ -68,8 +68,6 @@ class ReviewClassifier:
         :param classifier_type: SciKit Learn supervised machine-learning classifier ('nb', 'svm', or 'rf')
         :param negative_threshold: star-rating cutoff at with anything <= is labelled negative (default 2.0)
         :param positive_threshold: star-rating cutoff at with anything >= is labelled positive (default 4.0)
-        :param use_tfidf: whether or not to set vectorizer to TF-IDF vectorizer (vectorizer
-            is default CountVectorizer)
         """
 
         self.classifier_type = classifier_type
@@ -124,9 +122,8 @@ class ReviewClassifier:
 
         self.vectorizer.fit(reviews)
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
-        info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
 
-        return data, target, info
+        return data, target
 
     def generate_model(self):
         """
@@ -202,7 +199,7 @@ class ReviewClassifier:
             verbose: Whether or not to print evaluation metrics to console
         """
 
-        data, target, info = self.preprocess(reviews_filename)
+        data, target = self.preprocess(reviews_filename)
         splits = StratifiedKFold(n_splits=n_folds)
 
         accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
