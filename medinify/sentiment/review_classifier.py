@@ -22,7 +22,6 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import confusion_matrix
-# from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 
 # NN (Currently Unused)
 from keras.models import Sequential
@@ -122,6 +121,7 @@ class ReviewClassifier:
 
         self.vectorizer.fit(reviews)
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
+        target = np.asarray(target)
 
         return data, target
 
