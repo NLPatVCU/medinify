@@ -22,7 +22,7 @@ def main():
     # sent.evaluate_k_fold(input_file=input_file, num_folds=5, num_epochs=10)
 
     sent = ReviewClassifier('nb')
-    sent.evaluate_average_accuracy(reviews_filename='data/heart_drugs.csv', n_folds=10, verbose=True)
+    sent.evaluate_average_accuracy(reviews_filename='data/common_drugs.csv', n_folds=10, verbose=True)
 
 if __name__ == "__main__":
     main()
