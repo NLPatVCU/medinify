@@ -63,7 +63,9 @@ class ReviewClassifier:
     negative_threshold = 2.0
     positive_threshold = 4.0
     vectorizer = None
-    def __init__(self, classifier_type=None, numclasses=2, negative_threshold=None, positive_threshold=None, use_tfidf=False):
+
+    def __init__(self, classifier_type=None, numclasses=2, negative_threshold=None, positive_threshold=None,
+                 use_tfidf=False):
         """
         Initialize an instance of ReviewClassifier for the processing of review data into numerical
         representations, training machine-learning classifiers, and evaluating these classifiers' effectiveness
@@ -102,8 +104,8 @@ class ReviewClassifier:
             vectorized ratings
         """
 
-        #stop_words = set(stopwords.words('english'))
-        stop_words = spacy.lang.en.stop_words.STOP_WORDS
+        stop_words = set(stopwords.words('english'))
+        #stop_words = spacy.lang.en.stop_words.STOP_WORDS
         sp = spacy.load('en_core_web_sm')
         #txt = open(reviews_filename).read()
         df = pd.read_csv(reviews_filename)
@@ -130,6 +132,7 @@ class ReviewClassifier:
                                             if word not in stop_words))
                 else:
                     reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+
         elif self.numclasses == 2:
             for review in df.values.tolist():
                 if type(review[0]) == float:
@@ -144,13 +147,14 @@ class ReviewClassifier:
                     num_pos += 1
                     rating = 1
                 target.append(rating)
+
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
-                                            if word not in stop_words))
+                    reviews.append(' '.join([token.text.lower() for token in sp.tokenizer(review[0]) if
+                                             token.text.lower() not in stop_words]))
                 else:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+                    reviews.append(' '.join([token.text.lower() for token in sp.tokenizer(review[0])]))
+
         elif self.numclasses == 5:
-            print("I made it!")
             onecount = 0
             twocount = 0
             threecount = 0
