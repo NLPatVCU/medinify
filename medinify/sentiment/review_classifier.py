@@ -155,14 +155,13 @@ class ReviewClassifier:
         self.model = model
         return model
 
-    def evaluate_accuracy(self, data, target, model=None, verbose=False):
+    def evaluate_accuracy(self, data, target, model=None):
         """Evaluate accuracy of current model on new data
 
         Args:
             data: vectorized comments for feed into model
             target: actual ratings assosiated with data
             model: trained model to evaluate (if none, the class attribute 'model' will be evaluated)
-            verbose: Whether or not to print formatted results to console
         """
 
         if model:
@@ -172,15 +171,14 @@ class ReviewClassifier:
 
         accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = metrics(target, preds)
 
-        if verbose:
-            print('Evaluation Metrics:')
-            print('Accuracy: {}%'.format(accuracy * 100))
-            print('Positive Precision: {}%'.format(precision1 * 100))
-            print('Positive Recall: {}%'.format(recall1 * 100))
-            print('Positive F1-Score: {}%'.format(f1_1 * 100))
-            print('Negative Precision: {}%'.format(precision2 * 100))
-            print('Negative Recall: {}%'.format(recall2 * 100))
-            print('Negative F1-Score: {}%'.format(f1_2 * 100))
+        print('Evaluation Metrics:')
+        print('Accuracy: {}%'.format(accuracy * 100))
+        print('Positive Precision: {}%'.format(precision1 * 100))
+        print('Positive Recall: {}%'.format(recall1 * 100))
+        print('Positive F1-Score: {}%'.format(f1_1 * 100))
+        print('Negative Precision: {}%'.format(precision2 * 100))
+        print('Negative Recall: {}%'.format(recall2 * 100))
+        print('Negative F1-Score: {}%'.format(f1_2 * 100))
 
         """
         if self.classifier_type == 'nn':
@@ -190,13 +188,12 @@ class ReviewClassifier:
 
         return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
 
-    def evaluate_average_accuracy(self, reviews_filename, n_folds, verbose=False):
+    def evaluate_average_accuracy(self, reviews_filename, n_folds):
         """ Use stratified k fold to calculate average accuracy of models
 
         Args:
             reviews_filename: Filename of CSV with reviews to train on
             n_folds: int, number of k-folds
-            verbose: Whether or not to print evaluation metrics to console
         """
 
         data, target = self.preprocess(reviews_filename)
@@ -241,15 +238,14 @@ class ReviewClassifier:
                     'average_positive_f1_score': average_f1_1, 'average_negative_precision': average_precision2,
                     'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2}
 
-        if verbose:
-            print('Validation Metrics:')
-            print('Average Accuracy: {}%'.format(average_accuracy))
-            print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
-            print('Average Class 1 (Positive) Recall: {}%'.format(average_recall1))
-            print('Average Class 1 (Positive) F1-Score: {}%'.format(average_f1_1))
-            print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
-            print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
-            print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
+        print('Validation Metrics:')
+        print('Average Accuracy: {}%'.format(average_accuracy))
+        print('Average Class 1 (Positive) Precision: {}%'.format(average_precision1))
+        print('Average Class 1 (Positive) Recall: {}%'.format(average_recall1))
+        print('Average Class 1 (Positive) F1-Score: {}%'.format(average_f1_1))
+        print('Average Class 2 (Negative) Precision: {}%'.format(average_precision2))
+        print('Average Class 2 (Negative) Recall: {}%'.format(average_recall2))
+        print('Average Class 2 (Negative) F1-Score: {}%'.format(average_f1_2))
 
         return metrics_
 
