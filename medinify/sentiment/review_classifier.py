@@ -105,7 +105,7 @@ class ReviewClassifier:
         #stop_words = set(stopwords.words('english'))
         stop_words = spacy.lang.en.stop_words.STOP_WORDS
         sp = spacy.load('en_core_web_sm')
-        #txt = open(reviews_filename).read()
+        txt = open(reviews_filename).read()
         df = pd.read_csv(reviews_filename)
         #for token in df:
             #print(token.text)
@@ -125,11 +125,13 @@ class ReviewClassifier:
                     num_pos += 1
                     rating = 2
                 target.append(rating)
+                listoftokens = sp.tokenizer(review[0])
+                listoftokens = [str(tokens) for tokens in listoftokens]
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
+                    reviews.append(''.join(word.lower() for word in listoftokens
                                             if word not in stop_words))
                 else:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+                    reviews.append(''.join(word.lower() for word in listoftokens))
         elif self.numclasses == 2:
             for review in df.values.tolist():
                 if type(review[0]) == float:
@@ -144,18 +146,20 @@ class ReviewClassifier:
                     num_pos += 1
                     rating = 1
                 target.append(rating)
+                listoftokens = sp.tokenizer(review[0])
+                listoftokens = [str(tokens) for tokens in listoftokens]
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
+                    reviews.append(''.join(word.lower() for word in listoftokens
                                             if word not in stop_words))
                 else:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+                    reviews.append(''.join(word.lower() for word in listoftokens))
         elif self.numclasses == 5:
-            print("I made it!")
             onecount = 0
             twocount = 0
             threecount = 0
             fourcount = 0
             fivecount = 0
+            
             for review in df.values.tolist():
                 if type(review[0]) == float:
                     continue
@@ -180,13 +184,20 @@ class ReviewClassifier:
                     rating = 5
                     fivecount += 1
                 target.append(rating)
-                for tokens in sp.tokenizer(review[0]):
-                    print(tokens)
+                listoftokens = sp.tokenizer(review[0])
+                listoftokens = [str(tokens) for tokens in listoftokens]
                 if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
+                    reviews.append(''.join(word.lower() for word in listoftokens
                                             if word not in stop_words))
                 else:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+                    reviews.append(''.join(word.lower() for word in listoftokens))
+        
+        count = 0
+        while count < 5:
+            for word in sp.tokenizer(review[0]):
+                print(word)
+            count += 1
+        
         self.vectorizer.fit(reviews)
         data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
         info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
