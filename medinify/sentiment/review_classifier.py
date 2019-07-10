@@ -248,13 +248,13 @@ class ReviewClassifier:
                     'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2}
 
         print('Validation Metrics:')
-        print('Average Accuracy: {}% +/- {}%'.format(average_accuracy, accuracy_std))
-        print('Average Class 1 (Positive) Precision: {}% +/- {}%'.format(average_precision1, prec1_std))
-        print('Average Class 1 (Positive) Recall: {}% +/- {}%'.format(average_recall1, rec1_std))
-        print('Average Class 1 (Positive) F1-Score: {}% +/- {}%'.format(average_f1_1, f1_1_std))
-        print('Average Class 2 (Negative) Precision: {}% +/- {}%'.format(average_precision2, prec2_std))
-        print('Average Class 2 (Negative) Recall: {}% +/- {}%'.format(average_recall2, rec2_std))
-        print('Average Class 2 (Negative) F1-Score: {}% +/- {}%'.format(average_f1_2, f1_2_std))
+        self.log('Average Accuracy: {}% +/- {}%'.format(average_accuracy, accuracy_std))
+        self.log('Average Class 1 (Positive) Precision: {}% +/- {}%'.format(average_precision1, prec1_std))
+        self.log('Average Class 1 (Positive) Recall: {}% +/- {}%'.format(average_recall1, rec1_std))
+        self.log('Average Class 1 (Positive) F1-Score: {}% +/- {}%'.format(average_f1_1, f1_1_std))
+        self.log('Average Class 2 (Negative) Precision: {}% +/- {}%'.format(average_precision2, prec2_std))
+        self.log('Average Class 2 (Negative) Recall: {}% +/- {}%'.format(average_recall2, rec2_std))
+        self.log('Average Class 2 (Negative) F1-Score: {}% +/- {}%'.format(average_f1_2, f1_2_std))
 
         return metrics_
 
@@ -320,6 +320,10 @@ class ReviewClassifier:
                                                                                    recall1 * 100, f1_1 * 100,
                                                                                    precision2 * 100, recall2 * 100,
                                                                                    f1_2 * 100))
+
+    def log(self, string):
+        with open('examples/output.log', 'a') as f:
+            f.write(string + '\n')
 
     def save_model(self, output_file):
         """ Saves a trained model to a file
