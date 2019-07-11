@@ -79,7 +79,7 @@ class ReviewClassifier:
         """
 
         self.classifier_type = classifier_type
-        self.vectorizer = DictVectorizer()
+        self.vectorizer = DictVectorizer(sparse=False)
         self.numclasses = numclasses
 
         if negative_threshold:
@@ -138,9 +138,8 @@ class ReviewClassifier:
                 raw_data.append(comment)
 
         encoder = LabelEncoder()
-        self.vectorizer.fit(raw_data)
         target = np.asarray(encoder.fit_transform(raw_target))
-        data = np.asarray([self.vectorizer.transform(comment) for comment in raw_data])
+        data = self.vectorizer.fit_transform(raw_data)
 
         return data, target
 
@@ -261,36 +260,43 @@ class ReviewClassifier:
             verbose: Whether or not to print evaluation metrics to console
         """
 
-        data, target, info = self.preprocess(reviews_filename=reviews_filename)
+        data, target = self.preprocess(reviews_filename=reviews_filename)
         splits = StratifiedKFold(n_splits=n_folds)
-        accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
-        class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
+
+        if self.numclasses == 2:
+            sumtn, sumfp, sumfn, sumtp = 0, 0, 0, 0
+            accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
+            class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
+
         if self.numclasses == 3:
             class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
+            sumtpPos, sumtpNeg, sumtpNeu, sumfBA, sumfBC, sumfAB, sumfCB, sumfCA, sumfAC = 0, 0, 0, 0, 0, 0, 0, 0, 0
+
         if self.numclasses == 5:
             class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
             class_4_precisions, class_4_recalls, class_4_f1s = [], [], []
             class_5_precisions, class_5_recalls, class_5_f1s = [], [], []
-        if self.numclasses == 2:
-            sumtn, sumfp, sumfn, sumtp = 0, 0, 0, 0
-        if self.numclasses == 3:
-            sumtpPos, sumtpNeg, sumtpNeu, sumfBA, sumfBC, sumfAB, sumfCB, sumfCA, sumfAC = 0,0,0,0,0,0,0,0,0
-        if self.numclasses == 5:
             sumtpOneStar, sumtpTwoStar, sumtpThreeStar, sumtpFourStar, sumtpFiveStar, sumfAB, sumfAC, sumfAD, \
             sumfAE, sumfBA, sumfBC, sumfBD, sumfBE, sumfCA, sumfCB, sumfCD, sumfCE, sumfDA, sumfDB, sumfDC, \
             sumfDE, sumfEA, sumfEB, sumfEC, sumfED = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
+        scores = []
         for train, test in splits.split(data, target):
 
-            x_train = [data[x] for x in train]
-            y_train = [target[x] for x in train]
-            x_test = [data[x] for x in test]
-            y_test = [target[x] for x in test]
+            x_train = data[train]
+            y_train = target[train]
+            x_test = data[test]
+            y_test = target[test]
 
             model = self.generate_model()
             model.fit(x_train, y_train)
+
             if self.numclasses == 2:
                 accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.evaluate_accuracy(x_test, y_test, model=model)
+
+                scores.append(model.score(x_test, y_test))
+                print(sum(scores)/len(scores))
+
                 sumtn += tn
                 sumfn += fn
                 sumfp += fp
@@ -510,7 +516,7 @@ class ReviewClassifier:
                     rating = 1
                 comments.append(review.comment)
                 clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
-                                            if word not in stop_words))
+                                               if word not in stop_words))
                 target.append(rating)
         if self.numclasses == 3:
             for review in df.itertuples():
@@ -544,7 +550,8 @@ class ReviewClassifier:
                 clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
                                             if word not in stop_words))
                 target.append(rating)
-        data = np.array([self.vectorizer.transform([comment]).toarray() for comment in clean_comments]).squeeze(1)
+
+        data = np.array([self.vectorizer.transform([comment]).toarray() for comment in clean_comments])
         predictions = self.model.predict(data)
 
         classifications_file = open(output_file, 'a')
