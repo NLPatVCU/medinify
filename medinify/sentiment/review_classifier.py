@@ -6,15 +6,18 @@ import json
 import datetime
 from time import time
 import warnings
+import tarfile
+import os
 
 # Preprocessings
 import numpy as np
 import pandas as pd
 import spacy
 from spacy.lang.en import English
+from sklearn.preprocessing import LabelEncoder
 from nltk.corpus import stopwords
 from nltk import RegexpTokenizer
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction import DictVectorizer
 
 # Classification
 from sklearn import svm
@@ -64,8 +67,7 @@ class ReviewClassifier:
     positive_threshold = 4.0
     vectorizer = None
 
-    def __init__(self, classifier_type=None, numclasses=2, negative_threshold=None, positive_threshold=None,
-                 use_tfidf=False):
+    def __init__(self, classifier_type=None, numclasses=2, negative_threshold=None, positive_threshold=None):
         """
         Initialize an instance of ReviewClassifier for the processing of review data into numerical
         representations, training machine-learning classifiers, and evaluating these classifiers' effectiveness
@@ -77,18 +79,15 @@ class ReviewClassifier:
         """
 
         self.classifier_type = classifier_type
-        if not use_tfidf:
-            self.vectorizer = CountVectorizer()
-        else:
-            self.vectorizer = TfidfVectorizer()
+        self.vectorizer = DictVectorizer()
+        self.numclasses = numclasses
 
         if negative_threshold:
             self.negative_threshold = negative_threshold
         if positive_threshold:
             self.positive_threshold = positive_threshold
-        self.numclasses = numclasses
 
-    def preprocess(self, reviews_filename, remove_stop_words=True):
+    def preprocess(self, reviews_filename):
         """
         Transforms reviews (comments and ratings) into numerical representations (vectors)
         Comments are vectorized into bag-of-words representation
@@ -96,7 +95,6 @@ class ReviewClassifier:
         Neutral reviews are discarded
 
         :param reviews_filename: CSV file with comments and ratings
-        :param remove_stop_words: Whether or not to remove stop words
         :return:
         data: list of sparse matrices
             vectorized comments
@@ -105,100 +103,46 @@ class ReviewClassifier:
         """
 
         stop_words = set(stopwords.words('english'))
-        #stop_words = spacy.lang.en.stop_words.STOP_WORDS
         sp = spacy.load('en_core_web_sm')
-        #txt = open(reviews_filename).read()
+
         df = pd.read_csv(reviews_filename)
-        #for token in df:
-            #print(token.text)
-        reviews, target = [], []
-        num_pos, num_neg, num_neut = 0, 0, 0
-        if self.numclasses == 3:
-            for review in df.values.tolist():
-                if type(review[0]) == float:
+        raw_data, raw_target = [], []
+
+        for review in df.itertuples():
+
+            if type(review.comment) == float:
+                continue
+            comment = {token.text: True for token in sp.tokenizer(review.comment.lower()) if token.text
+                       not in stop_words}
+
+            if self.numclasses == 2:
+                rating = 'pos'
+                if review.rating == 3:
                     continue
-                if self.negative_threshold < review[1] < self.positive_threshold:
-                    num_neut += 1
-                    rating = 1
-                elif review[1] <= self.negative_threshold:
-                    num_neg += 1
-                    rating = 0
-                else:
-                    num_pos += 1
-                    rating = 2
-                target.append(rating)
-                if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
-                                            if word not in stop_words))
-                else:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+                if review.rating in [1, 2]:
+                    rating = 'neg'
+                raw_data.append(comment)
+                raw_target.append(rating)
 
-        elif self.numclasses == 2:
-            for review in df.values.tolist():
-                if type(review[0]) == float:
-                    continue
-                if self.negative_threshold < review[1] < self.positive_threshold:
-                    num_neut += 1
-                    continue
-                elif review[1] <= self.negative_threshold:
-                    num_neg += 1
-                    rating = 0
-                else:
-                    num_pos += 1
-                    rating = 1
-                target.append(rating)
+            elif self.numclasses == 3:
+                rating = 'neg'
+                if review.rating == 3:
+                    rating = 'neut'
+                elif review.rating in [4, 5]:
+                    rating = 'pos'
+                raw_data.append(comment)
+                raw_target.append(rating)
 
-                if remove_stop_words:
-                    reviews.append(' '.join([token.text.lower() for token in sp.tokenizer(review[0]) if
-                                             token.text.lower() not in stop_words]))
-                else:
-                    reviews.append(' '.join([token.text.lower() for token in sp.tokenizer(review[0])]))
+            elif self.numclasses == 5:
+                raw_target.append(review.rating)
+                raw_data.append(comment)
 
-        elif self.numclasses == 5:
-            onecount = 0
-            twocount = 0
-            threecount = 0
-            fourcount = 0
-            fivecount = 0
-            for review in df.values.tolist():
-                if type(review[0]) == float:
-                    continue
-                if review[1] == 1.0:
-                    num_neg += 1
-                    rating = 1
-                    onecount += 1
-                elif review[1] == 2.0:
-                    num_neg += 1
-                    rating = 2
-                    twocount += 1
-                elif review[1] == 3.0:
-                    num_neut += 1
-                    rating = 3
-                    threecount += 1
-                elif review[1] == 4.0:
-                    num_pos += 1
-                    rating = 4
-                    fourcount += 1
-                else:
-                    num_pos += 1
-                    rating = 5
-                    fivecount += 1
-                target.append(rating)
-                for tokens in sp.tokenizer(review[0]):
-                    print(tokens)
-                if remove_stop_words:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])
-                                            if word not in stop_words))
-                else:
-                    reviews.append(' '.join(word.lower() for word in sp.tokenizer(review[0])))
+        encoder = LabelEncoder()
+        self.vectorizer.fit(raw_data)
+        target = np.asarray(encoder.fit_transform(raw_target))
+        data = np.asarray([self.vectorizer.transform(comment) for comment in raw_data])
 
-        self.vectorizer.fit(reviews)
-
-        data = np.array([self.vectorizer.transform([comment]).toarray() for comment in reviews]).squeeze(1)
-
-        info = {'positive': num_pos, 'negative': num_neg, 'neutral': num_neut}
-
-        return data, target, info
+        return data, target
 
     def generate_model(self):
         """
@@ -695,18 +639,18 @@ class ReviewClassifier:
         """ Saves a trained model to a file
         """
 
-        with open(output_file, 'wb') as pickle_file:
-            pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
-            pickle.dump(self.vectorizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        if self.classifier_type and self.classifier_type != 'nn':
+            with open(output_file, 'wb') as pickle_file:
+                pickle.dump(self.model, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(self.vectorizer, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
-        """
         elif self.classifier_type == 'nn':
             with open("trained_nn_model.json", "w") as json_file:
                 json_file.write(self.model.to_json()) # Save mode
             self.model.save_weights("trained_nn_weights.h5") # Save weights
             with open('trained_nn_vec_encoder.pickle', 'wb') as pickle_file:
                 pickle.dump(self.vectorizer, pickle_file)
-                pickle.dump(self.encoder, pickle_file)
+                # pickle.dump(self.encoder, pickle_file)
             tar_file = tarfile.open("trained_nn_model.tar", 'w')
             tar_file.add('trained_nn_model.json')
             tar_file.add('trained_nn_weights.h5')
@@ -716,7 +660,6 @@ class ReviewClassifier:
             os.remove('trained_nn_model.json')
             os.remove('trained_nn_weights.h5')
             os.remove('trained_nn_vec_encoder.pickle')
-        """
 
     def load_model(self, model_file=None, tar_file=None, saved_vectorizer=None):
         """ Loads a trained model from a file
@@ -726,7 +669,6 @@ class ReviewClassifier:
             self.model = pickle.load(model_file)
             self.vectorizer = pickle.load(model_file)
 
-        """
         if saved_vectorizer and tar_file:
             tfile = tarfile.open(tar_file, 'r')
             tfile.extractall()
@@ -743,7 +685,6 @@ class ReviewClassifier:
 
             os.remove('trained_nn_model.json')
             os.remove('trained_nn_weights.h5')
-        """
 
     def metrics(self, actual_ratings, predicted_ratings, counts=True):
 
@@ -811,119 +752,5 @@ class ReviewClassifier:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
             else:
                 return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5
-
-"""
-This is the code for the command line tool. It's not yet up and running yet, but it will be soon!
-# TODO finish command line tool
-
-def main():
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--nb', help='Use Naive Bayes classifier (SciKit Learn MultinomialNaiveBayes Implementation)',
-                        action='store_true')
-    parser.add_argument('--rf', help='Use Random Forest classifier (SciKit Learn Implementation)',
-                        action='store_true')
-    parser.add_argument('--svm', help='Use Support Vector Machine classifier (SciKit Learn LinearSVC Implementation)',
-                        action='store_true')
-    parser.add_argument('-p', '--process', help='File path to reviews csv to process')
-    parser.add_argument('-f', '--fit', help='File path to reviews csv to fit model with')
-    parser.add_argument('-e', '--evaluate', help='Path to reviews file to evaluate model on')
-    parser.add_argument('-v', '--validate', help='Path to reviews file on which to perform k-fold cross validation')
-    parser.add_argument('-k', '--folds', help='Number of folds for cross-validation (default 10)', type=int)
-    parser.add_argument('-c', '--classify', help='Path of reviews file to classify')
-    parser.add_argument('--cf', help='Classification output file')
-    parser.add_argument('-s', '--save', help='File to which to save trained model')
-    parser.add_argument('-l', '--load', help='Path to saved model file')
-    parser.add_argument('-w', '--write', help='Path to write output file with information')
-
-    args = parser.parse_args()
-    info = {'start_datetime': str(datetime.datetime.now())}
-    start = time()
-
-    classifier_type = None
-    if args.nb:
-        classifier_type = 'nb'
-    elif args.svm:
-        classifier_type = 'svm'
-    elif args.rf:
-        classifier_type = 'rf'
-    classifier = ReviewClassifier(classifier_type=classifier_type)
-    info['classifier_type'] = classifier_type
-
-    if args.evaluate and not args.load and not args.fit:
-        raise Exception('In order to evaluate, you must specify a model to '
-                        'load (-l flag) or fit a model (-f flag)')
-    if args.classify and not args.load and not args.fit:
-        raise Exception('In order to classify, you must specify a model to '
-                        'load (-l flag) or fit a model (-f flag)')
-    if args.classify and not args.cf:
-        raise Exception('In order to classify, you must specify and classification'
-                        ' output file (using the --cf flag)')
-
-    if args.process:
-        data, target, preprocess_info = classifier.preprocess(args.process)
-        info['num_positive_reviews'] = preprocess_info['positive']
-        info['num_negative_reviews'] = preprocess_info['negative']
-        info['num_neutral_reviews'] = preprocess_info['neutral']
-
-    if args.load:
-        classifier.load_model(args.load)
-
-    if classifier.model and args.evaluate:
-        data, target, data_info = classifier.preprocess(args.evaluate)
-        accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = classifier.evaluate_accuracy(data, target)
-        info['eval_accuracy'] = accuracy
-        info['class_1_precision'] = precision1
-        info['class_1_recall'] = recall1
-        info['class_1_f1'] = f1_1
-        info['class_2_precision'] = precision2
-        info['class_2_recall'] = recall2
-        info['class_2_f1'] = f1_2
-
-    if classifier.model and args.classify:
-        classifier.classify(output_file=args.cf, csv_file=args.classify)
-
-    if args.fit and not classifier.model:
-        data, target, data_info = classifier.preprocess(args.fit)
-        classifier.fit(data, target)
-
-    if args.fit and classifier.model:
-        warnings.warn('You are trying to both load and fit a model. The loaded model takes precedence, '
-                      'and a model will not be fit.')
-
-    if args.evaluate and not args.load:
-        data, target, data_info = classifier.preprocess(args.evaluate)
-        accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = classifier.evaluate_accuracy(data, target)
-        info['eval_accuracy'] = accuracy
-        info['class_1_precision'] = precision1
-        info['class_1_recall'] = recall1
-        info['class_1_f1'] = f1_1
-        info['class_2_precision'] = precision2
-        info['class_2_recall'] = recall2
-        info['class_2_f1'] = f1_2
-
-    if args.validate:
-        folds = 10
-        if args.folds:
-            folds = args.folds
-        evaluation_info = classifier.evaluate_average_accuracy(args.evaluate, folds)
-        info['k-fold validation results'] = evaluation_info
-
-    if args.save:
-        classifier.save_model(args.save)
-
-    info['end_datetime'] = str(datetime.datetime.now())
-    end = time()
-    elapsed = float(end - start)
-    info['time_elapsed'] = elapsed
-
-    if args.write:
-        with open(args.write + '.json', 'w') as output:
-            json.dump(info, output, indent=2)
-
-
-if __name__ == '__main__':
-    main()
-"""
 
 
