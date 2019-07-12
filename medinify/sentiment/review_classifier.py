@@ -180,7 +180,6 @@ class ReviewClassifier:
             data: vectorized comments for feed into model
             target: actual ratings assosiated with data
             model: trained model to evaluate (if none, the class attribute 'model' will be evaluated)
-            verbose: Whether or not to print formatted results to console
         """
 
         if model:
@@ -239,6 +238,8 @@ class ReviewClassifier:
                 test_data, np.array(test_target), verbose=0)[1]
         """
 
+        return results
+
     def evaluate_average_accuracy(self, reviews_filename, n_folds, verbose=False):
         """ Use stratified k fold to calculate average accuracy of models
 
@@ -251,24 +252,17 @@ class ReviewClassifier:
         data, target = self.preprocess(reviews_filename=reviews_filename)
         splits = StratifiedKFold(n_splits=n_folds)
 
-        if self.numclasses == 2:
-            sumtn, sumfp, sumfn, sumtp = 0, 0, 0, 0
-            accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
-            class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
+        sumtn, sumfp, sumfn, sumtp = 0, 0, 0, 0
+        accuracies, class_1_precisions, class_1_recalls, class_1_f1s = [], [], [], []
+        class_2_precisions, class_2_recalls, class_2_f1s = [], [], []
+        class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
+        class_4_precisions, class_4_recalls, class_4_f1s = [], [], []
+        class_5_precisions, class_5_recalls, class_5_f1s = [], [], []
+        sumtpPos = sumtpNeg = sumtpNeu = sumtpOneStar = sumtpTwoStar = sumtpThreeStar = sumtpFourStar = \
+            sumtpFiveStar = sumfAB = sumfAC = sumfAD = sumfAE = sumfBA = sumfBC = sumfBD = sumfBE = \
+            sumfCA = sumfCB = sumfCD = sumfCE = sumfDA = sumfDB = sumfDC = sumfDE = sumfEA = sumfEB = \
+            sumfEC = sumfED = 0
 
-        if self.numclasses == 3:
-            class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
-            sumtpPos, sumtpNeg, sumtpNeu, sumfBA, sumfBC, sumfAB, sumfCB, sumfCA, sumfAC = 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-        if self.numclasses == 5:
-            class_3_precisions, class_3_recalls, class_3_f1s = [], [], []
-            class_4_precisions, class_4_recalls, class_4_f1s = [], [], []
-            class_5_precisions, class_5_recalls, class_5_f1s = [], [], []
-            sumtpOneStar, sumtpTwoStar, sumtpThreeStar, sumtpFourStar, sumtpFiveStar, sumfAB, sumfAC, sumfAD, \
-            sumfAE, sumfBA, sumfBC, sumfBD, sumfBE, sumfCA, sumfCB, sumfCD, sumfCE, sumfDA, sumfDB, sumfDC, \
-            sumfDE, sumfEA, sumfEB, sumfEC, sumfED = 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-
-        scores = []
         for train, test in splits.split(data, target):
 
             x_train = data[train]
@@ -278,74 +272,73 @@ class ReviewClassifier:
 
             model = self.generate_model()
             model.fit(x_train, y_train)
+            results = self.evaluate_accuracy(x_test, y_test, model=model)
+
+            accuracies.append(results['accuracy'])
+            class_1_precisions.append(results['precision1'])
+            class_2_precisions.append(results['precision2'])
+            class_1_recalls.append(results['recall1'])
+            class_2_recalls.append(results['recall2'])
+            class_1_f1s.append(results['f1_1'])
+            class_2_f1s.append(results['f1_2'])
 
             if self.numclasses == 2:
-                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.evaluate_accuracy(x_test, y_test, model=model)
+                sumtn += results['tn']
+                sumfn += results['fn']
+                sumfp += results['fp']
+                sumtp += results['tp']
 
-                sumtn += tn
-                sumfn += fn
-                sumfp += fp
-                sumtp += tp
             if self.numclasses == 3:
-                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, \
-                tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = self.evaluate_accuracy(x_test, y_test, model=model)
-                sumtpPos += tpPos
-                sumtpNeg += tpNeg
-                sumtpNeu += tpNeu
-                sumfBA += fBA
-                sumfBC += fBC
-                sumfAB += fAB
-                sumfCB += fCB
-                sumfCA += fCA
-                sumfAC += fAC
+                sumtpPos += results['tp_pos']
+                sumtpNeg += results['tp_neg']
+                sumtpNeu += results['tp_neut']
+                sumfBA += results['f_ba']
+                sumfBC += results['f_bc']
+                sumfAB += results['f_ab']
+                sumfCB += results['f_cb']
+                sumfCA += results['f_ca']
+                sumfAC += results['f_ac']
+
             if self.numclasses == 5:
-                accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, \
-                recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, \
-                fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED \
-                = self.evaluate_accuracy(x_test, y_test, model=model)
-                sumtpOneStar += tpOneStar
-                sumtpTwoStar += tpTwoStar
-                sumtpThreeStar += tpThreeStar
-                sumtpFourStar += tpFourStar
-                sumtpFiveStar += tpFiveStar 
-                sumfAB += fAB
-                sumfAC += fAC
-                sumfAD += fAD
-                sumfAE += fAE
-                sumfBA += fBA
-                sumfBC += fBC
-                sumfBD += fBD
-                sumfBE += fBE
-                sumfCA += fCA
-                sumfCB += fCB
-                sumfCD += fCD
-                sumfCE += fCE
-                sumfDA += fDA
-                sumfDB += fDB
-                sumfDC += fDC
-                sumfDE += fDE
-                sumfEA += fEA
-                sumfEB += fEB
-                sumfEC += fEC
-                sumfED += fED                                                                                                                                        
-            accuracies.append(accuracy)
-            class_1_precisions.append(precision1)
-            class_2_precisions.append(precision2)
-            class_1_recalls.append(recall1)
-            class_2_recalls.append(recall2)
-            class_1_f1s.append(f1_1)
-            class_2_f1s.append(f1_2)
+                sumtpOneStar += results['tp_one']
+                sumtpTwoStar += results['tp_two']
+                sumtpThreeStar += results['tp_three']
+                sumtpFourStar += results['tp_four']
+                sumtpFiveStar += results['tp_five']
+                sumfAB += results['f_ab']
+                sumfAC += results['f_ac']
+                sumfAD += results['f_ad']
+                sumfAE += results['f_ae']
+                sumfBA += results['f_ba']
+                sumfBC += results['f_bc']
+                sumfBD += results['f_bd']
+                sumfBE += results['f_be']
+                sumfCA += results['f_ca']
+                sumfCB += results['f_cb']
+                sumfCD += results['f_cd']
+                sumfCE += results['f_ce']
+                sumfDA += results['f_da']
+                sumfDB += results['f_db']
+                sumfDC += results['f_dc']
+                sumfDE += results['f_de']
+                sumfEA += results['f_ea']
+                sumfEB += results['f_eb']
+                sumfEC += results['f_ec']
+                sumfED += results['f_ed']
+
             if self.numclasses == 3 or self.numclasses == 5:
-                class_3_precisions.append(precision3)
-                class_3_recalls.append(recall3)
-                class_3_f1s.append(f1_3)
+                class_3_precisions.append(results['precision3'])
+                class_3_recalls.append(results['recall3'])
+                class_3_f1s.append(results['f1_3'])
+
             if self.numclasses == 5:
-                class_4_precisions.append(precision4)
-                class_4_recalls.append(recall4)
-                class_4_f1s.append(f1_4)
-                class_5_precisions.append(precision5)
-                class_5_recalls.append(recall5)
-                class_5_f1s.append(f1_5)
+                class_4_precisions.append(results['precision4'])
+                class_4_recalls.append(results['recall4'])
+                class_4_f1s.append(results['f1_4'])
+                class_5_precisions.append(results['precision5'])
+                class_5_recalls.append(results['recall5'])
+                class_5_f1s.append(results['f1_5'])
+
         average_accuracy = np.mean(np.array(accuracies)) * 100
         average_precision1 = np.mean(np.array(class_1_precisions)) * 100
         average_precision2 = np.mean(np.array(class_2_precisions)) * 100
@@ -353,10 +346,12 @@ class ReviewClassifier:
         average_recall2 = np.mean(np.array(class_2_recalls)) * 100
         average_f1_1 = np.mean(np.array(class_1_f1s)) * 100
         average_f1_2 = np.mean(np.array(class_2_f1s)) * 100
+
         if self.numclasses == 3 or self.numclasses == 5:
             average_precision3 = np.mean(np.array(class_3_precisions)) * 100
             average_recall3 = np.mean(np.array(class_3_recalls)) * 100
             average_f1_3 = np.mean(np.array(class_3_f1s)) * 100
+
         if self.numclasses == 5:
             average_precision4 = np.mean(np.array(class_4_precisions)) * 100
             average_recall4 = np.mean(np.array(class_4_recalls)) * 100
@@ -364,43 +359,8 @@ class ReviewClassifier:
             average_precision5 = np.mean(np.array(class_5_precisions)) * 100
             average_recall5 = np.mean(np.array(class_5_recalls)) * 100
             average_f1_5 = np.mean(np.array(class_5_f1s)) * 100
+
         if self.numclasses == 2:
-            metrics_ = {'accuracies': accuracies, 'positive_precisions': class_1_precisions,
-                        'positive_recalls': class_1_recalls, 'positive_f1_scores': class_1_f1s,
-                        'negative_precisions': class_2_precisions, 'negative_recalls': class_2_recalls,
-                        'negative_f1_scores': class_2_f1s, 'average_accuracy': average_accuracy,
-                        'average_positive_precision': average_precision1, 'average_positive_recall': average_recall1,
-                        'average_positive_f1_score': average_f1_1, 'average_negative_precision': average_precision2,
-                        'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2}
-        if self.numclasses == 3:
-            metrics_ = {'accuracies': accuracies, 'positive_precisions': class_1_precisions,
-                        'positive_recalls': class_1_recalls, 'positive_f1_scores': class_1_f1s,
-                        'negative_precisions': class_2_precisions, 'negative_recalls': class_2_recalls,
-                        'negative_f1_scores': class_2_f1s, 'average_accuracy': average_accuracy,
-                        'average_positive_precision': average_precision1, 'average_positive_recall': average_recall1,
-                        'average_positive_f1_score': average_f1_1, 'average_negative_precision': average_precision2,
-                        'average_negative_recall': average_recall2, 'average_negative_f1_score': average_f1_2, 
-                        'neutral_precisions': class_3_precisions, 'neutral_recalls': class_3_recalls,
-                        'neutral_f1_scores': class_3_f1s, 'average_neutral_precision': average_precision3,
-                        'average_neutral_recall': average_recall3, 'average_neutral_f1_score': average_f1_3}    
-        if self.numclasses == 5:
-            metrics_ = {'accuracies': accuracies, 'onestar_precisions': class_1_precisions,
-                        'onestar_recalls': class_1_recalls, 'onestar_f1_scores': class_1_f1s,
-                        'twostar_precisions': class_2_precisions, 'twostar_recalls': class_2_recalls,
-                        'twostar_f1_scores': class_2_f1s, 'average_accuracy': average_accuracy,
-                        'average_onestar_precision': average_precision1, 'average_onestar_recall': average_recall1,
-                        'average_onestar_f1_score': average_f1_1, 'average_twostar_precision': average_precision2,
-                        'average_twostar_recall': average_recall2, 'average_twostar_f1_score': average_f1_2, 
-                        'threestar_precisions': class_3_precisions, 'threestar_recalls': class_3_recalls, 
-                        'threestar_f1_scores': class_3_f1s, 'average_threestar_precision': average_precision3,
-                        'average_threestar_recall': average_recall3, 'average_threestar_f1_score': average_f1_3, 
-                        'fourstar_precisions': class_4_precisions, 'fourstar_recalls': class_4_recalls, 
-                        'fourstar_f1_scores': class_4_f1s, 'average_fourstar_precision': average_precision4,
-                        'average_fourstar_recall': average_recall4, 'average_fourstar_f1_score': average_f1_4, 
-                        'fivestar_precisions': class_5_precisions, 'fivestar_recalls': class_5_recalls, 
-                        'fivestar_f1_scores': class_5_f1s, 'average_fivestar_precision': average_precision5,
-                        'average_fivestar_recall': average_recall5, 'average_fivestar_f1_score': average_f1_5}
-        if verbose and self.numclasses == 2:
             print('Validation Metrics:')
             print('Average Accuracy: {:.4f}%'.format(average_accuracy))
             print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2) / 2))
@@ -416,7 +376,8 @@ class ReviewClassifier:
             print("\t" + "\t" + "Neg:" + "\t" + "Pos:")
             print("Negative:" + "\t" + str(sumtn) + "\t" + str(sumfp))
             print("Positive:" + "\t" + str(sumfn) + "\t" + str(sumtp))
-        if verbose and self.numclasses == 3:
+
+        elif self.numclasses == 3:
             print('Validation Metrics:')
             print('Average Accuracy: {:.4f}%'.format(average_accuracy))
             print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3) / 3))
@@ -435,8 +396,9 @@ class ReviewClassifier:
             print("\t" + "\t" + "Neg:" + "\t" + "Neu:" + "\t" + "Pos:")
             print("Negative:" + "\t" + str(sumtpPos) + "\t" + str(sumfAB) + "\t" + str(sumfAC))
             print("Neutral:" + "\t" + str(sumfBA) + "\t" + str(sumtpNeg) + "\t" + str(sumfBC))
-            print("Positive:" + "\t" + str(sumfCA) + "\t" + str(sumfCB) + "\t" + str(sumtpNeu))       
-        if verbose and self.numclasses == 5:
+            print("Positive:" + "\t" + str(sumfCA) + "\t" + str(sumfCB) + "\t" + str(sumtpNeu))
+
+        elif self.numclasses == 5:
             print('Validation Metrics:')
             print('Average Accuracy: {:.4f}%'.format(average_accuracy))
             print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3 + average_precision4 + average_precision5) / 5))
@@ -464,7 +426,6 @@ class ReviewClassifier:
             print("Three Star:" + "\t" + str(sumfCA) + "\t" + str(sumfCB) + "\t" + str(sumtpThreeStar) + "\t" + str(sumfCD) + "\t" + str(sumfCE))
             print("Four Star:" + "\t" + str(sumfDA) + "\t" + str(sumfDB) + "\t" + str(sumfDC) + "\t" + str(sumtpFourStar) + "\t" + str(sumfDE))
             print("Five Star:" + "\t" + str(sumfEA) + "\t" + str(sumfEB) + "\t" + str(sumfEC) + "\t" + str(sumfED) + "\t" + str(sumtpFiveStar))
-        return metrics_
 
     def classify(self, output_file, csv_file=None, text_file=None, evaluate=False):
         """Classifies a list of comments as positive or negative
@@ -740,7 +701,7 @@ class ReviewClassifier:
             info['f_ba'], info['f_bc'], info['f_bd'], info['f_be'] = f_ba, f_bc, f_bd, f_be
             info['f_ca'], info['f_cb'], info['f_cd'], info['f_ce'] = f_ca, f_cb, f_cd, f_ce
             info['f_da'], info['f_db'], info['f_dc'], info['f_de'] = f_da, f_db, f_dc, f_de
-            info['f_ea'], info['f_ea'], info['f_ea'], info['f_ea'] = f_ea, f_eb, f_ec, f_ed
+            info['f_ea'], info['f_eb'], info['f_ec'], info['f_ed'] = f_ea, f_eb, f_ec, f_ed
 
             info['accuracy'] = ((tp_one + tp_two + tp_three + tp_four + tp_five) * 1.0) / \
                                (tp_one + tp_two + tp_three + tp_four + tp_five + f_ab + f_ac
