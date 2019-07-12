@@ -332,38 +332,54 @@ class ReviewClassifier:
                 class_5_f1s.append(results['f1_5'])
 
         average_accuracy = np.mean(np.array(accuracies)) * 100
+        accuracy_std = np.std(np.array(accuracies)) * 100
         average_precision1 = np.mean(np.array(class_1_precisions)) * 100
+        precision1_std = np.std(np.array(class_1_precisions)) * 100
         average_precision2 = np.mean(np.array(class_2_precisions)) * 100
+        precision2_std = np.std(np.array(class_2_precisions)) * 100
         average_recall1 = np.mean(np.array(class_1_recalls)) * 100
+        recall1_std = np.std(np.array(class_1_recalls)) * 100
         average_recall2 = np.mean(np.array(class_2_recalls)) * 100
+        recall2_std = np.std(np.array(class_2_recalls)) * 100
         average_f1_1 = np.mean(np.array(class_1_f1s)) * 100
+        f1_1_std = np.std(np.array(class_1_f1s)) * 100
         average_f1_2 = np.mean(np.array(class_2_f1s)) * 100
+        f1_2_std = np.std(np.array(class_2_f1s)) * 100
 
         if self.numclasses == 3 or self.numclasses == 5:
             average_precision3 = np.mean(np.array(class_3_precisions)) * 100
+            precision3_std = np.std(np.array(class_3_precisions)) * 100
             average_recall3 = np.mean(np.array(class_3_recalls)) * 100
+            recall3_std = np.std(np.array(class_3_recalls)) * 100
             average_f1_3 = np.mean(np.array(class_3_f1s)) * 100
+            f1_3_std = np.std(np.array(class_3_f1s)) * 100
 
         if self.numclasses == 5:
             average_precision4 = np.mean(np.array(class_4_precisions)) * 100
+            precision4_std = np.std(np.array(class_4_precisions)) * 100
             average_recall4 = np.mean(np.array(class_4_recalls)) * 100
+            recall4_std = np.std(np.array(class_4_recalls)) * 100
             average_f1_4 = np.mean(np.array(class_4_f1s)) * 100
+            f1_4_std = np.std(np.array(class_4_f1s)) * 100
             average_precision5 = np.mean(np.array(class_5_precisions)) * 100
+            precision5_std = np.std(np.array(class_5_precisions)) * 100
             average_recall5 = np.mean(np.array(class_5_recalls)) * 100
+            recall5_std = np.std(np.array(class_5_recalls)) * 100
             average_f1_5 = np.mean(np.array(class_5_f1s)) * 100
+            f1_5_std = np.std(np.array(class_5_f1s)) * 100
 
         if self.numclasses == 2:
             print('Validation Metrics:')
-            print('Average Accuracy: {:.4f}%'.format(average_accuracy))
-            print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2) / 2))
-            print('Average Recall: {:.4f}%'.format((average_recall1 + average_recall2) / 2))
-            print('Average F1-Score: {:.4f}%'.format((average_f1_1 + average_f1_2) / 2))
-            print('Average Class 1 (Positive) Precision: {:.4f}%'.format(average_precision1))
-            print('Average Class 1 (Positive) Recall: {:.4f}%'.format(average_recall1))
-            print('Average Class 1 (Positive) F1-Score: {:.4f}%'.format(average_f1_1))
-            print('Average Class 2 (Negative) Precision: {:.4f}%'.format(average_precision2))
-            print('Average Class 2 (Negative) Recall: {:.4f}%'.format(average_recall2))
-            print('Average Class 2 (Negative) F1-Score: {:.4f}%'.format(average_f1_2))
+            print('Average Accuracy: {:.4f}% +/- {:.4f}%'.format(average_accuracy, accuracy_std))
+            print('Average Precision: {:.4f}% +/- {:.4f}%'.format((average_precision1 + average_precision2) / 2, (precision1_std + precision2_std) / 2))
+            print('Average Recall: {:.4f}% +/- {:.4f}%'.format((average_recall1 + average_recall2) / 2, (recall1_std + recall2_std) / 2))
+            print('Average F1-Score: {:.4f}% +/- {:.4f}%'.format((average_f1_1 + average_f1_2) / 2, (f1_1_std + f1_2_std) / 2))
+            print('Average Class 1 (Positive) Precision: {:.4f}% +/- {:.4f}%'.format(average_precision1, precision1_std))
+            print('Average Class 1 (Positive) Recall: {:.4f}% +/- {:.4f}%'.format(average_recall1, recall1_std))
+            print('Average Class 1 (Positive) F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_1, f1_1_std))
+            print('Average Class 2 (Negative) Precision: {:.4f}% +/- {:.4f}%'.format(average_precision2, precision2_std))
+            print('Average Class 2 (Negative) Recall: {:.4f}% +/- {:.4f}%'.format(average_recall2, recall2_std))
+            print('Average Class 2 (Negative) F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_2, f1_2_std))
             print('Confusion Matrix: ')
             print("\t" + "\t" + "Neg:" + "\t" + "Pos:")
             print("Negative:" + "\t" + str(sumtn) + "\t" + str(sumfp))
@@ -371,19 +387,19 @@ class ReviewClassifier:
 
         elif self.numclasses == 3:
             print('Validation Metrics:')
-            print('Average Accuracy: {:.4f}%'.format(average_accuracy))
-            print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3) / 3))
-            print('Average Recall: {:.4f}%'.format((average_recall1 + average_recall2 + average_recall3) / 3))
-            print('Average F1-Score: {:.4f}%'.format((average_f1_1 + average_f1_2 + average_f1_3) / 3))
-            print('Average Class 1 (Positive) Precision: {:.4f}%'.format(average_precision1))
-            print('Average Class 1 (Positive) Recall: {:.4f}%'.format(average_recall1))
-            print('Average Class 1 (Positive) F1-Score: {:.4f}%'.format(average_f1_1))
-            print('Average Class 2 (Negative) Precision: {:.4f}%'.format(average_precision2))
-            print('Average Class 2 (Negative) Recall: {:.4f}%'.format(average_recall2))
-            print('Average Class 2 (Negative) F1-Score: {:.4f}%'.format(average_f1_2))
-            print('Average Class 3 (Neutral) Precision: {:.4f}%'.format(average_precision3))
-            print('Average Class 3 (Neutral) Recall: {:.4f}%'.format(average_recall3))
-            print('Average Class 3 (Neutral) F1-Score: {:.4f}%'.format(average_f1_3))
+            print('Average Accuracy: {:.4f}% +/- {:.4f}%'.format(average_accuracy, accuracy_std))
+            print('Average Precision: {:.4f}% +/- {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3) / 3, (precision1_std + precision2_std + precision3_std) / 3))
+            print('Average Recall: {:.4f}% +/- {:.4f}%'.format((average_recall1 + average_recall2 + average_recall3) / 3, (recall1_std + recall2_std + recall3_std) / 3))
+            print('Average F1-Score: {:.4f}% +/- {:.4f}%'.format((average_f1_1 + average_f1_2 + average_f1_3) / 3, (f1_1_std + f1_2_std + f1_3_std) / 3))
+            print('Average Class 1 (Positive) Precision: {:.4f}% +/- {:.4f}%'.format(average_precision1, precision1_std))
+            print('Average Class 1 (Positive) Recall: {:.4f}% +/- {:.4f}%'.format(average_recall1, recall1_std))
+            print('Average Class 1 (Positive) F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_1, f1_1_std))
+            print('Average Class 2 (Negative) Precision: {:.4f}% +/- {:.4f}%'.format(average_precision2, precision2_std))
+            print('Average Class 2 (Negative) Recall: {:.4f}% +/- {:.4f}%'.format(average_recall2, recall2_std))
+            print('Average Class 2 (Negative) F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_2, f1_2_std))
+            print('Average Class 3 (Neutral) Precision: {:.4f}% +/- {:.4f}%'.format(average_precision3, precision3_std))
+            print('Average Class 3 (Neutral) Recall: {:.4f}% +/- {:.4f}%'.format(average_recall3, recall3_std))
+            print('Average Class 3 (Neutral) F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_3, f1_3_std))
             print('Confusion Matrix: ')
             print("\t" + "\t" + "Neg:" + "\t" + "Neu:" + "\t" + "Pos:")
             print("Negative:" + "\t" + str(sumtpPos) + "\t" + str(sumfAB) + "\t" + str(sumfAC))
@@ -392,25 +408,25 @@ class ReviewClassifier:
 
         elif self.numclasses == 5:
             print('Validation Metrics:')
-            print('Average Accuracy: {:.4f}%'.format(average_accuracy))
-            print('Average Precision: {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3 + average_precision4 + average_precision5) / 5))
-            print('Average Recall: {:.4f}%'.format((average_recall1 + average_recall2 + average_recall3 + average_recall4 + average_recall5) / 5))
-            print('Average F1-Score: {:.4f}%'.format((average_f1_1 + average_f1_2 + average_f1_3 + average_f1_4 + average_f1_5) / 5))
-            print('Average One Star Precision: {:.4f}%'.format(average_precision1))
-            print('Average One Star Recall: {:.4f}%'.format(average_recall1))
-            print('Average One Star F1-Score: {:.4f}%'.format(average_f1_1))
-            print('Average Two Star Precision: {:.4f}%'.format(average_precision2))
-            print('Average Two Star Recall: {:.4f}%'.format(average_recall2))
-            print('Average Two Star F1-Score: {:.4f}%'.format(average_f1_2))
-            print('Average Three Star Precision: {:.4f}%'.format(average_precision3))
-            print('Average Three Star Recall: {:.4f}%'.format(average_recall3))
-            print('Average Three Star F1-Score: {:.4f}%'.format(average_f1_3))
-            print('Average Four Star Precision: {:.4f}%'.format(average_precision4))
-            print('Average Four Star Recall: {:.4f}%'.format(average_recall4))
-            print('Average Four Star F1-Score: {:.4f}%'.format(average_f1_4))
-            print('Average Five Star Precision: {:.4f}%'.format(average_precision5))
-            print('Average Five Star Recall: {:.4f}%'.format(average_recall5))
-            print('Average Five Star F1-Score: {:.4f}%'.format(average_f1_5))
+            print('Average Accuracy: {:.4f}% +/- {:.4f}%'.format(average_accuracy, accuracy_std))
+            print('Average Precision: {:.4f}% +/- {:.4f}%'.format((average_precision1 + average_precision2 + average_precision3 + average_precision4 + average_precision5) / 5, (precision1_std + precision2_std + precision3_std + precision4_std + precision5_std) / 5))
+            print('Average Recall: {:.4f}% +/- {:.4f}%'.format((average_recall1 + average_recall2 + average_recall3 + average_recall4 + average_recall5) / 5, (recall1_std + recall2_std + recall3_std + recall4_std + recall5_std) / 5))
+            print('Average F1-Score: {:.4f}% +/- {:.4f}%'.format((average_f1_1 + average_f1_2 + average_f1_3 + average_f1_4 + average_f1_5) / 5, (f1_1_std + f1_2_std + f1_3_std + f1_4_std + f1_5_std) / 5))
+            print('Average One Star Precision: {:.4f}% +/- {:.4f}%'.format(average_precision1, precision1_std))
+            print('Average One Star Recall: {:.4f}% +/- {:.4f}%'.format(average_recall1, recall1_std))
+            print('Average One Star F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_1, f1_1_std))
+            print('Average Two Star Precision: {:.4f}% +/- {:.4f}%'.format(average_precision2, precision2_std))
+            print('Average Two Star Recall: {:.4f}% +/- {:.4f}%'.format(average_recall2, recall2_std))
+            print('Average Two Star F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_2, f1_2_std))
+            print('Average Three Star Precision: {:.4f}% +/- {:.4f}%'.format(average_precision3, precision3_std))
+            print('Average Three Star Recall: {:.4f}% +/- {:.4f}%'.format(average_recall3, recall3_std))
+            print('Average Three Star F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_3, f1_3_std))
+            print('Average Four Star Precision: {:.4f}% +/- {:.4f}%'.format(average_precision4, precision4_std))
+            print('Average Four Star Recall: {:.4f}% +/- {:.4f}%'.format(average_recall4, recall4_std))
+            print('Average Four Star F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_4, f1_4_std))
+            print('Average Five Star Precision: {:.4f}% +/- {:.4f}%'.format(average_precision5, precision5_std))
+            print('Average Five Star Recall: {:.4f}% +/- {:.4f}%'.format(average_recall5, recall5_std))
+            print('Average Five Star F1-Score: {:.4f}% +/- {:.4f}%'.format(average_f1_5, f1_5_std))
             print('Confusion Matrix: ')
             print("\t" + "\t" + "1-Star:" + "\t" + "2-Star:" + "\t" + "3-Star:" + "\t" + "4-Star:" + "\t" + "5-Star:")
             print("One Star:" + "\t" + str(sumtpOneStar) + "\t" + str(sumfAB) + "\t" + str(sumfAC) + "\t" + str(sumfAD) + "\t" + str(sumfAE))
