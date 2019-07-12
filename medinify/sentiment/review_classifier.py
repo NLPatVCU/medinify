@@ -444,60 +444,22 @@ class ReviewClassifier:
         if text_file and evaluate:
             raise Exception('In order to evaluate the classification, data must be passed in csv format')
 
-        stop_words = set(stopwords.words('english'))
-        tokenizer = RegexpTokenizer(r'\w+')
         df = pd.read_csv(csv_file)
-
-        clean_comments = []
         comments = []
-        target = []
 
-        if self.numclasses == 2:
-            for review in df.itertuples():
-                if type(review.comment) == float or self.negative_threshold < review.rating < self.positive_threshold:
-                    continue
-                elif review.rating <= self.negative_threshold:
-                    rating = 0
-                else:
-                    rating = 1
-                comments.append(review.comment)
-                clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
-                                               if word not in stop_words))
-                target.append(rating)
-        if self.numclasses == 3:
-            for review in df.itertuples():
-                if type(review.comment) == float:
-                    continue
-                elif self.negative_threshold < review.rating < self.positive_threshold:
-                    rating = 1
-                elif review.rating <= self.negative_threshold:
-                    rating = 0
-                else:
-                    rating = 2
-                comments.append(review.comment)
-                clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
-                                            if word not in stop_words))
-                target.append(rating)
-        if self.numclasses == 5:
-            for review in df.itertuples():
-                if type(review.comment) == float:
-                    continue
-                if review.rating == 1.0:
-                    rating = 1
-                elif review.rating == 2.0:
-                    rating = 2
-                elif review.rating == 3.0:
-                    rating = 3
-                elif review.rating == 4.0:
-                    rating = 4
-                else:
-                    rating = 5
-                comments.append(review.comment)
-                clean_comments.append(' '.join(word.lower() for word in tokenizer.tokenize(review.comment)
-                                            if word not in stop_words))
-                target.append(rating)
+        for review in df.itertuples():
+            if type(review.comment) == float:
+                continue
 
-        data = np.array([self.vectorizer.transform([comment]).toarray() for comment in clean_comments])
+            if self.numclasses == 2:
+                if review.rating == 3:
+                    continue
+                comments.append(review.comment)
+
+            else:
+                comments.append(review.comment)
+
+        data, target = self.preprocess(csv_file)
         predictions = self.model.predict(data)
 
         classifications_file = open(output_file, 'a')
@@ -511,7 +473,9 @@ class ReviewClassifier:
                     actual = 'Negative'
                 else:
                     actual = 'Positive'
-                classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred, actual))
+                classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred,
+                                                                                                     actual))
+
         if self.numclasses == 3:
             for i, comment in enumerate(comments):
                 if predictions[i] == 2:
@@ -526,7 +490,8 @@ class ReviewClassifier:
                     actual = 'Neutral'
                 else:
                     actual = 'Positive'
-                classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred, actual))
+                classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred,
+                                                                                                     actual))
         if self.numclasses == 5:
             for i, comment in enumerate(comments):
                 if predictions[i] == 1:
@@ -549,44 +514,59 @@ class ReviewClassifier:
                     actual = 'Four Star'
                 else:
                     actual = 'Five Star'
-                classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred, actual))
-        if evaluate and self.numclasses == 2:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2 = self.metrics(target, predictions, counts=False)
+                classifications_file.write('Comment: {}\tPrediction: {}\tActual Rating: {}\n'.format(comment, pred,
+                                                                                                     actual))
+
+        if evaluate:
+            results = self.metrics(target, predictions)
             classifications_file.write('\nEvaluation Metrics:\n')
-            classifications_file.write('Accuracy: {}%\nClass 1 (Positive) Precision: {}%\n'
-                                       'Class 1 (Positive) Recall: {}%\nClass 1 (Positive) F1-Measure: {}%\n'
-                                       'Class 2 (Negative) Precision: {}%\nClass 2 (Negative) Recall: {}%\n'
-                                       'Class 2 (Negative) F1-Measure: {}%'.format(accuracy * 100, precision1 * 100,
-                                                                                   recall1 * 100, f1_1 * 100,
-                                                                                   precision2 * 100, recall2 * 100,
-                                                                                   f1_2 * 100))
-        if evaluate and self.numclasses == 3:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3 = self.metrics(target, predictions, counts=False)
-            classifications_file.write('\nEvaluation Metrics:\n')
-            classifications_file.write('Accuracy: {}%\nClass 1 (Positive) Precision: {}%\n'
-                                       'Class 1 (Positive) Recall: {}%\nClass 1 (Positive) F1-Measure: {}%\n'
-                                       'Class 2 (Negative) Precision: {}%\nClass 2 (Negative) Recall: {}%\n'
-                                       'Class 2 (Negative) F1-Measure: {}%\nClass 3 (Neutral) Precision: {}%\n'
-                                       'Class 3 (Neutral) Recall: {}%\nClass 3 (Neutral) F1-Measure: {}%\n'.format(accuracy * 100, precision1 * 100,
-                                                                                   recall1 * 100, f1_1 * 100,
-                                                                                   precision2 * 100, recall2 * 100,
-                                                                                   f1_2 * 100, precision3 * 100, recall3 * 100, f1_3 * 100))
-        if evaluate and self.numclasses == 5:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5 \
-            = self.metrics(target, predictions, counts=False)
-            classifications_file.write('\nEvaluation Metrics:\n')
-            classifications_file.write('Accuracy: {}%\nOne Star Precision: {}%\n'
-                                       'One Star Recall: {}%\nOne Star F1-Measure: {}%\n'
-                                       'Two Star Precision: {}%\nTwo Star Recall: {}%\n'
-                                       'Two Star F1-Measure: {}%\nThree Star Precision: {}%\n'
-                                       'Three Star Recall: {}%\nThree Star F1-Measure: {}%\n'
-                                       'Four Star Precision: {}%\nFour Star Recall: {}%\n'
-                                       'Four Star F1-Measure: {}%\nFive Star Precision: {}%\n'
-                                       'Five Star Recall: {}%\nFive Star F1-Measure: {}%\n'.format(accuracy * 100, precision1 * 100,
-                                                                                   recall1 * 100, f1_1 * 100,
-                                                                                   precision2 * 100, recall2 * 100,
-                                                                                   f1_2 * 100, precision3 * 100, recall3 * 100, f1_3 * 100, precision4 * 100,
-                                                                                   recall4 * 100, f1_4 * 100, precision5 * 100, recall5 * 100, f1_5 * 100))
+            if self.numclasses == 2:
+                classifications_file.write(
+                    'Accuracy: {}%\nClass 1 (Positive) Precision: {}%\n'
+                    'Class 1 (Positive) Recall: {}%\nClass 1 (Positive) F1-Measure: {}%\n'
+                    'Class 2 (Negative) Precision: {}%\nClass 2 (Negative) Recall: {}%\n'
+                    'Class 2 (Negative) F1-Measure: {}%'.format(results['accuracy'] * 100,
+                                                                results['precision1'] * 100,
+                                                                results['recall1'] * 100,
+                                                                results['f1_1'] * 100,
+                                                                results['precision2'] * 100,
+                                                                results['recall2'] * 100,
+                                                                results['f1_2'] * 100))
+            elif self.numclasses == 3:
+                classifications_file.write(
+                    'Accuracy: {}%\nClass 1 (Positive) Precision: {}%\n'
+                    'Class 1 (Positive) Recall: {}%\nClass 1 (Positive) F1-Measure: {}%\n'
+                    'Class 2 (Negative) Precision: {}%\nClass 2 (Negative) Recall: {}%\n'
+                    'Class 2 (Negative) F1-Measure: {}%\nClass 3 (Neutral) Precision: {}%\n'
+                    'Class 3 (Neutral) Recall: {}%\n'
+                    'Class 3 (Neutral) F1-Measure: {}%\n'.format(results['accuracy'] * 100,
+                                                                 results['precision1'] * 100,
+                                                                 results['recall1'] * 100,
+                                                                 results['f1_1'] * 100,
+                                                                 results['precision2'] * 100,
+                                                                 results['recall2'] * 100,
+                                                                 results['f1_2'] * 100,
+                                                                 results['precision3'] * 100,
+                                                                 results['recall3'] * 100,
+                                                                 results['f1_3'] * 100))
+            elif self.numclasses == 5:
+                classifications_file.write(
+                    'Accuracy: {}%\nOne Star Precision: {}%\n'
+                    'One Star Recall: {}%\nOne Star F1-Measure: {}%\n'
+                    'Two Star Precision: {}%\nTwo Star Recall: {}%\n'
+                    'Two Star F1-Measure: {}%\nThree Star Precision: {}%\n'
+                    'Three Star Recall: {}%\nThree Star F1-Measure: {}%\n'
+                    'Four Star Precision: {}%\nFour Star Recall: {}%\n'
+                    'Four Star F1-Measure: {}%\nFive Star Precision: {}%\n'
+                    'Five Star Recall: {}%\nFive Star F1-Measure: {}%\n'.format(
+                        results['accuracy'] * 100, results['precision1'] * 100,
+                        results['recall1'] * 100, results['f1_1'] * 100,
+                        results['precision2'] * 100, results['recall2'] * 100,
+                        results['f1_2'] * 100, results['precision3'] * 100,
+                        results['recall3'] * 100, results['f1_3'] * 100,
+                        results['precision4'] * 100, results['recall4'] * 100,
+                        results['f1_4'] * 100, results['precision5'] * 100,
+                        results['recall5'] * 100, results['f1_5'] * 100))
 
     def save_model(self, output_file):
         """ Saves a trained model to a file
