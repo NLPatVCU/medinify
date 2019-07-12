@@ -1,5 +1,6 @@
 
 import numpy as np
+import pandas as pd
 
 # Evaluation
 from sklearn.model_selection import StratifiedKFold
@@ -59,17 +60,23 @@ class CNNReviewClassifier:
         :return: data loaders
         """
 
-        dataset_maker = ReviewClassifier()
-        train_data = dataset_maker.create_dataset(train_file)
-        valid_data = dataset_maker.create_dataset(valid_file)
+        train_reviews = pd.read_csv(train_file).values.tolist()
+        valid_reviews = pd.read_csv(valid_file).values.tolist()
 
-        return self.generate_data_loaders(train_data, valid_data, batch_size)
+        train_data = [str(review[0]).lower() for review in train_reviews if review[1] != 3]
+        valid_data = [str(review[0]).lower() for review in valid_reviews if review[1] != 3]
+        train_target = ['neg' if review[1] in [1, 2] else 'pos' for review in train_reviews if review[1] != 3]
+        valid_target = ['neg' if review[1] in [1, 2] else 'pos' for review in valid_reviews if review[1] != 3]
 
-    def generate_data_loaders(self, train_dataset, valid_dataset, batch_size):
+        return self.generate_data_loaders(train_data, train_target, valid_data, valid_target, batch_size)
+
+    def generate_data_loaders(self, train_data, train_target, valid_data, valid_target, batch_size):
         """
         This function generates TorchText dataloaders for training and validation datasets
-        :param train_dataset: training dataset
-        :param valid_dataset: validation dataset
+        :param train_data: training dataset (list of comment string)
+        :param valid_data: validation dataset (list of comment string)
+        :param train_target: training data's assosated ratings (list of 'pos' and 'neg')
+        :param valid_target: validation data's assosated ratings (list of 'pos' and 'neg')
         :param batch_size: the loaders' batch sizes
         :return: train data loader and validation data loader
         """
@@ -82,21 +89,19 @@ class CNNReviewClassifier:
         train_examples = []
         valid_examples = []
 
-        for review in train_dataset:
-            comment = ' '.join(list(review[0].keys()))
-            rating = review[1]
-            characters = list(comment)
-            review = {'comment': comment, 'characters': characters, 'rating': rating}
+        for i in range(len(train_data)):
+            comment = train_data[i]
+            rating = train_target[i]
+            review = {'comment': comment, 'rating': rating}
             ex = Example.fromdict(data=review,
                                   fields={'comment': ('comment', self.comment_field),
                                           'rating': ('rating', self.rating_field)})
             train_examples.append(ex)
 
-        for review in valid_dataset:
-            comment = ' '.join(list(review[0].keys()))
-            rating = review[1]
-            characters = list(comment)
-            review = {'comment': comment, 'characters': characters, 'rating': rating}
+        for i in range(len(valid_data)):
+            comment = valid_data[i]
+            rating = valid_target[i]
+            review = {'comment': comment, 'rating': rating}
             ex = Example.fromdict(data=review,
                                   fields={'comment': ('comment', self.comment_field),
                                           'rating': ('rating', self.rating_field)})
@@ -305,11 +310,11 @@ class CNNReviewClassifier:
         :param num_epochs: number of epochs per fold
         """
 
-        classifier = ReviewClassifier()
-        dataset = classifier.create_dataset(input_file)
+        df = pd.read_csv(input_file)
+        dataset = df.values.tolist()
 
-        comments = [review[0] for review in dataset]
-        ratings = [review[1] for review in dataset]
+        comments = [review[0].lower() for review in dataset if review[1] != 3]
+        ratings = ['neg' if review[1] in [1, 2] else 'pos' for review in dataset if review[1] != 3]
 
         skf = StratifiedKFold(n_splits=num_folds)
 
@@ -318,10 +323,14 @@ class CNNReviewClassifier:
         total_recall = 0
 
         for train, test in skf.split(comments, ratings):
-            train_data = [dataset[x] for x in train]
-            test_data = [dataset[x] for x in test]
+            train_data = [comments[x] for x in train]
+            train_target = [ratings[x] for x in train]
+            test_data = [comments[x] for x in test]
+            test_target = [ratings[x] for x in test]
 
-            train_loader, valid_loader = self.generate_data_loaders(train_data, test_data, 25)
+            train_loader, valid_loader = self.generate_data_loaders(train_data, train_target,
+                                                                    test_data, test_target, 25)
+
             network = SentimentNetwork(vocab_size=len(self.comment_field.vocab), embeddings=self.embeddings)
 
             network.apply(self.set_weights)
@@ -353,12 +362,9 @@ class CNNReviewClassifier:
         for csv in datasets:
             dataset_num = dataset_num + 1
             print('Gathering comments from dataset #' + str(dataset_num))
-            dataset = classifier.create_dataset(csv)
-            dataset_comments = []
-            for comment in dataset:
-                dataset_comments.append(list(comment[0].keys()))
+            data_, target = classifier.preprocess(csv)
             print('\nFinished gathering dataset #' + str(dataset_num))
-            comments = comments + dataset_comments
+            comments = comments + data_
         print('\nGenerating Word2Vec model')
         w2v_model = Word2Vec(comments)
         print('Training word embeddings...')
