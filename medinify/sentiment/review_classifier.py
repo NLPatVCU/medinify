@@ -1,11 +1,6 @@
 
 # Python Libraries
 import pickle
-import argparse
-import json
-import datetime
-from time import time
-import warnings
 import tarfile
 import os
 
@@ -13,10 +8,8 @@ import os
 import numpy as np
 import pandas as pd
 import spacy
-from spacy.lang.en import English
 from sklearn.preprocessing import LabelEncoder
 from nltk.corpus import stopwords
-from nltk import RegexpTokenizer
 from sklearn.feature_extraction import DictVectorizer
 
 # Classification
@@ -27,7 +20,6 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import confusion_matrix
-# from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 
 # NN (Currently Unused)
 from keras.models import Sequential
