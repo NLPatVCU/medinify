@@ -182,28 +182,32 @@ class ReviewClassifier:
             model: trained model to evaluate (if none, the class attribute 'model' will be evaluated)
             verbose: Whether or not to print formatted results to console
         """
+
         if model:
-            preds = model.predict(data)
+            predictions = model.predict(data)
+
         else:
-            preds = self.model.predict(data)
+            predictions = self.model.predict(data)
+
         if self.numclasses == 2:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.metrics(target, preds)
+            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.metrics(target, predictions)
+            if verbose:
+                print('Evaluation Metrics:')
+                print('Accuracy: {}%'.format(accuracy * 100))
+                print('Positive Precision: {}%'.format(precision1 * 100))
+                print('Positive Recall: {}%'.format(recall1 * 100))
+                print('Positive F1-Score: {}%'.format(f1_1 * 100))
+                print('Negative Precision: {}%'.format(precision2 * 100))
+                print('Negative Recall: {}%'.format(recall2 * 100))
+                print('Negative F1-Score: {}%'.format(f1_2 * 100))
         if self.numclasses == 3:
             accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, \
-            fBA, fBC, fAB, fCB, fCA, fAC = self.metrics(target, preds)
+            fBA, fBC, fAB, fCB, fCA, fAC = self.metrics(target, predictions)
         if self.numclasses == 5:
             accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, \
             f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, \
-            fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = self.metrics(target, preds)
-        if verbose and self.numclasses == 2:
-            print('Evaluation Metrics:')
-            print('Accuracy: {}%'.format(accuracy * 100))
-            print('Positive Precision: {}%'.format(precision1 * 100))
-            print('Positive Recall: {}%'.format(recall1 * 100))
-            print('Positive F1-Score: {}%'.format(f1_1 * 100))
-            print('Negative Precision: {}%'.format(precision2 * 100))
-            print('Negative Recall: {}%'.format(recall2 * 100))
-            print('Negative F1-Score: {}%'.format(f1_2 * 100))
+            fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = self.metrics(target, predictions)
+
         elif verbose and self.numclasses == 3:
             print('Evaluation Metrics:')
             print('Accuracy: {}%'.format(accuracy * 100))
@@ -693,71 +697,91 @@ class ReviewClassifier:
             os.remove('trained_nn_model.json')
             os.remove('trained_nn_weights.h5')
 
-    def metrics(self, actual_ratings, predicted_ratings, counts=True):
+    def metrics(self, actual_ratings, predicted_ratings):
+
+        info = {}
 
         if self.numclasses == 2:
 
             matrix = confusion_matrix(actual_ratings, predicted_ratings)
             tn, fp, fn, tp = matrix[0][0], matrix[0, 1], matrix[1, 0], matrix[1][1]
-            accuracy = (tp + tn) * 1.0 / (tp + tn + fp + fn)
-            precision1, precision2 = (tp * 1.0) / (tp + fp), (tn * 1.0) / (tn + fn)
-            recall1, recall2 = (tp * 1.0) / (tp + fn), (tn * 1.0) / (tn + fp)
-            f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
-            f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
+            info['tp'], info['tn'], info['fp'], info['fn'] = tp, tn, fp, fn
+            info['accuracy'] = (tp + tn) * 1.0 / (tp + tn + fp + fn)
+            precision1 = (tp * 1.0) / (tp + fp)
+            precision2 = (tn * 1.0) / (tn + fn)
+            recall1 = (tp * 1.0) / (tp + fn)
+            recall2 = (tn * 1.0) / (tn + fp)
+            info['precision1'], info['precision2'], info['recall1'], info['recall2'] = \
+                precision1, precision2, recall1, recall2
+            info['f1_1'] = 2 * ((precision1 * recall1) / (precision1 + recall1))
+            info['f1_2'] = 2 * ((precision2 * recall2) / (precision2 + recall2))
 
-            if counts:
-                return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
-            else:
-                return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2
-
-        if self.numclasses == 3:
-
-            matrix = confusion_matrix(actual_ratings, predicted_ratings)
-            tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC = matrix[0][0], matrix[1, 1], matrix[2, 2], matrix[1, 0], matrix[1, 2], matrix[0, 1], \
-            matrix[2][1], matrix[2,0], matrix[0,2]
-            accuracy = ((tpPos + tpNeg + tpNeu) * 1.0) / (tpPos + tpNeg + tpNeu + fBA + fBC + fAB + fCB + fCA + fAC)
-            precision1, precision2, precision3 = (tpPos * 1.0) / (tpPos + fBA + fCA), (tpNeg * 1.0) / (tpNeg + fAB + fCB), (tpNeu * 1.0) / (tpNeu + fBC + fAC)
-            recall1, recall2, recall3 = (tpPos * 1.0) / (tpPos + fAB + fAC), (tpNeg * 1.0) / (tpNeg + fBA + fBC), (tpNeu * 1.0) / (tpNeu + fCA + fCB) 
-            f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
-            f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
-            f1_3 = 2 * ((precision3 * recall3) / (precision3 + recall3))
-
-            if counts:
-                return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
-            else:
-                return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3
-
-        if self.numclasses == 5:
+        elif self.numclasses == 3:
 
             matrix = confusion_matrix(actual_ratings, predicted_ratings)
+            tp_pos, tp_neg, tp_neu = matrix[0][0], matrix[1, 1], matrix[2, 2]
+            f_ba, f_bc, f_ab = matrix[1, 0], matrix[1, 2], matrix[0, 1]
+            f_cb, f_ca, f_ac = matrix[2][1], matrix[2,0], matrix[0, 2]
+            info['accuracy'] = ((tp_pos + tp_neg + tp_neu) * 1.0) / \
+                               (tp_pos + tp_neg + tp_neu + f_ba + f_bc + f_ab + f_cb + f_ca + f_ac)
+            precision1 = (tp_pos * 1.0) / (tp_pos + f_ba + f_ca)
+            precision2 = (tp_neg * 1.0) / (tp_neg + f_ab + f_cb)
+            precision3 = (tp_neu * 1.0) / (tp_neu + f_bc + f_ac)
+            info['precision1'], info['precision2'], info['precision3'] = precision1, precision2, precision3
 
-            tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, \
-            fEC, fED = matrix[0, 0], matrix[1, 1], matrix[2, 2], matrix[3, 3], matrix[4, 4],  matrix[0, 1], matrix[0, 2], matrix[0, 3], matrix[0, 4], matrix[1, 0], \
-            matrix[1, 2], matrix[1, 3], matrix[1, 4], matrix[2, 0], matrix[2, 1], matrix[2, 3], matrix[2, 4], matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 4], \
-            matrix[4, 0], matrix[4, 1], matrix[4, 2], matrix[4, 3]
+            recall1 = (tp_pos * 1.0) / (tp_pos + f_ab + f_ac)
+            recall2 = (tp_neg * 1.0) / (tp_neg + f_ba + f_bc)
+            recall3 = (tp_neu * 1.0) / (tp_neu + f_ca + f_cb)
+            info['recall1'], info['recall2'], info['recall3'] = recall1, recall2, recall3
 
-            accuracy = ((tpOneStar + tpTwoStar + tpThreeStar + tpFourStar + tpFiveStar) * 1.0) / (tpOneStar + tpTwoStar + tpThreeStar + \
-            tpFourStar + tpFiveStar + fAB + fAC + fAD + fAE + fBA + fBC + fBD + fBE + fCA + fCB + fCD + fCE + fDA + fDB + fDC + fDE + fEA + fEB + fEC + fED)
+            info['f1_1'] = 2 * ((precision1 * recall1) / (precision1 + recall1))
+            info['f1_2'] = 2 * ((precision2 * recall2) / (precision2 + recall2))
+            info['f1_3'] = 2 * ((precision3 * recall3) / (precision3 + recall3))
 
-            precision1, precision2, precision3, precision4, precision5 = (tpOneStar * 1.0) / (tpOneStar + fBA + fCA + fDA + fEA), (tpTwoStar * 1.0) / \
-            (tpTwoStar + fAB + fCB + fDB + fEB), (tpThreeStar * 1.0) / (tpThreeStar + fAC + fBC + fDC + fEC), (tpFourStar * 1.0) / (tpFourStar + fAD + fBD + \
-            fCD + fED), (tpFiveStar * 1.0) / (tpFiveStar + fAE + fBE + fCE + fDE)
+        elif self.numclasses == 5:
 
-            recall1, recall2, recall3, recall4, recall5 = (tpOneStar * 1.0) / (tpOneStar + fAB + fAC + fAD + fAE), (tpTwoStar * 1.0) / (tpTwoStar + fBA + fBC + \
-            fBD + fBE), (tpThreeStar * 1.0) / (tpThreeStar + fCA + fCB + fCD + fCE), (tpFourStar * 1.0) / (tpFourStar + fDA + fDB + fDC + fDE), (tpFiveStar * 1.0) \
-            / (tpFiveStar + fEA + fEB + fEC + fED)
-            f1_1 = 2 * ((precision1 * recall1) / (precision1 + recall1))
+            matrix = confusion_matrix(actual_ratings, predicted_ratings)
+
+            tp_one, tp_two, tp_three = matrix[0, 0], matrix[1, 1], matrix[2, 2]
+            tp_four, tp_five = matrix[3, 3], matrix[4, 4]
+            f_ab, f_ac, f_ad, f_ae = matrix[0, 1], matrix[0, 2], matrix[0, 3], matrix[0, 4]
+            f_ba, f_bc, f_bd, f_be = matrix[1, 0], matrix[1, 2], matrix[1, 3], matrix[1, 4]
+            f_ca, f_cb, f_cd, f_ce = matrix[2, 0], matrix[2, 1], matrix[2, 3], matrix[2, 4]
+            f_da, f_db, f_dc, f_de = matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 4]
+            f_ea, f_eb, f_ec, f_ed = matrix[4, 0], matrix[4, 1], matrix[4, 2], matrix[4, 3]
+
+            info['accuracy'] = ((tp_one + tp_two + tp_three + tp_four + tp_five) * 1.0) / \
+                               (tp_one + tp_two + tp_three + tp_four + tp_five + f_ab + f_ac
+                                + f_ad + f_ae + f_ba + f_bc + f_bd + f_be + f_ca + f_cb + f_cd
+                                + f_ce + f_da + f_db + f_dc + f_de + f_ea + f_eb + f_ec + f_ed)
+
+            precision1 = (tp_one * 1.0) / (tp_one + f_ba + f_ca + f_da + f_ea)
+            precision2 = (tp_two * 1.0) / (tp_two + f_ab + f_cb + f_db + f_eb)
+            precision3 = (tp_three * 1.0) / (tp_three + f_ac + f_bc + f_dc + f_ec)
+            precision4 = (tp_four * 1.0) / (tp_four + f_ad + f_bd + f_cd + f_ed)
+            precision5 = (tp_five * 1.0) / (tp_five + f_ae + f_be + f_ce + f_de)
+            info['precision1'], info['precision2'], info['precision3'], info['precision4'], info['precision5'] = \
+                precision1, precision2, precision3, precision4, precision5
+
+            recall1 = (tp_one * 1.0) / (tp_one + f_ab + f_ac + f_ad + f_ae)
+            recall2 = (tp_two * 1.0) / (tp_two + f_ba + f_bc + f_bd + f_be)
+            recall3 = (tp_three * 1.0) / (tp_three + f_ca + f_cb + f_cd + f_ce)
+            recall4 = (tp_four * 1.0) / (tp_four + f_da + f_db + f_dc + f_de)
+            recall5 = (tp_five * 1.0) / (tp_five + f_ea + f_eb + f_ec + f_ed)
+            info['recall1'], info['recall2'], info['recall3'], info['recall4'], info['recall5'] = \
+                recall1, recall2, recall3, recall4, recall5
+
+            info['f1_1'] = 2 * ((precision1 * recall1) / (precision1 + recall1))
+
             if precision2 + recall2 == 0:
-                f1_2 = 0
-            else:
-                f1_2 = 2 * ((precision2 * recall2) / (precision2 + recall2))
-            f1_3 = 2 * ((precision3 * recall3) / (precision3 + recall3))
-            f1_4 = 2 * ((precision4 * recall4) / (precision4 + recall4))
-            f1_5 = 2 * ((precision5 * recall5) / (precision5 + recall5))
-            
-            if counts:
-                return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED
-            else:
-                return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5
+                info['f1_2'] = 0
 
+            else:
+                info['f1_2'] = 2 * ((precision2 * recall2) / (precision2 + recall2))
+
+            info['f1_3'] = 2 * ((precision3 * recall3) / (precision3 + recall3))
+            info['f1_4'] = 2 * ((precision4 * recall4) / (precision4 + recall4))
+            info['f1_5'] = 2 * ((precision5 * recall5) / (precision5 + recall5))
+
+        return info
 
