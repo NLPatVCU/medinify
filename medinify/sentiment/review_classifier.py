@@ -173,7 +173,7 @@ class ReviewClassifier:
         self.model = model
         return model
 
-    def evaluate_accuracy(self, data, target, model=None, verbose=False):
+    def evaluate_accuracy(self, data, target, model=None):
         """Evaluate accuracy of current model on new data
 
         Args:
@@ -189,71 +189,55 @@ class ReviewClassifier:
         else:
             predictions = self.model.predict(data)
 
-        if self.numclasses == 2:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.metrics(target, predictions)
-            if verbose:
-                print('Evaluation Metrics:')
-                print('Accuracy: {}%'.format(accuracy * 100))
-                print('Positive Precision: {}%'.format(precision1 * 100))
-                print('Positive Recall: {}%'.format(recall1 * 100))
-                print('Positive F1-Score: {}%'.format(f1_1 * 100))
-                print('Negative Precision: {}%'.format(precision2 * 100))
-                print('Negative Recall: {}%'.format(recall2 * 100))
-                print('Negative F1-Score: {}%'.format(f1_2 * 100))
-        if self.numclasses == 3:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, tpPos, tpNeg, tpNeu, \
-            fBA, fBC, fAB, fCB, fCA, fAC = self.metrics(target, predictions)
-        if self.numclasses == 5:
-            accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, f1_3, precision4, recall4, \
-            f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, \
-            fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, fDC, fDE, fEA, fEB, fEC, fED = self.metrics(target, predictions)
+        results = self.metrics(target, predictions)
 
-        elif verbose and self.numclasses == 3:
+        if self.numclasses == 2:
             print('Evaluation Metrics:')
-            print('Accuracy: {}%'.format(accuracy * 100))
-            print('Positive Precision: {}%'.format(precision1 * 100))
-            print('Positive Recall: {}%'.format(recall1 * 100))
-            print('Positive F1-Score: {}%'.format(f1_1 * 100))
-            print('Negative Precision: {}%'.format(precision2 * 100))
-            print('Negative Recall: {}%'.format(recall2 * 100))
-            print('Negative F1-Score: {}%'.format(f1_2 * 100))
-            print('Neutral Precision: {}%'.format(precision3 * 100))
-            print('Neutral Recall: {}%'.format(recall3 * 100))
-            print('Neutral F1-Score: {}%'.format(f1_3 * 100))
-        elif verbose and self.numclasses == 5:
+            print('Accuracy: {}%'.format(results['accuracy'] * 100))
+            print('Positive Precision: {}%'.format(results['precision1'] * 100))
+            print('Positive Recall: {}%'.format(results['recall1'] * 100))
+            print('Positive F1-Score: {}%'.format(results['f1_1'] * 100))
+            print('Negative Precision: {}%'.format(results['precision2'] * 100))
+            print('Negative Recall: {}%'.format(results['recall2'] * 100))
+            print('Negative F1-Score: {}%'.format(results['f1_2'] * 100))
+
+        if self.numclasses == 3:
             print('Evaluation Metrics:')
-            print('Accuracy: {}%'.format(accuracy * 100))
-            print('One Star Precision: {}%'.format(precision1 * 100))
-            print('One Star Recall: {}%'.format(recall1 * 100))
-            print('One Star F1-Score: {}%'.format(f1_1 * 100))
-            print('Two Star Precision: {}%'.format(precision2 * 100))
-            print('Two Star Recall: {}%'.format(recall2 * 100))
-            print('Two Star F1-Score: {}%'.format(f1_2 * 100))
-            print('Three Star Precision: {}%'.format(precision3 * 100))
-            print('Three Star Recall: {}%'.format(recall3 * 100))
-            print('Three Star F1-Score: {}%'.format(f1_3 * 100))
-            print('Four Star Precision: {}%'.format(precision4 * 100))
-            print('Four Star Recall: {}%'.format(recall4 * 100))
-            print('Four Star F1-Score: {}%'.format(f1_4 * 100))
-            print('Five Star Precision: {}%'.format(precision5 * 100))
-            print('Five Star Recall: {}%'.format(recall5 * 100))
-            print('Five Star F1-Score: {}%'.format(f1_5 * 100))
+            print('Accuracy: {}%'.format(results['accuracy'] * 100))
+            print('Positive Precision: {}%'.format(results['precision1'] * 100))
+            print('Positive Recall: {}%'.format(results['recall1'] * 100))
+            print('Positive F1-Score: {}%'.format(results['f1_1'] * 100))
+            print('Negative Precision: {}%'.format(results['precision2'] * 100))
+            print('Negative Recall: {}%'.format(results['recall2'] * 100))
+            print('Negative F1-Score: {}%'.format(results['f1_2'] * 100))
+            print('Neutral Precision: {}%'.format(results['precision3'] * 100))
+            print('Neutral Recall: {}%'.format(results['recall3'] * 100))
+            print('Neutral F1-Score: {}%'.format(results['f1_3'] * 100))
+
+        if self.numclasses == 5:
+            print('Evaluation Metrics:')
+            print('Accuracy: {}%'.format(results['accuracy'] * 100))
+            print('One Star Precision: {}%'.format(results['precision1'] * 100))
+            print('One Star Recall: {}%'.format(results['recall1'] * 100))
+            print('One Star F1-Score: {}%'.format(results['f1_1'] * 100))
+            print('Two Star Precision: {}%'.format(results['precision2'] * 100))
+            print('Two Star Recall: {}%'.format(results['recall2'] * 100))
+            print('Two Star F1-Score: {}%'.format(results['f1_2'] * 100))
+            print('Three Star Precision: {}%'.format(results['precision3'] * 100))
+            print('Three Star Recall: {}%'.format(results['recall3'] * 100))
+            print('Three Star F1-Score: {}%'.format(results['f1_3'] * 100))
+            print('Four Star Precision: {}%'.format(results['precision4'] * 100))
+            print('Four Star Recall: {}%'.format(results['recall4'] * 100))
+            print('Four Star F1-Score: {}%'.format(results['f1_4'] * 100))
+            print('Five Star Precision: {}%'.format(results['precision5'] * 100))
+            print('Five Star Recall: {}%'.format(results['recall5'] * 100))
+            print('Five Star F1-Score: {}%'.format(results['f1_5'] * 100))
 
         """
         if self.classifier_type == 'nn':
             score = self.model.evaluate(
                 test_data, np.array(test_target), verbose=0)[1]
         """
-        if self.numclasses == 2:
-            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp
-        if self.numclasses == 3:
-            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, \
-            f1_3, tpPos, tpNeg, tpNeu, fBA, fBC, fAB, fCB, fCA, fAC
-        if self.numclasses == 5:
-            return accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, precision3, recall3, \
-            f1_3, precision4, recall4, f1_4, precision5, recall5, f1_5, tpOneStar, tpTwoStar, tpThreeStar, \
-            tpFourStar, tpFiveStar, fAB, fAC, fAD, fAE, fBA, fBC, fBD, fBE, fCA, fCB, fCD, fCE, fDA, fDB, \
-            fDC, fDE, fEA, fEB, fEC, fED
 
     def evaluate_average_accuracy(self, reviews_filename, n_folds, verbose=False):
         """ Use stratified k fold to calculate average accuracy of models
@@ -297,9 +281,6 @@ class ReviewClassifier:
 
             if self.numclasses == 2:
                 accuracy, precision1, recall1, f1_1, precision2, recall2, f1_2, tn, fp, fn, tp = self.evaluate_accuracy(x_test, y_test, model=model)
-
-                scores.append(model.score(x_test, y_test))
-                print(sum(scores)/len(scores))
 
                 sumtn += tn
                 sumfn += fn
@@ -722,6 +703,10 @@ class ReviewClassifier:
             tp_pos, tp_neg, tp_neu = matrix[0][0], matrix[1, 1], matrix[2, 2]
             f_ba, f_bc, f_ab = matrix[1, 0], matrix[1, 2], matrix[0, 1]
             f_cb, f_ca, f_ac = matrix[2][1], matrix[2,0], matrix[0, 2]
+            info['tp_pos'], info['tp_neg'], info['tp_neut'] = tp_pos, tp_neg, tp_neu
+            info['f_ba'], info['f_bc'], info['f_ab'] = f_ba, f_bc, f_ab
+            info['f_cb'], info['f_ca'], info['f_ac'] = f_cb, f_ca, f_ac
+
             info['accuracy'] = ((tp_pos + tp_neg + tp_neu) * 1.0) / \
                                (tp_pos + tp_neg + tp_neu + f_ba + f_bc + f_ab + f_cb + f_ca + f_ac)
             precision1 = (tp_pos * 1.0) / (tp_pos + f_ba + f_ca)
@@ -749,6 +734,13 @@ class ReviewClassifier:
             f_ca, f_cb, f_cd, f_ce = matrix[2, 0], matrix[2, 1], matrix[2, 3], matrix[2, 4]
             f_da, f_db, f_dc, f_de = matrix[3, 0], matrix[3, 1], matrix[3, 2], matrix[3, 4]
             f_ea, f_eb, f_ec, f_ed = matrix[4, 0], matrix[4, 1], matrix[4, 2], matrix[4, 3]
+            info['tp_one'], info['tp_two'], info['tp_three'], info['tp_four'], info['tp_five'] = \
+                tp_one, tp_two, tp_three, tp_four, tp_five
+            info['f_ab'], info['f_ac'], info['f_ad'], info['f_ae'] = f_ab, f_ac, f_ad, f_ae
+            info['f_ba'], info['f_bc'], info['f_bd'], info['f_be'] = f_ba, f_bc, f_bd, f_be
+            info['f_ca'], info['f_cb'], info['f_cd'], info['f_ce'] = f_ca, f_cb, f_cd, f_ce
+            info['f_da'], info['f_db'], info['f_dc'], info['f_de'] = f_da, f_db, f_dc, f_de
+            info['f_ea'], info['f_ea'], info['f_ea'], info['f_ea'] = f_ea, f_eb, f_ec, f_ed
 
             info['accuracy'] = ((tp_one + tp_two + tp_three + tp_four + tp_five) * 1.0) / \
                                (tp_one + tp_two + tp_three + tp_four + tp_five + f_ab + f_ac
