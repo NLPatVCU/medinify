@@ -55,11 +55,12 @@ class ReviewClassifier:
     classifier_type = None
     model = None
     numclasses = 2
+    poslist = []
     negative_threshold = 2.0
     positive_threshold = 4.0
     vectorizer = None
 
-    def __init__(self, classifier_type=None, numclasses=2, negative_threshold=None, positive_threshold=None):
+    def __init__(self, classifier_type=None, numclasses=2, poslist=[], negative_threshold=None, positive_threshold=None):
         """
         Initialize an instance of ReviewClassifier for the processing of review data into numerical
         representations, training machine-learning classifiers, and evaluating these classifiers' effectiveness
@@ -73,6 +74,7 @@ class ReviewClassifier:
         self.classifier_type = classifier_type
         self.vectorizer = DictVectorizer(sparse=False)
         self.numclasses = numclasses
+        self.poslist = poslist
 
         if negative_threshold:
             self.negative_threshold = negative_threshold
@@ -100,17 +102,26 @@ class ReviewClassifier:
 
         sp = spacy.load('en_core_web_sm')
 
+        print(self.poslist)
+        """
+        sent = sp("This is a cool sentence, with many interesting words that can effectively describe how cool they are.")
+        for token in sent:
+            if token.pos_ != "ADJ":
+                print(token.pos_)
+        """
+
         df = pd.read_csv(reviews_filename)
 
         raw_data, raw_target = [], []
-
         for review in df.itertuples():
-
             if type(review.comment) == float:
                 continue
-            comment = {token.text: True for token in sp.tokenizer(review.comment.lower()) if token.text
-                       not in stop_words}
-
+            if self.poslist == []:
+                comment = {token.text: True for token in sp.tokenizer(review.comment.lower()) if token.text
+                        not in stop_words and token.pos_ not in self.poslist}
+            else:
+                comment = {token.text: True for token in sp(review.comment.lower()) if token.text
+                        not in stop_words and token.pos_ not in self.poslist}
             if self.numclasses == 2:
                 rating = 'pos'
                 if review.rating == 3:
