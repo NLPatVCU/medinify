@@ -102,14 +102,6 @@ class ReviewClassifier:
 
         sp = spacy.load('en_core_web_sm')
 
-        print(self.poslist)
-        """
-        sent = sp("This is a cool sentence, with many interesting words that can effectively describe how cool they are.")
-        for token in sent:
-            if token.pos_ != "ADJ":
-                print(token.pos_)
-        """
-
         df = pd.read_csv(reviews_filename)
 
         raw_data, raw_target = [], []
