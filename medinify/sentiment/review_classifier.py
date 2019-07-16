@@ -42,7 +42,7 @@ class ReviewClassifier:
             star-rating cutoff at with anything <= is labelled negative (default 2.0)
         positive_threshold: float
             star-rating cutoff at with anything >= is labelled positive (default 4.0)
-        vectorizer: CountVectorizer or TfidfVectorizer
+        vectorizer: DictVectorizer
             object for turning dictionary of tokens into numerical representation (vector)
     """
 
@@ -60,8 +60,6 @@ class ReviewClassifier:
         :param classifier_type: SciKit Learn supervised machine-learning classifier ('nb', 'svm', or 'rf')
         :param negative_threshold: star-rating cutoff at with anything <= is labelled negative (default 2.0)
         :param positive_threshold: star-rating cutoff at with anything >= is labelled positive (default 4.0)
-        :param use_tfidf: whether or not to set vectorizer to TF-IDF vectorizer (vectorizer
-            is default CountVectorizer)
         """
 
         self.classifier_type = classifier_type
