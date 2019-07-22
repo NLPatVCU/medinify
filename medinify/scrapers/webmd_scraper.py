@@ -13,6 +13,7 @@ import csv
 import pickle
 import os
 from medinify.scrapers.scraper import Scraper
+import pandas as pd
 
 
 class WebMDScraper(Scraper):
@@ -22,11 +23,42 @@ class WebMDScraper(Scraper):
 
     def scrape_page(self, url):
         """
-        Scrapes a single page of drug reviews
-        :param url: drug reviews page url
-        :return:
+        Scrapes a single page of reviews
+        :param url: String, url for review page
         """
-        pass
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        reviews = soup.find_all('div', attrs={'class': 'userPost'})
+
+        rows = []
+
+        for review in reviews:
+            row = {}
+            comment = (re.sub('\n+|\r+', '', (re.sub('\s+', ' ', review.find(
+                'p', {'id': re.compile("^comFull*")}).text).replace(
+                'Comment:', '').replace('Hide Full Comment', ''))))
+            row['comment'] = comment
+
+            if 'rating' in self.data_collected:
+                rating_set = {}
+                rates = review.find_all('span', attrs={'class': 'current-rating'})
+                rating_set['effectiveness'] = int(rates[0].text.replace('Current Rating:', '').strip())
+                rating_set['ease'] = int(rates[1].text.replace('Current Rating:', '').strip())
+                rating_set['satisfaction'] = int(rates[2].text.replace('Current Rating:', '').strip())
+                row['rating'] = rating_set
+            if 'date' in self.data_collected:
+                row['date'] = review.find('div', {'class': 'date'}).text
+            if 'url' in self.data_collected:
+                row['url'] = url
+            if 'user id' in self.data_collected:
+                row['user id'] = review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', '')
+            if 'drug' in self.data_collected:
+                row['drug'] = soup.find('h1').text.replace('User Reviews & Ratings - ', '').split()[0]
+
+            rows.append(row)
+
+        scraped_data = pd.DataFrame(rows, columns=self.data_collected)
+        self.dataset.append(scraped_data)
 
     def scrape(self, url):
         """

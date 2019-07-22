@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-from medinify.datasets import Dataset
+import pandas as pd
 
 
 class Scraper(ABC):
@@ -23,9 +23,7 @@ class Scraper(ABC):
         if collect_urls:
             self.data_collected.append('url')
 
-        self.dataset = Dataset(use_rating=collect_ratings, use_dates=collect_dates,
-                               use_drugs=collect_drugs, use_user_ids=collect_user_ids,
-                               use_urls=collect_urls)
+        self.dataset = pd.DataFrame(columns=self.data_collected)
 
     @abstractmethod
     def scrape_page(self, url):
@@ -60,3 +58,4 @@ class Scraper(ABC):
         :param drug_urls_file: path to text file containing review urls
         :param output_file: path to file to output urls
         """
+        pass
