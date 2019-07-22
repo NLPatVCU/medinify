@@ -1,6 +1,6 @@
 
 from abc import ABC, abstractmethod
-import pandas as pd
+from medinify.datasets import Dataset
 
 
 class Scraper(ABC):
@@ -9,7 +9,7 @@ class Scraper(ABC):
     dataset = None
 
     def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
-                 collect_user_ids=False, collected_urls=False):
+                 collect_user_ids=False, collect_urls=False):
 
         self.data_collected.append('comment')
         if collect_ratings:
@@ -20,10 +20,12 @@ class Scraper(ABC):
             self.data_collected.append('drug')
         if collect_user_ids:
             self.data_collected.append('user id')
-        if collected_urls:
+        if collect_urls:
             self.data_collected.append('url')
 
-        self.dataset = pd.DataFrame(columns=self.data_collected)
+        self.dataset = Dataset(use_rating=collect_ratings, use_dates=collect_dates,
+                               use_drugs=collect_drugs, use_user_ids=collect_user_ids,
+                               use_urls=collect_urls)
 
     @abstractmethod
     def scrape_page(self, url):
