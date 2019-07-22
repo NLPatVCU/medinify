@@ -30,42 +30,60 @@ class WebMDScraper(Scraper):
         soup = BeautifulSoup(page.text, 'html.parser')
         reviews = soup.find_all('div', attrs={'class': 'userPost'})
 
-        rows = []
+        rows = {'comment': []}
+        if 'rating' in self.data_collected:
+            rows['rating'] = []
+        if 'date' in self.data_collected:
+            rows['date'] = []
+        if 'drug' in self.data_collected:
+            rows['drug'] = []
+        if 'user id' in self.data_collected:
+            rows['user id'] = []
+        if 'url' in self.data_collected:
+            rows['url'] = []
 
         for review in reviews:
-            row = {}
             comment = (re.sub('\n+|\r+', '', (re.sub('\s+', ' ', review.find(
                 'p', {'id': re.compile("^comFull*")}).text).replace(
                 'Comment:', '').replace('Hide Full Comment', ''))))
-            row['comment'] = comment
-
+            rows['comment'].append(comment)
             if 'rating' in self.data_collected:
                 rating_set = {}
                 rates = review.find_all('span', attrs={'class': 'current-rating'})
                 rating_set['effectiveness'] = int(rates[0].text.replace('Current Rating:', '').strip())
                 rating_set['ease'] = int(rates[1].text.replace('Current Rating:', '').strip())
                 rating_set['satisfaction'] = int(rates[2].text.replace('Current Rating:', '').strip())
-                row['rating'] = rating_set
+                rows['rating'].append(rating_set)
             if 'date' in self.data_collected:
-                row['date'] = review.find('div', {'class': 'date'}).text
+                rows['date'].append(review.find('div', {'class': 'date'}).text)
             if 'url' in self.data_collected:
-                row['url'] = url
+                rows['url'].append(url)
             if 'user id' in self.data_collected:
-                row['user id'] = review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', '')
+                rows['user id'].append(review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', ''))
             if 'drug' in self.data_collected:
-                row['drug'] = soup.find('h1').text.replace('User Reviews & Ratings - ', '').split()[0]
-
-            rows.append(row)
+                rows['drug'].append(soup.find('h1').text.replace('User Reviews & Ratings - ', '').split()[0])
 
         scraped_data = pd.DataFrame(rows, columns=self.data_collected)
-        self.dataset.append(scraped_data)
+        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
 
     def scrape(self, url):
         """
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        pass
+        print('Scraping WebMD...')
+
+        quote_page1 = url + '&pageIndex='
+        quote_page2 = '&sortby=3&conditionFilter=-1'
+
+        pages = max_pages(url)
+
+        for i in range(pages):
+            page_url = quote_page1 + str(i) + quote_page2
+            self.scrape_page(page_url)
+
+            if (i + 1) % 10 == 0:
+                print('Scraped {} of {} pages...'.format(i + 1, pages))
 
     def get_url(self, drug_name):
         """
