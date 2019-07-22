@@ -4,6 +4,7 @@ from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
 from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
+import os
 
 
 class Dataset:
@@ -62,5 +63,43 @@ class Dataset:
         :param reviews: DataFrame of reviews data
         """
         self.data.append(reviews, ignore_index=True)
+
+    def collect(self, url):
+        """
+        Given a url, collects drug review data into Dataset
+        :param url: drug reviews url
+        """
+        assert self.scraper, "In order to collect reviews, a scraper must be specified"
+
+        self.scraper.scrape(url)
+        self.data = self.data.append(self.scraper.dataset, ignore_index=True)
+
+    def collect_from_drug_names(self, drug_names_file):
+        """
+        Given a text file listing drug names, collects a dataset of reviews for those drugs
+        :param drug_names_file: path to urls file
+        """
+        assert self.scraper, "In order to collect reviews, a scraper must be specified"
+
+        print('\nCollecting urls...')
+        self.scraper.get_urls(drug_names_file, 'medinify/scrapers/temp_urls_file.txt')
+        print('\nScraping urls...')
+        self.scraper.scrape_urls('medinify/scrapers/temp_urls_file.txt')
+        self.data = self.data.append(self.scraper.dataset, ignore_index=True)
+
+        os.remove('medinify/scrapers/temp_urls_file.txt')
+        print('Collected reviews.')
+
+    def collect_from_urls(self, urls_file):
+        """
+        Given a file listing drug urls, collects review data into Dataset
+        :param urls_file: path to file listing drug urls
+        """
+        assert self.scraper, "In order to collect reviews, a scraper must be specified"
+
+        print('\nScraping urls...')
+        self.scraper.scrape_urls(urls_file)
+        self.data = self.data.append(self.scraper.dataset, ignore_index=True)
+
 
 
