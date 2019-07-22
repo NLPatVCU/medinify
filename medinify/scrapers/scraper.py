@@ -51,11 +51,25 @@ class Scraper(ABC):
         """
         pass
 
-    @abstractmethod
-    def get_urls(self, drug_urls_file, output_file):
+    def get_urls(self, drug_names_file, output_file):
         """
         Given a text file of drug names, searches for and writes file with review urls
-        :param drug_urls_file: path to text file containing review urls
+        :param drug_names_file: path to text file containing review urls
         :param output_file: path to file to output urls
         """
-        pass
+        review_urls = []
+        unfound_drugs = []
+        with open(drug_names_file, 'r') as f:
+            for line in f.readlines():
+                drug_name = line.strip()
+                drug_review_urls = self.get_url(drug_name)
+                if len(drug_review_urls) == 0:
+                    unfound_drugs.append(drug_name)
+                review_urls.extend(drug_review_urls)
+        with open(output_file, 'w') as url_f:
+            for url in review_urls:
+                url_f.write(url + '\n')
+        print('Wrote review url file.')
+        print('No urls found for {} drugs: {}'.format(len(unfound_drugs), unfound_drugs))
+
+
