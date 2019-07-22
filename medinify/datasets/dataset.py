@@ -1,5 +1,6 @@
 
 import pandas as pd
+import numpy as np
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
@@ -100,6 +101,80 @@ class Dataset:
         print('\nScraping urls...')
         self.scraper.scrape_urls(urls_file)
         self.data = self.data.append(self.scraper.dataset, ignore_index=True)
+
+    def write_file(self, output_file, write_comments=True,
+                   write_ratings=True, write_date=True,
+                   write_drugs=True, write_user_ids=False,
+                   write_urls=False):
+        """
+        Write csv file containing data
+        :param output_file: csv output file path
+        :param write_comments: whether or not to write comments to csv file
+        :param write_ratings: whether or not to write ratings to csv file
+        :param write_date: whether or not to write dates to csv file
+        :param write_drugs: whether or not to write drug names to csv file
+        :param write_urls: whether or not to write urls to csv file
+        :param write_user_ids: whether or not to write urls to csv file
+        """
+        columns = []
+        if write_comments:
+            columns.append('comment')
+        if write_ratings:
+            columns.append('rating')
+        if write_date:
+            columns.append('date')
+        if write_drugs:
+            columns.append('drug')
+        if write_user_ids:
+            columns.append('user id')
+        if write_urls:
+            columns.append('url')
+        self.data.to_csv(output_file, columns=columns, index=False)
+
+    def load_data(self, csv_file):
+        """
+        Loads dataset from csv file
+        :param csv_file: path to csv file to load
+        """
+        self.data = pd.read_csv(csv_file)
+
+    def remove_empty_comments(self):
+        """
+        Removes empty comments from Dataset
+        """
+        data_array = self.data.to_numpy()
+        new_list = []
+        num_empty = 0
+
+        for review in data_array:
+            if type(review[0]) != float:
+                new_list.append(review)
+            else:
+                num_empty += 1
+
+        new_array = np.asarray(new_list)
+        self.data = pd.DataFrame(new_array, columns=self.data_used)
+        print('Removed {} empty comments.'.format(num_empty))
+
+    def remove_duplicate_comments(self):
+        """
+        Removes duplicate comments from Dataset
+        """
+        data_array = self.data.to_numpy()
+        not_dupes = []
+        not_dupes_reviews = []
+        num_dupes = 0
+
+        for review in data_array:
+            if review[0] not in not_dupes_reviews:
+                not_dupes_reviews.append(review[0])
+                not_dupes.append(review)
+            else:
+                num_dupes += 1
+
+        new_array = np.asarray(not_dupes)
+        self.data = pd.DataFrame(new_array, columns=self.data_used)
+        print('Removed {} duplicate comments.'.format(num_dupes))
 
 
 
