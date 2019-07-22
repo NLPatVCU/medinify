@@ -1,9 +1,10 @@
 
 import pandas as pd
-import numpy as np
 import pickle
 import os
 import datetime
+import numpy as np
+import ast
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
@@ -31,26 +32,17 @@ class Dataset:
         :param use_user_ids: whether or not to store user id data
         :param use_urls: whether or not to store drug url data
         """
-        self.data_used.append('comment')
-        if use_rating:
-            self.data_used.append('rating')
-        if use_dates:
-            self.data_used.append('date')
-        if use_drugs:
-            self.data_used.append('drug')
-        if use_user_ids:
-            self.data_used.append('user id')
-        if use_urls:
-            self.data_used.append('url')
 
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                         collect_urls=use_urls)
+
         if scraper == 'Drugs':
             self.scraper = DrugsScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                         collect_urls=use_urls)
+
         if scraper == 'DrugRatingz':
             self.scraper = DrugRatingzScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                               collect_drugs=use_drugs, collect_user_ids=use_user_ids,
@@ -59,6 +51,22 @@ class Dataset:
             self.scraper = EverydayHealthScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                                  collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                                  collect_urls=use_urls)
+
+        if self.scraper:
+            self.data_used = self.scraper.data_collected
+
+        else:
+            self.data_used.append('comment')
+            if use_rating:
+                self.data_used.append('rating')
+            if use_dates:
+                self.data_used.append('date')
+            if use_drugs:
+                self.data_used.append('drug')
+            if use_user_ids:
+                self.data_used.append('user id')
+            if use_urls:
+                self.data_used.append('url')
 
         self.data = pd.DataFrame(columns=self.data_used)
 
@@ -214,6 +222,63 @@ class Dataset:
         new_array = np.asarray(not_dupes)
         self.data = pd.DataFrame(new_array, columns=self.data_used)
         print('Removed {} duplicate comments.'.format(num_dupes))
+
+    def print_stats(self, pos_threshold, neg_threshold):
+        """
+        Calculates and prints data distribution statistics
+        """
+        ratings = self.data['rating'].to_numpy()
+        num_reviews = len(ratings)
+
+        if type(ratings[0]) == str and ratings[0][0] == '{':
+            ratings = [ast.literal_eval(x) for x in ratings]
+            rating_types = list(ratings[0].keys())
+            ratings_sets = {rating_type: [] for rating_type in rating_types}
+            data = {rating_type: {} for rating_type in rating_types}
+            for rating in ratings:
+                for rating_type in rating_types:
+                    ratings_sets[rating_type].append(float(rating[rating_type]))
+            for rating_type in rating_types:
+                ratings_sets[rating_type] = np.asarray(ratings_sets[rating_type])
+                data[rating_type]['range'] = (np.amin(ratings_sets[rating_type]),
+                                              np.amax(ratings_sets[rating_type]))
+                data[rating_type]['num_pos'] = len([x for x in ratings_sets[rating_type]
+                                                    if x >= pos_threshold])
+                data[rating_type]['num_neg'] = len([x for x in ratings_sets[rating_type]
+                                                    if x <= neg_threshold])
+                data[rating_type]['num_neutral'] = len([x for x in ratings_sets[rating_type]
+                                                        if neg_threshold < x < pos_threshold])
+
+            print('\nDataset Stats:\n')
+            print('Number of reviews with ratings: {}'.format(num_reviews))
+            print('Types of ratings: {}'.format(rating_types))
+            print('\nRating type distributions:\n')
+            for rating_type in rating_types:
+                print('{}:'.format(rating_type))
+                print('\tRating Range: {}'.format(data[rating_type]['range']))
+                print('\tPositive Reviews: {}'.format(data[rating_type]['num_pos']))
+                print('\tNegative Reviews: {}'.format(data[rating_type]['num_neg']))
+                print('\tNeutral Reviews: {}'.format(data[rating_type]['num_neutral']))
+                print('\tPos:Neg Ratio: {}\n'.format(data[rating_type]['num_pos'] / data[rating_type]['num_neg']))
+
+        elif type(ratings[0]) == np.float64:
+            ratings = np.asarray([x for x in ratings if not np.isnan(x)])
+            num_reviews = len(ratings)
+            range_ = (np.amin(ratings), np.amax(ratings))
+            num_pos = len([x for x in ratings if x >= pos_threshold])
+            num_neg = len([x for x in ratings if x <= neg_threshold])
+            num_neutral = len([x for x in ratings if neg_threshold < x < pos_threshold])
+
+            print('\nDataset Stats:\n')
+            print('Number of reviews with ratings: {}'.format(num_reviews))
+            print('Rating Range: {}'.format(range_))
+            print('Positive Reviews: {}'.format(num_pos))
+            print('Negative Reviews: {}'.format(num_neg))
+            print('Neutral Reviews: {}'.format(num_neutral))
+            print('Pos:Neg Ratio: {}\n'.format(num_pos / num_neg))
+
+        else:
+            raise ValueError('This type of rating ({}) is not supported.'.format(type(ratings[0])))
 
 
 

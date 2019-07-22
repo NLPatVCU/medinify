@@ -47,7 +47,7 @@ class WebMDScraper(Scraper):
                 rating_set = {}
                 rates = review.find_all('span', attrs={'class': 'current-rating'})
                 rating_set['effectiveness'] = int(rates[0].text.replace('Current Rating:', '').strip())
-                rating_set['ease'] = int(rates[1].text.replace('Current Rating:', '').strip())
+                rating_set['ease of use'] = int(rates[1].text.replace('Current Rating:', '').strip())
                 rating_set['satisfaction'] = int(rates[2].text.replace('Current Rating:', '').strip())
                 rows['rating'].append(rating_set)
             if 'date' in self.data_collected:

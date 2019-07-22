@@ -18,6 +18,7 @@ class Scraper(ABC):
         :param collect_user_ids: whether or not to collect user id data
         :param collect_urls: whether or not to collect drug url data
         """
+        self.data_collected = []
         self.data_collected.append('comment')
         if collect_ratings:
             self.data_collected.append('rating')
