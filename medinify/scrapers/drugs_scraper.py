@@ -5,47 +5,13 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 import os
+from medinify.scrapers.scraper import Scraper
 
-class DrugsScraper():
+
+class DrugsScraper(Scraper):
     """Scrapes Drugs.com for drug reviews.
     """
 
-
-    all_pages = True
-    pages = 1
-
-    def __init__(self, all_pages=True, pages=1):
-        self.all_pages = all_pages
-        self.pages = pages
-
-    def max_pages(self, drug_url):
-        """Finds number of review pages for this drug.
-
-        Args:
-            drug_url: URL for the first page of reviews.
-        Returns:
-            (int) Highest page number
-        """
-        page = requests.get(drug_url)
-        soup = BeautifulSoup(page.text, 'html.parser')
-        table_footer = None
-        if soup.find('table', {'class': 'data-list ddc-table-sortable'}):
-            if soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot'):
-                table_footer = soup.find('table', {
-                'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
-        if not table_footer:
-            return 0
-        total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
-
-        max_pages = total_reviews // 25
-        if (total_reviews % 25 != 0):
-            max_pages += 1
-
-        print('Found ' + str(total_reviews) + ' reviews.')
-        print('Scraping ' + str(max_pages) + ' pages...')
-        return max_pages
-
-      
     def scrape(self, drug_url, pages=1):
         """Scrape for drug reviews.
 
@@ -135,4 +101,32 @@ class DrugsScraper():
             writer.writerows(review_urls)
 
         print('Finished writing!')
+
+
+def max_pages(drug_url):
+    """Finds number of review pages for this drug.
+
+    Args:
+        drug_url: URL for the first page of reviews.
+    Returns:
+        (int) Highest page number
+    """
+    page = requests.get(drug_url)
+    soup = BeautifulSoup(page.text, 'html.parser')
+    table_footer = None
+    if soup.find('table', {'class': 'data-list ddc-table-sortable'}):
+        if soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot'):
+            table_footer = soup.find('table', {
+            'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
+    if not table_footer:
+        return 0
+    total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
+
+    max_pages = total_reviews // 25
+    if (total_reviews % 25 != 0):
+        max_pages += 1
+
+    print('Found ' + str(total_reviews) + ' reviews.')
+    print('Scraping ' + str(max_pages) + ' pages...')
+    return max_pages
 

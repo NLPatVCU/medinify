@@ -5,9 +5,10 @@ import csv
 import requests
 from bs4 import BeautifulSoup
 import os
+from medinify.scrapers.scraper import Scraper
 
 
-class DrugRatingzScraper():
+class DrugRatingzScraper(Scraper):
     """Scrapes drugratingz.com for drug reviews.
     """
 
