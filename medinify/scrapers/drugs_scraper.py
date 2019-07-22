@@ -66,7 +66,17 @@ class DrugsScraper(Scraper):
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        pass
+        print('Scraping Drugs.com...')
+
+        base_url = url + '?page='
+        num_pages = max_pages(url)
+
+        for i in range(num_pages):
+            full_url = base_url + str(i + 1)
+            self.scrape_page(full_url)
+
+            if (i + 1) % 10 == 0:
+                print('Scraped {} of {} pages...'.format(i + 1, num_pages))
 
     def get_url(self, drug_name):
         """
@@ -74,7 +84,8 @@ class DrugsScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
-        pass
+
+
 
     def get_urls(self, drug_urls_file, output_file):
         """
