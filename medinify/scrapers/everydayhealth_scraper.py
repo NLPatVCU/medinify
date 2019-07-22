@@ -1,12 +1,12 @@
 """
 EverydayHealth.com drug review scraper
 """
-import csv
+
 import re
 import requests
 from bs4 import BeautifulSoup
-import os
 from medinify.scrapers.scraper import Scraper
+import pandas as pd
 
 
 class EverydayHealthScraper(Scraper):
@@ -51,12 +51,23 @@ class EverydayHealthScraper(Scraper):
             if 'url' in self.data_collected:
                 rows['url'].append(url)
 
+        scraped_data = pd.DataFrame(rows, columns=self.data_collected)
+        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
+
     def scrape(self, url):
         """
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        pass
+        print('Scraping WebMD...')
+        pages = max_pages(url)
+
+        for i in range(pages):
+            page_url = url + '/' + str(i + 1)
+            self.scrape_page(page_url)
+
+            if (i + 1) % 10 == 0:
+                print('Scraped {} of {} pages...'.format(i + 1, pages))
 
     def get_url(self, drug_name):
         """
@@ -64,106 +75,14 @@ class EverydayHealthScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
-        pass
-
-    def get_urls(self, drug_urls_file, output_file):
-        """
-        Given a text file of drug names, searches for and writes file with review urls
-        :param drug_urls_file: path to text file containing review urls
-        :param output_file: path to file to output urls
-        """
-        pass
-
-    """
-    def scrape(self, url):
-
-        review_list = []
-
-        for i in range(max_pages(url)):
-            new_url = url + '?page=' + str(i+1)
-            page = requests.get(new_url)
-            soup = BeautifulSoup(page.text, 'html.parser')
-            reviews = soup.find_all('div', {'class': 'review-container row'})
-
-            for review in reviews:
-                review_for = review.find('h3').text.lstrip('"').rstrip('"')
-                review_for = re.sub('Report', '', review_for)
-
-                comment = review.find('p').text.lstrip('"').rstrip('"')
-                comment = re.sub('Report', '', comment)
-
-                if review.find('div', {'class': 'star-rating-print'}):
-                    rating = review.find('div', {'class': 'star-rating-print'}).text
-                    rating = float(re.sub('Stars', '', rating).strip())
-
-                # Encode string to unicode for ascii codec
-                comment = comment.encode('utf-8')
-                review_for = review_for.encode('utf-8')
-                
-                review_list.append({'comment': comment.decode("utf-8").strip(),
-                                    'for': review_for.decode("utf-8"), 'rating': rating})
-
-        print("Number of reviews scraped: " + str(len(review_list)))
-        return review_list
-
-    def get_drug_urls(self, file_path, output_file):
-
-        drugs = []
-        with open(file_path, 'r') as drug_names:
-            drugs_reader = csv.reader(drug_names)
-            for row in drugs_reader:
-                drugs.append(row[0])
-
-        # search for drug info pages
-        unfound_drugs = []
-        drug_review_urls = {}
-        review_urls = []
-
-        if not os.path.exists('drug_results.pickle'):
-            for drug in drugs:
-                print('Searching for {}'.format(drug))
-                review_url = 'https://www.everydayhealth.com/drugs/' + drug.lower().split()[0] + '/reviews'
-                review_page = requests.get(review_url)
-                if review_page.status_code < 400:
-                    drug_review_urls[drug] = review_url
-                else:
-                    search_url = 'https://www.everydayhealth.com/search/' + drug
-                    search_page = requests.get(search_url)
-                    search_soup = BeautifulSoup(search_page.text, 'html.parser')
-                    if search_soup.find('div', {'class': 'resultTitle'}):
-                        drug_info_url = 'https:' + search_soup.find('div', {'class': 'resultTitle'}).find(
-                            'a').attrs['href']
-                        drug_info_page = requests.get(drug_info_url)
-                        drug_info_soup = BeautifulSoup(drug_info_page.text, 'html.parser')
-                        if drug_info_soup.find('div', {'class': 'review-links drugs-profile__review-links'}):
-                            drug_review_url = 'https://www.everydayhealth.com' + drug_info_soup.find(
-                                'div', {'class': 'review-links drugs-profile__review-links'}).find('a').attrs['href']
-                            drug_review_urls[drug] = drug_review_url
-
-            reverse_review_urls = dict((y, x) for x, y in drug_review_urls.items())
-            no_duplicates_urls = dict((y, x) for x, y in reverse_review_urls.items())
-
-            for drug in drugs:
-                if drug not in list(no_duplicates_urls.keys()):
-                    unfound_drugs.append(drug)
-
-            drugs = list(no_duplicates_urls.keys())
-            for drug in drugs:
-                entry = {'Drug': drug, 'URL': no_duplicates_urls[drug]}
-                review_urls.append(entry)
-
-        print(str(len(unfound_drugs)) + ' drugs not found')
-        print(unfound_drugs)
-
-        # writes url csv file
-        with open(output_file, 'w') as url_csv:
-            fieldnames = ['Drug', 'URL']
-            writer = csv.DictWriter(url_csv, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(review_urls)
-
-        print('Finished writing!')
-    """
+        url = []
+        drug = re.sub('\s+', '-', drug_name.lower())
+        search_url = 'https://www.everydayhealth.com/drugs/' + drug + '/reviews'
+        page = requests.get(search_url)
+        search_soup = BeautifulSoup(page.text, 'html.parser')
+        if 'Reviews' in search_soup.find('title').text.split():
+            url.append(search_url)
+        return url
 
 
 def max_pages(input_url):
