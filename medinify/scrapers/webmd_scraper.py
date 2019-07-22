@@ -91,7 +91,28 @@ class WebMDScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
-        pass
+        name = re.sub('\s+', '-', drug_name.lower())
+        url = 'https://www.webmd.com/drugs/2/search?type=drugs&query=' + name
+        page = requests.get(url)
+        search_soup = BeautifulSoup(page.text, 'html.parser')
+
+        review_urls = []
+
+        if search_soup.find('a', {'class': 'drug-review'}):
+            review_url = 'https://www.webmd.com' + search_soup.find('a', {'class': 'drug-review'}).attrs['href']
+            review_urls.append(review_url)
+
+        elif search_soup.find('ul', {'class': 'exact-match'}):
+            exact_matches = search_soup.find('ul', {'class': 'exact-match'})
+            search_links = ['https://www.webmd.com' + x.attrs['href'] for x in exact_matches.find_all('a')]
+            for info_page in search_links:
+                info = requests.get(info_page)
+                info_soup = BeautifulSoup(info.text, 'html.parser')
+                review_url = 'https://www.webmd.com' + info_soup.find('a', {'class': 'drug-review'}).attrs['href']
+                review_urls.append(review_url)
+
+        print('Found {} Review Page(s) for {}'.format(len(review_urls), drug_name))
+        return review_urls
 
     def get_urls(self, drug_urls_file, output_file):
         """
