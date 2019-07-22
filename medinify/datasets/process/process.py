@@ -1,42 +1,43 @@
 
 import numpy as np
 import ast
-from gensim.models import KeyedVectors
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import spacy
-from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
+from nltk.corpus import stopwords
+from gensim.models import KeyedVectors
 
 
 class Process:
+    """
+    For processing review ratings / comments
 
-    data = None
+    Attributes:
+        data: DataFrame containing collected review data
+        w2v_file: w2v_file: path to word2vec file
+        pos_threshold: positive rating threshold
+        neg_threshold: negative rating threshold
+        num_classes: number of rating classes
+        rating_type: if data has multiple rating types, which one to use
+        pos: part of speech to use if using pos arrays
+    """
+
     comments = []
     ratings = []
-    w2v = {}
-    count_vectors = {}
-    tfidf_vectors = {}
-    average_embeddings = {}
-    pos_embeddings = {}
+    data = None
+    w2v_file = None
     pos_threshold = None
     neg_threshold = None
-    num_classes = None
+    num_class = None
     rating_type = None
     pos = None
+    count_vectors = {}
+    tfidf_vectors = {}
+    pos_embeddings = {}
+    average_embeddings = {}
 
     def __init__(self, data, w2v_file, pos_threshold=4.0, neg_threshold=2.0,
                  num_classes=2, rating_type='effectiveness', pos=None):
-        """
-        Initializes an instance of the class Process
-        for processing review ratings / comments
-        :param data: DataFrame containing collected review data
-        :param w2v_file: w2v_file: path to word2vec file
-        :param pos_threshold: positive rating threshold
-        :param neg_threshold: negative rating threshold
-        :param num_classes: number of rating classes
-        :param rating_type: if data has multiple rating types, which one to use
-        :param pos: part of speech to use if using pos arrays
-        """
         self.data = data
         for i, row in data.iterrows():
             if type(row['rating']) == float:
@@ -55,6 +56,7 @@ class Process:
             self.w2v = wv
 
         assert num_classes in [2, 3, 5]
+
         self.num_classes = num_classes
         self.rating_type = rating_type
         self.pos_threshold = pos_threshold
@@ -62,6 +64,13 @@ class Process:
         self.nlp = spacy.load("en_core_web_sm")
         self.stops = set(stopwords.words('english'))
         self.pos = pos
+
+        self.count_vectorize()
+        self.tfidf_vectorize()
+        if self.w2v:
+            self.average_embedding_vectorize()
+        if self.pos:
+            self.pos_vectorizer()
 
     def count_vectorize(self):
         """
