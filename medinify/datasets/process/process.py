@@ -17,13 +17,15 @@ class Process:
     count_vectors = {}
     tfidf_vectors = {}
     average_embeddings = {}
+    pos_embeddings = {}
     pos_threshold = None
     neg_threshold = None
     num_classes = None
     rating_type = None
+    pos = None
 
     def __init__(self, data, w2v_file, pos_threshold=4.0, neg_threshold=2.0,
-                 num_classes=2, rating_type='effectiveness'):
+                 num_classes=2, rating_type='effectiveness', pos=None):
         """
         Initializes an instance of the class Process
         for processing review ratings / comments
@@ -31,22 +33,21 @@ class Process:
         :param w2v_file: w2v_file: path to word2vec file
         :param pos_threshold: positive rating threshold
         :param neg_threshold: negative rating threshold
+        :param num_classes: number of rating classes
+        :param rating_type: if data has multiple rating types, which one to use
+        :param pos: part of speech to use if using pos arrays
         """
         self.data = data
         for i, row in data.iterrows():
             if type(row['rating']) == float:
-                if not np.isnan(row['rating']):
-                    self.comments.append(row['comment'])
+                if not np.isnan(row['rating']) and type(row['comment']) != float:
+                    self.comments.append(row['comment'].lower())
                     self.ratings.append(row['rating'])
             else:
                 ratings = ast.literal_eval(row['rating'])
-                self.ratings.append(ratings)
-                self.comments.append(row['comment'])
-
-        for i, comment in enumerate(self.comments):
-            if type(comment) == float:
-                del self.comments[i]
-                del self.ratings[i]
+                if type(row['comment']) != float:
+                    self.ratings.append(ratings)
+                    self.comments.append(row['comment'].lower())
 
         if w2v_file:
             w2v = KeyedVectors.load_word2vec_format(w2v_file)
@@ -60,6 +61,7 @@ class Process:
         self.neg_threshold = neg_threshold
         self.nlp = spacy.load("en_core_web_sm")
         self.stops = set(stopwords.words('english'))
+        self.pos = pos
 
     def count_vectorize(self):
         """
@@ -110,6 +112,36 @@ class Process:
         print('Discarded {} empty comments.'.format(num_discarded))
         self.average_embeddings['data'] = average_embeddings
         self.average_embeddings['target'] = new_ratings
+
+    def pos_vectorizer(self):
+        """
+        Produces pos arrays for comments
+        """
+        assert self.pos, 'In order to use part of speech arrays, a part of speech must be specified'
+
+        ratings, indices = self.process_ratings()
+
+        pos_comments = []
+        for comment in self.comments:
+            pos_comment = [token.text for token in self.nlp(comment) if not token.is_punct and
+                           token.text not in self.stops and token.pos_ is self.pos]
+            pos_comments.append(pos_comment)
+        pos_comments = [pos_comments[i] for i in indices]
+
+        new_comments = []
+        new_indicies = []
+
+        for i, comment in enumerate(pos_comments):
+            if comment:
+                new_comments.append(' '.join(comment))
+                new_indicies.append(i)
+        new_ratings = np.asarray([ratings[i] for i in new_indicies])
+
+        vectorizer = CountVectorizer()
+        vecotrized_comments = [x.todense() for x in vectorizer.fit_transform(new_comments)]
+
+        self.pos_embeddings['data'] = vecotrized_comments
+        self.pos_embeddings['target'] = new_ratings
 
     def tokenize(self, comment):
         """
