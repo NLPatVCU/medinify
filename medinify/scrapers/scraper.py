@@ -24,3 +24,37 @@ class Scraper(ABC):
             self.data_collected.append('url')
 
         self.dataset = pd.DataFrame(columns=self.data_collected)
+
+    @abstractmethod
+    def scrape_page(self, url):
+        """
+        Scrapes a single page of drug reviews
+        :param url: drug reviews page url
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def scrape(self, url):
+        """
+        Scrapes all reviews of a given drug
+        :param url: drug reviews url
+        """
+        pass
+
+    @abstractmethod
+    def get_url(self, drug_name):
+        """
+        Given a drug name, finds the drug review page(s) on a given review forum
+        :param drug_name: name of drug being searched for
+        :return: drug url on given review forum
+        """
+        pass
+
+    @abstractmethod
+    def get_urls(self, drug_urls_file, output_file):
+        """
+        Given a text file of drug names, searches for and writes file with review urls
+        :param drug_urls_file: path to text file containing review urls
+        :param output_file: path to file to output urls
+        """

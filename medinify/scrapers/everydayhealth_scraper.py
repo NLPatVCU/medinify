@@ -13,12 +13,39 @@ class EverydayHealthScraper(Scraper):
     """Scrapes EverydayHealth.com for drug reviews.
     """
 
-    def scrape(self, url):
-        """Scrape for drug reviews.
-
-        Args:
-            url: EverydayHealth.com page to scrape
+    def scrape_page(self, url):
         """
+        Scrapes a single page of drug reviews
+        :param url: drug reviews page url
+        :return:
+        """
+        pass
+
+    def scrape(self, url):
+        """
+        Scrapes all reviews of a given drug
+        :param url: drug reviews url
+        """
+        pass
+
+    def get_url(self, drug_name):
+        """
+        Given a drug name, finds the drug review page(s) on a given review forum
+        :param drug_name: name of drug being searched for
+        :return: drug url on given review forum
+        """
+        pass
+
+    def get_urls(self, drug_urls_file, output_file):
+        """
+        Given a text file of drug names, searches for and writes file with review urls
+        :param drug_urls_file: path to text file containing review urls
+        :param output_file: path to file to output urls
+        """
+        pass
+
+    """
+    def scrape(self, url):
 
         review_list = []
 
@@ -50,7 +77,6 @@ class EverydayHealthScraper(Scraper):
         return review_list
 
     def get_drug_urls(self, file_path, output_file):
-        """Given a list of drug names, gets reviews pages on EverydayHealth.com"""
 
         drugs = []
         with open(file_path, 'r') as drug_names:
@@ -107,6 +133,7 @@ class EverydayHealthScraper(Scraper):
             writer.writerows(review_urls)
 
         print('Finished writing!')
+    """
 
 
 def max_pages(input_url):

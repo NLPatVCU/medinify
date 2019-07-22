@@ -12,13 +12,39 @@ class DrugRatingzScraper(Scraper):
     """Scrapes drugratingz.com for drug reviews.
     """
 
-    def scrape(self, drug_url):
-        """Scrape for drug reviews.
-
-        Args:
-            drug_url: Drugsratingz.com page to scrape
-            output_path: Path to the file where the output should be sent
+    def scrape_page(self, url):
         """
+        Scrapes a single page of drug reviews
+        :param url: drug reviews page url
+        :return:
+        """
+        pass
+
+    def scrape(self, url):
+        """
+        Scrapes all reviews of a given drug
+        :param url: drug reviews url
+        """
+        pass
+
+    def get_url(self, drug_name):
+        """
+        Given a drug name, finds the drug review page(s) on a given review forum
+        :param drug_name: name of drug being searched for
+        :return: drug url on given review forum
+        """
+        pass
+
+    def get_urls(self, drug_urls_file, output_file):
+        """
+        Given a text file of drug names, searches for and writes file with review urls
+        :param drug_urls_file: path to text file containing review urls
+        :param output_file: path to file to output urls
+        """
+        pass
+
+    """
+    def scrape(self, drug_url):
 
         page = requests.get(drug_url)
         soup = BeautifulSoup(page.text, 'html.parser')
@@ -53,7 +79,6 @@ class DrugRatingzScraper(Scraper):
         return review_list
 
     def get_drug_urls(self, file_path, output_file):
-        """Given a list of drug names, gets reviews pages on DrugRatingz.com"""
 
         drugs = []
         with open(file_path, 'r') as drug_names:
@@ -112,6 +137,8 @@ class DrugRatingzScraper(Scraper):
             writer.writerows(review_urls)
 
         print('Finished writing!')
+        
+    """
 
 
 

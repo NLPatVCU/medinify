@@ -20,11 +20,39 @@ class WebMDScraper(Scraper):
     Class to scrap drug reviews from WebMD
     """
 
-    def scrape_page(self, page_url):
-        """Scrapes a single page for reviews and adds them to review_list
-        Args:
-            page_url: URL of the page to scrape.
+    def scrape_page(self, url):
         """
+        Scrapes a single page of drug reviews
+        :param url: drug reviews page url
+        :return:
+        """
+        pass
+
+    def scrape(self, url):
+        """
+        Scrapes all reviews of a given drug
+        :param url: drug reviews url
+        """
+        pass
+
+    def get_url(self, drug_name):
+        """
+        Given a drug name, finds the drug review page(s) on a given review forum
+        :param drug_name: name of drug being searched for
+        :return: drug url on given review forum
+        """
+        pass
+
+    def get_urls(self, drug_urls_file, output_file):
+        """
+        Given a text file of drug names, searches for and writes file with review urls
+        :param drug_urls_file: path to text file containing review urls
+        :param output_file: path to file to output urls
+        """
+        pass
+
+    """
+    def scrape_page(self, page_url):
         page = requests.get(page_url)
         soup = BeautifulSoup(page.text, 'html.parser')
         reviews = soup.find_all('div', attrs={'class': 'userPost'})
@@ -45,10 +73,6 @@ class WebMDScraper(Scraper):
                                      'satisfaction': satisfaction})
 
     def scrape(self, input_url):
-        """Scrapes the reviews from WebMD
-        Args:
-            input_url : WebMD URL to scrape
-        """
 
         print('Scraping WebMD...')
 
@@ -76,10 +100,6 @@ class WebMDScraper(Scraper):
         return self.review_list
 
     def get_common_drugs(self):
-        """ Get all urls for 'common' drug review pages
-        Returns:
-            List of urls for each drug's review page
-        """
         url = 'https://www.webmd.com/drugs/2/index?show=drugs'
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
@@ -96,7 +116,6 @@ class WebMDScraper(Scraper):
         return drug_review_pages
 
     def get_drug_urls(self, file_path, output_file):
-        """Given a list of drug names, gets reviews pages on WebMD.com"""
 
         drugs = []
         with open(file_path, 'r') as drug_names:
@@ -180,6 +199,7 @@ class WebMDScraper(Scraper):
             os.remove('drug_info_page.pickle')
         if os.path.exists('drug_results.pickle'):
             os.remove('drug_results.pickle')
+    """
 
 
 def max_pages(input_url):
