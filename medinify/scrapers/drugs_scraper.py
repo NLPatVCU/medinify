@@ -1,4 +1,5 @@
-"""Scrapes Drugs.com for drug reviews.
+"""
+Scrapes Drugs.com for drug reviews.
 """
 
 import re
@@ -84,16 +85,17 @@ class DrugsScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
+        name = re.sub('\s+', '-', drug_name.lower())
+        search_url = 'https://www.drugs.com/search.php?searchterm=' + name
+        search_page = requests.get(search_url)
+        search_soup = BeautifulSoup(search_page.text, 'html.parser')
 
+        if search_soup.find('p', {'class': 'user-reviews-title mgb-1'}):
+            reviews_url = 'https://www.drugs.com' + search_soup.find(
+                'p', {'class': 'user-reviews-title mgb-1'}).find('a').attrs['href']
+            return [reviews_url]
 
-
-    def get_urls(self, drug_urls_file, output_file):
-        """
-        Given a text file of drug names, searches for and writes file with review urls
-        :param drug_urls_file: path to text file containing review urls
-        :param output_file: path to file to output urls
-        """
-        pass
+        return []
 
 
 def max_pages(drug_url):
@@ -110,16 +112,16 @@ def max_pages(drug_url):
     if soup.find('table', {'class': 'data-list ddc-table-sortable'}):
         if soup.find('table', {'class': 'data-list ddc-table-sortable'}).find('tfoot'):
             table_footer = soup.find('table', {
-            'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
+                'class': 'data-list ddc-table-sortable'}).find('tfoot').find('tr').find_all('th')
     if not table_footer:
         return 0
     total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
 
-    max_pages = total_reviews // 25
-    if (total_reviews % 25 != 0):
-        max_pages += 1
+    max_pages_ = total_reviews // 25
+    if total_reviews % 25 != 0:
+        max_pages_ += 1
 
     print('Found ' + str(total_reviews) + ' reviews.')
-    print('Scraping ' + str(max_pages) + ' pages...')
-    return max_pages
+    print('Scraping ' + str(max_pages_) + ' pages...')
+    return max_pages_
 
