@@ -6,12 +6,8 @@ Based on work by Amy Olex 11/13/17.
 
 import re
 from time import sleep
-from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
-import csv
-import pickle
-import os
 from medinify.scrapers.scraper import Scraper
 import pandas as pd
 
