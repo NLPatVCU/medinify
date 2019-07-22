@@ -19,7 +19,37 @@ class EverydayHealthScraper(Scraper):
         :param url: drug reviews page url
         :return:
         """
-        pass
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        reviews = soup.find_all('div', {'itemprop': 'review'})
+        drug_name = soup.find('title').text.split()[0]
+
+        rows = {'comment': []}
+        if 'rating' in self.data_collected:
+            rows['rating'] = []
+        if 'date' in self.data_collected:
+            rows['date'] = []
+        if 'drug' in self.data_collected:
+            rows['drug'] = []
+        if 'user id' in self.data_collected:
+            raise AttributeError('EverydayHealth.com does to contain user ids.')
+        if 'url' in self.data_collected:
+            rows['url'] = []
+
+        for review in reviews:
+            rows['comment'].append(re.sub('\n+|\r+', '', review.find(
+                'p', {'itemprop': 'reviewBody'}).text[:-7]))
+            if 'rating' in self.data_collected:
+                rating = None
+                if review.find('span', {'itemprop': 'reviewRating'}):
+                    rating = float(review.find('span', {'itemprop': 'reviewRating'}).text)
+                rows['rating'].append(rating)
+            if 'date' in self.data_collected:
+                rows['date'].append(review.find('span', {'class': 'time'}).attrs['content'])
+            if 'drug' in self.data_collected:
+                rows['drug'].append(drug_name)
+            if 'url' in self.data_collected:
+                rows['url'].append(url)
 
     def scrape(self, url):
         """
