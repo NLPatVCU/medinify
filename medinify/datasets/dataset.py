@@ -9,6 +9,7 @@ from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
 from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
+from medinify.datasets.process.process import Process
 
 
 class Dataset:
@@ -18,10 +19,16 @@ class Dataset:
     scraper = None
     start_timestamp = None
     end_timestamp = None
+    count_vectors = {}
+    tfidf_vectors = {}
+    average_embeddings = {}
+    pos_vectors = {}
 
     def __init__(self, scraper=None, use_rating=True,
                  use_dates=True, use_drugs=True,
-                 use_user_ids=False, use_urls=False):
+                 use_user_ids=False, use_urls=False,
+                 w2v_file=None, pos_threshold=4.0, neg_threshold=2.0,
+                 num_classes=2, rating_type='effectiveness', pos=None):
         """
         Creates an instance of the Dataset class, which stores and processes data
         If also wraps around the functionality of the review scrapers for collecting review data
@@ -69,6 +76,13 @@ class Dataset:
                 self.data_used.append('url')
 
         self.data = pd.DataFrame(columns=self.data_used)
+
+        self.w2v_file = w2v_file
+        self.pos_threshold = pos_threshold
+        self.neg_threshold = neg_threshold
+        self.num_classes = num_classes
+        self.rating_type = rating_type
+        self.pos = pos
 
     def add_reviews(self, reviews):
         """
@@ -280,5 +294,16 @@ class Dataset:
         else:
             raise ValueError('This type of rating ({}) is not supported.'.format(type(ratings[0])))
 
+    def process(self):
+        """
+        Runs processing on dataset
+        """
+        process = Process(self.data, self.w2v_file, self.pos_threshold,
+                          self.neg_threshold, self.num_classes,
+                          self.rating_type, self.pos)
+        self.count_vectors = process.count_vectors
+        self.tfidf_vectors = process.tfidf_vectors
+        self.average_embeddings = process.average_embeddings
+        self.pos_vectors = process.pos_embeddings
 
 

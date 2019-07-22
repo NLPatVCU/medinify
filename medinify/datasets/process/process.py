@@ -31,6 +31,7 @@ class Process:
     num_class = None
     rating_type = None
     pos = None
+    w2v = {}
     count_vectors = {}
     tfidf_vectors = {}
     pos_embeddings = {}
