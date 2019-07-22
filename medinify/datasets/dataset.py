@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import os
+import datetime
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
@@ -14,6 +15,8 @@ class Dataset:
     data_used = []
     data = None
     scraper = None
+    start_timestamp = None
+    end_timestamp = None
 
     def __init__(self, scraper=None, use_rating=True,
                  use_dates=True, use_drugs=True,
@@ -73,8 +76,13 @@ class Dataset:
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
 
+        if not self.start_timestamp:
+            self.start_timestamp = str(datetime.datetime.now())
+
         self.scraper.scrape(url)
         self.data = self.data.append(self.scraper.dataset, ignore_index=True)
+
+        self.end_timestamp = str(datetime.datetime.now())
 
     def collect_from_drug_names(self, drug_names_file):
         """
@@ -82,6 +90,9 @@ class Dataset:
         :param drug_names_file: path to urls file
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
+
+        if not self.start_timestamp:
+            self.start_timestamp = str(datetime.datetime.now())
 
         print('\nCollecting urls...')
         self.scraper.get_urls(drug_names_file, 'medinify/scrapers/temp_urls_file.txt')
@@ -92,6 +103,8 @@ class Dataset:
         os.remove('medinify/scrapers/temp_urls_file.txt')
         print('Collected reviews.')
 
+        self.end_timestamp = str(datetime.datetime.now())
+
     def collect_from_urls(self, urls_file):
         """
         Given a file listing drug urls, collects review data into Dataset
@@ -99,9 +112,14 @@ class Dataset:
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
 
+        if not self.start_timestamp:
+            self.start_timestamp = str(datetime.datetime.now())
+
         print('\nScraping urls...')
         self.scraper.scrape_urls(urls_file)
         self.data = self.data.append(self.scraper.dataset, ignore_index=True)
+
+        self.end_timestamp = str(datetime.datetime.now())
 
     def write_file(self, output_file, write_comments=True,
                    write_ratings=True, write_date=True,
@@ -139,6 +157,8 @@ class Dataset:
         """
         with open(output_file, 'wb') as pkl:
             pickle.dump(self.data, pkl, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.start_timestamp, pkl, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.end_timestamp, pkl, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_data(self, pickle_file):
         """
@@ -147,6 +167,8 @@ class Dataset:
         """
         with open(pickle_file, 'rb') as pkl:
             self.data = pickle.load(pkl)
+            self.start_timestamp = pickle.load(pkl)
+            self.end_timestamp = pickle.load(pkl)
 
     def load_file(self, csv_file):
         """
