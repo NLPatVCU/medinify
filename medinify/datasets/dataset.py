@@ -1,11 +1,12 @@
 
 import pandas as pd
 import numpy as np
+import pickle
+import os
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
 from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
-import os
 
 
 class Dataset:
@@ -131,7 +132,23 @@ class Dataset:
             columns.append('url')
         self.data.to_csv(output_file, columns=columns, index=False)
 
-    def load_data(self, csv_file):
+    def save_data(self, output_file):
+        """
+        Saves Dataset in compressed pickle file
+        :param output_file: path to output pickle file
+        """
+        with open(output_file, 'wb') as pkl:
+            pickle.dump(self.data, pkl, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_data(self, pickle_file):
+        """
+        Loads dataset from compressed pickle file
+        :param pickle_file: path to saved pickle file
+        """
+        with open(pickle_file, 'rb') as pkl:
+            self.data = pickle.load(pkl)
+
+    def load_file(self, csv_file):
         """
         Loads dataset from csv file
         :param csv_file: path to csv file to load
