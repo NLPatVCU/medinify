@@ -38,7 +38,9 @@ class Process:
     average_embeddings = {}
 
     def __init__(self, data, w2v_file, pos_threshold=4.0, neg_threshold=2.0,
-                 num_classes=2, rating_type='effectiveness', pos=None):
+                 num_classes=2, rating_type='effectiveness', pos=None,
+                 count_vectorize=True, tfidf_vectorize=False, average_emebeddings_vectorize=True,
+                 pos_vectorize=False):
         self.data = data
         for i, row in data.iterrows():
             if type(row['rating']) == float:
@@ -66,12 +68,18 @@ class Process:
         self.stops = set(stopwords.words('english'))
         self.pos = pos
 
-        self.count_vectorize()
-        self.tfidf_vectorize()
-        if self.w2v:
+        if count_vectorize:
+            self.count_vectorize()
+            print('Processed count vectors.')
+        if tfidf_vectorize:
+            self.tfidf_vectorize()
+            print('Processed tf-idf vectors')
+        if average_emebeddings_vectorize and self.w2v:
             self.average_embedding_vectorize()
-        if self.pos:
+            print('Processed average word embeddings.')
+        if pos_vectorize and self.pos:
             self.pos_vectorizer()
+            print('Processed part-of-speech count vectors.')
 
     def count_vectorize(self):
         """
@@ -159,7 +167,6 @@ class Process:
         :param comment: comment being tokenized
         :return: tokens
         """
-
         tokens = [token.text for token in self.nlp.tokenizer(comment)
                   if token.text not in self.stops and not token.is_punct]
         return tokens

@@ -84,13 +84,6 @@ class Dataset:
         self.rating_type = rating_type
         self.pos = pos
 
-    def add_reviews(self, reviews):
-        """
-        Adds a dataframe of reviews to dataset
-        :param reviews: DataFrame of reviews data
-        """
-        self.data.append(reviews, ignore_index=True)
-
     def collect(self, url):
         """
         Given a url, collects drug review data into Dataset
@@ -294,13 +287,18 @@ class Dataset:
         else:
             raise ValueError('This type of rating ({}) is not supported.'.format(type(ratings[0])))
 
-    def process(self):
+    def process(self, count_vectorize=True, tfidf_vectorize=False,
+                average_embeddings=True, pos_vectorize=False):
         """
         Runs processing on dataset
         """
         process = Process(self.data, self.w2v_file, self.pos_threshold,
                           self.neg_threshold, self.num_classes,
-                          self.rating_type, self.pos)
+                          self.rating_type, self.pos,
+                          count_vectorize=count_vectorize,
+                          tfidf_vectorize=tfidf_vectorize,
+                          average_emebeddings_vectorize=average_embeddings,
+                          pos_vectorize=pos_vectorize)
         self.count_vectors = process.count_vectors
         self.tfidf_vectors = process.tfidf_vectors
         self.average_embeddings = process.average_embeddings
