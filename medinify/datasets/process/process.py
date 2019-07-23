@@ -128,8 +128,8 @@ class Process:
             new_ratings.append(ratings[i])
 
         print('Discarded {} empty comments.'.format(num_discarded))
-        self.average_embeddings['data'] = average_embeddings
-        self.average_embeddings['target'] = new_ratings
+        self.average_embeddings['data'] = np.asarray(average_embeddings)
+        self.average_embeddings['target'] = np.asarray(new_ratings)
 
     def pos_vectorizer(self):
         """
@@ -212,5 +212,5 @@ class Process:
                 indices.append(i)
 
         encoder = LabelEncoder()
-        encoded = encoder.fit_transform(new_ratings)
+        encoded = np.asarray(encoder.fit_transform(new_ratings))
         return encoded, indices
