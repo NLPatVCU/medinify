@@ -13,44 +13,49 @@ from medinify.datasets.process.process import Processor
 
 
 class Dataset:
+    """
+    The Dataset class stores and processes data
+    If also wraps around the functionality of the review scrapers for collecting review data
 
-    data_used = []
-    data = None
+    Attributes:
+        data_used: list of review data to collect (i.e., comment, rating, drug, date, etc.)
+        data: DataFrame containing review data
+        scraper: Which scraper to use for scraping functionality
+        processor: The dataset's processor, defines how data is transformed into numeric representation
+        start_timestamp: If collecting reviews, time when collection started
+        end_timestamp: If collecting reviews, time when collection ended
+        pos_threshold: postive review threshold
+        neg_threshold: negative review threshold
+        use_rating: whether or not to store rating data
+        use_dates: whether or not to store date data
+        use_drugs: whether or not to store drug name data
+        use_user_ids: whether or not to store user id data
+        use_urls: whether or not to store drug url data
+    """
+
     scraper = None
-    start_timestamp = None
-    end_timestamp = None
+    data_used = []
 
-    def __init__(self, scraper=None, use_rating=True,
-                 use_dates=True, use_drugs=True,
-                 use_user_ids=False, use_urls=False,
-                 num_classes=2, rating_type='effectiveness',
-                 pos_threshold=4.0, neg_threshold=2.0):
-        """
-        Creates an instance of the Dataset class, which stores and processes data
-        If also wraps around the functionality of the review scrapers for collecting review data
-        :param scraper: Which scraper to use for scraping functionality
-        :param use_rating: whether or not to store rating data
-        :param use_dates: whether or not to store date data
-        :param use_drugs: whether or not to store drug name data
-        :param use_user_ids: whether or not to store user id data
-        :param use_urls: whether or not to store drug url data
-        """
-
+    def __init__(self, scraper=None,
+                 use_rating=True, use_dates=True,
+                 use_drugs=True, use_user_ids=False,
+                 use_urls=False, rating_type='effectiveness',
+                 num_classes=2, pos_threshold=4.0, neg_threshold=2.0):
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                         collect_urls=use_urls)
 
-        if scraper == 'Drugs':
+        elif scraper == 'Drugs':
             self.scraper = DrugsScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                         collect_urls=use_urls)
 
-        if scraper == 'DrugRatingz':
+        elif scraper == 'DrugRatingz':
             self.scraper = DrugRatingzScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                               collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                               collect_urls=use_urls)
-        if scraper == 'EverydayHealth':
+        elif scraper == 'EverydayHealth':
             self.scraper = EverydayHealthScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                                  collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                                  collect_urls=use_urls)
@@ -71,6 +76,10 @@ class Dataset:
             if use_urls:
                 self.data_used.append('url')
 
+        self.start_timestamp = None
+        self.end_timestamp = None
+        self.pos_threshold = pos_threshold
+        self.neg_threshold = neg_threshold
         self.data = pd.DataFrame(columns=self.data_used)
         self.processor = Processor(num_classes=num_classes,
                                    ratings_type=rating_type,
@@ -223,7 +232,7 @@ class Dataset:
         self.data = pd.DataFrame(new_array, columns=self.data_used)
         print('Removed {} duplicate comments.'.format(num_dupes))
 
-    def print_stats(self, pos_threshold, neg_threshold):
+    def print_stats(self):
         """
         Calculates and prints data distribution statistics
         """
@@ -243,11 +252,11 @@ class Dataset:
                 data[rating_type]['range'] = (np.amin(ratings_sets[rating_type]),
                                               np.amax(ratings_sets[rating_type]))
                 data[rating_type]['num_pos'] = len([x for x in ratings_sets[rating_type]
-                                                    if x >= pos_threshold])
+                                                    if x >= self.pos_threshold])
                 data[rating_type]['num_neg'] = len([x for x in ratings_sets[rating_type]
-                                                    if x <= neg_threshold])
+                                                    if x <= self.neg_threshold])
                 data[rating_type]['num_neutral'] = len([x for x in ratings_sets[rating_type]
-                                                        if neg_threshold < x < pos_threshold])
+                                                        if self.neg_threshold < x < self.pos_threshold])
 
             print('\nDataset Stats:\n')
             print('Number of reviews with ratings: {}'.format(num_reviews))
@@ -265,9 +274,9 @@ class Dataset:
             ratings = np.asarray([x for x in ratings if not np.isnan(x)])
             num_reviews = len(ratings)
             range_ = (np.amin(ratings), np.amax(ratings))
-            num_pos = len([x for x in ratings if x >= pos_threshold])
-            num_neg = len([x for x in ratings if x <= neg_threshold])
-            num_neutral = len([x for x in ratings if neg_threshold < x < pos_threshold])
+            num_pos = len([x for x in ratings if x >= self.pos_threshold])
+            num_neg = len([x for x in ratings if x <= self.neg_threshold])
+            num_neutral = len([x for x in ratings if self.neg_threshold < x < self.pos_threshold])
 
             print('\nDataset Stats:\n')
             print('Number of reviews with ratings: {}'.format(num_reviews))

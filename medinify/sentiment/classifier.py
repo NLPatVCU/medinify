@@ -14,6 +14,21 @@ class Classifier:
     The classifier class implements three SkLearn-Based sentiment classifiers
     MultinomialNaiveBayes, Random Forest, and SVC
     For training, evaluation, and validation (k-fold)
+
+    Attributes:
+        classifier_type: what type of classifier to train ('nb', 'rf', or 'svm')
+        count_vectorizer: turns strings into count vectors
+        tfidf_vectorizer: turns strings into tfidf vectors
+        pos_count_vectorizer: turns string into count vectors for a certain part of speech
+        processor: processes data and ratings into numeric representations
+        data_representation: how comment data should be numerically represented
+            ('count', 'tfidf', 'embedding', or 'pos')
+        num_classes: number of rating classes
+        rating_type: type of rating to use if multiple exist in the dataset
+        pos_threshold: postive rating threshold
+        neg_threshold: negative rating threshold
+        w2v_file: path to w2v file if using averaged embeddings
+        pos: part of speech if using pos count vectors
     """
 
     classifier_type = None
@@ -65,6 +80,9 @@ class Classifier:
         of a trained model over a review dataset
         :param trained_model: trained model
         :param eval_reviews_csv: path to csv of review data being evaluated
+        :param data: ndarray of data
+        :param target: ndarray of target
+        :return eval_metrics: calculated evaluation metrics (accuracy, precision, recall, f_measure)
         """
         if eval_reviews_csv:
             data, target = self.load_data(eval_reviews_csv)
