@@ -30,16 +30,16 @@ class Processor:
     nlp = None
     stops = None
     num_classes = None
-    rating_type = None
+    ratings_type = None
     pos_threshold = None
     neg_threshold = None
 
-    def __init__(self, num_classes=2, rating_type='effectiveness',
+    def __init__(self, num_classes=2, ratings_type='effectiveness',
                  pos_threshold=4.0, neg_threshold=2.0):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
         self.num_classes = num_classes
-        self.rating_type = rating_type
+        self.ratings_type = ratings_type
         self.pos_threshold = pos_threshold
         self.neg_threshold = neg_threshold
 
@@ -204,7 +204,7 @@ class Processor:
         ratings_and_indices = []
         for i, rating in enumerate(ratings):
             if type(rating) == str:
-                ratings_and_indices.append({'target': float(ast.literal_eval(rating)[self.rating_type]), 'index': i})
+                ratings_and_indices.append({'target': float(ast.literal_eval(rating)[self.ratings_type]), 'index': i})
             else:
                 ratings_and_indices.append({'target': rating, 'index': i})
 
