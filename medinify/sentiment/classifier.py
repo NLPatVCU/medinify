@@ -1,5 +1,6 @@
 
 import numpy as np
+import pickle
 from medinify.datasets.dataset import Dataset
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
@@ -426,6 +427,27 @@ class Classifier:
                 average_five_star_recall * 100, five_star_recall_std * 100))
             print('Average Five Star F-Measure: {:.4f}% +/-{:.4f}%'.format(
                 average_five_star_f_measure * 100, five_star_f_measure_std * 100))
+
+    def save_model(self, trained_model, output_file):
+        """
+        Saves a trained model and its processor
+        :param trained_model: trained model
+        :param output_file: path to output saved model file
+        """
+        with open(output_file, 'wb') as f:
+            pickle.dump(trained_model, f, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.processor, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_model(self, model_file):
+        """
+        Loads model and processor from pickled format
+        :param model_file: path to pickled model file
+        :return: loaded model
+        """
+        with open(model_file, 'rb') as f:
+            model = pickle.load(f)
+            self.processor = pickle.load(f)
+        return model
 
     def load_data(self, review_csv):
         """
