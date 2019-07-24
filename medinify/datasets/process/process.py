@@ -70,6 +70,7 @@ class Processor:
             data = np.asarray([x.todense() for x in self.count_vectorizer.transform(comments)]).squeeze(1)
 
         target = np.asarray(target)
+
         return data, target
 
     def get_tfidf_vectors(self, comments, ratings):
