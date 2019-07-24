@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
+import warnings
 
 
 class DrugsScraper(Scraper):
@@ -19,10 +20,16 @@ class DrugsScraper(Scraper):
         :param url: drug reviews page url
         :return:
         """
+        assert url[:31] == 'https://www.drugs.com/comments/', 'Invalid Drugs.com Reviews Page URL'
+
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
         drug_name = soup.find('h1').text.replace('User Reviews for ', '')
         reviews = soup.find_all('div', {'class': 'ddc-comment'})
+
+        if len(reviews) == 0:
+            warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
+            return 1
 
         rows = {'comment': []}
         if 'rating' in self.data_collected:
@@ -37,8 +44,7 @@ class DrugsScraper(Scraper):
             rows['url'] = []
 
         for review in reviews:
-            comment = re.sub('\n+|\r+', '', review.find('p', {'class': 'ddc-comment-content'}).find(
-                'span').text.replace('"', ''))
+            comment = review.find('p', {'class': 'ddc-comment-content'}).find('span').text.replace('"', '')
             rows['comment'].append(comment)
             if 'rating' in self.data_collected:
                 rating = None
@@ -85,7 +91,9 @@ class DrugsScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
-        name = re.sub('\s+', '-', drug_name.lower())
+        characters = list('+'.join(drug_name.lower().split()))
+        name = ''.join([x if x.isalnum() or x == '+' else hex(ord(x)).replace('0x', '%') for x in characters])
+
         search_url = 'https://www.drugs.com/search.php?searchterm=' + name
         search_page = requests.get(search_url)
         search_soup = BeautifulSoup(search_page.text, 'html.parser')
@@ -94,6 +102,13 @@ class DrugsScraper(Scraper):
             reviews_url = 'https://www.drugs.com' + search_soup.find(
                 'p', {'class': 'user-reviews-title mgb-1'}).find('a').attrs['href']
             return [reviews_url]
+        elif search_soup.find('img', {'src': '/img/icons/star.png'}):
+            url = search_soup.find('h3').find('a').attrs['href']
+            reviews_url = url[:22] + 'comments' + url[21:]
+            reviews_page = requests.get(reviews_url)
+            reviews_soup = BeautifulSoup(reviews_page.text, 'html.parser')
+            if reviews_soup.find('h1').text[:16] == 'User Reviews for':
+                return [reviews_url]
 
         return []
 

@@ -73,7 +73,8 @@ class Scraper(ABC):
                 drug_review_urls = self.get_url(drug_name)
                 if len(drug_review_urls) == 0:
                     unfound_drugs.append(drug_name)
-                review_urls.extend(drug_review_urls)
+                else:
+                    review_urls.extend(drug_review_urls)
         with open(output_file, 'w') as url_f:
             for url in review_urls:
                 url_f.write(url + '\n')

@@ -180,3 +180,129 @@ def test_get_url_multiple_pages_webmd():
     assert len(url) > 1
 
 
+# Drugs.com Scraper Tests
+def test_all_data_collected_drugs():
+    """
+    Tests data_collected attribute while collecting all review data
+    """
+    scraper = DrugsScraper(collect_user_ids=True, collect_urls=True)
+    assert 'comment' in scraper.data_collected
+    assert 'rating' in scraper.data_collected
+    assert 'drug' in scraper.data_collected
+    assert 'user id' in scraper.data_collected
+    assert 'url' in scraper.data_collected
+    assert 'date' in scraper.data_collected
+
+
+def test_default_data_collected_drugs():
+    """
+    Tests data_collected attribute while collecting default review data
+    """
+    scraper = DrugsScraper()
+    assert 'comment' in scraper.data_collected
+    assert 'rating' in scraper.data_collected
+    assert 'drug' in scraper.data_collected
+    assert 'user id' not in scraper.data_collected
+    assert 'url' not in scraper.data_collected
+    assert 'date' in scraper.data_collected
+
+
+def test_no_data_collected_drugs():
+    """
+    Tests data_collected attribute while all data set to false review data
+    """
+    scraper = DrugsScraper(collect_ratings=False, collect_dates=False, collect_drugs=False)
+    assert 'comment' in scraper.data_collected
+    assert 'rating' not in scraper.data_collected
+    assert 'drug' not in scraper.data_collected
+    assert 'user id' not in scraper.data_collected
+    assert 'url' not in scraper.data_collected
+    assert 'date' not in scraper.data_collected
+
+
+def test_scrape_page_incorrect_url_drugs():
+    """
+    Tests scrape_page() function with incorrect url
+    """
+    scraper = DrugsScraper()
+    with pytest.raises(AssertionError):
+        scraper.scrape_page(
+            'https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
+
+
+def test_scrape_page_one_page_drugs():
+    """
+    Tests scrape_page() function scraping one page for
+    correct number of review data
+    """
+    scraper = DrugsScraper()
+    scraper.scrape_page('https://www.drugs.com/comments/naproxen/aleve.html')
+    assert scraper.dataset['comment'].shape[0] == 25
+    assert scraper.dataset['rating'].shape[0] == 25
+    assert scraper.dataset['date'].shape[0] == 25
+    assert scraper.dataset['drug'].shape[0] == 25
+
+
+def test_scrape_page_data_types_drugs():
+    """
+    Tests scrape_page() function for correct data type collection
+    """
+    scraper = DrugsScraper(collect_urls=True, collect_user_ids=True)
+    scraper.scrape_page('https://www.drugs.com/comments/naproxen/aleve.html')
+    for row in scraper.dataset.itertuples():
+        assert type(row.comment) == str
+        assert type(row.rating) == float or not type(row.rating)
+        assert type(row.date) == str
+        assert type(row.drug) == str
+        assert type(row.url) == str
+
+
+def test_scrape_page_multiple_pages_drugs():
+    """
+    Tests scrape_page() function for appending to dataset
+    when called multiple times
+    """
+    scraper = DrugsScraper(collect_urls=True, collect_user_ids=True)
+    scraper.scrape_page('https://www.drugs.com/comments/naproxen/aleve.html')
+    scraper.scrape_page('https://www.drugs.com/comments/naproxen/aleve.html?page=2')
+    assert scraper.dataset['comment'].shape[0] == 50
+    assert scraper.dataset['comment'].shape[0] == \
+           scraper.dataset['rating'].shape[0] == \
+           scraper.dataset['drug'].shape[0] == \
+           scraper.dataset['date'].shape[0]
+
+
+def test_scrape_drugs():
+    """
+    Tests scrape() function for number of reviews data collected
+    """
+    scraper = DrugsScraper()
+    scraper.scrape('https://www.drugs.com/comments/methotrexate/')
+    assert scraper.dataset['comment'].shape[0] > 25
+    assert scraper.dataset['comment'].shape[0] == \
+           scraper.dataset['rating'].shape[0] == \
+           scraper.dataset['drug'].shape[0] == \
+           scraper.dataset['date'].shape[0]
+
+
+def test_get_url_no_url_drugs():
+    """
+    Tests get_url() function for drug name with no url
+    """
+    scraper = DrugsScraper()
+    url = scraper.get_url('bhkjvghjvg')
+    assert len(url) == 0
+
+
+def test_get_drug_url_drugs():
+    """
+    Test get_url() function for drug name with a review page
+    """
+    scraper = DrugsScraper()
+    url = scraper.get_url('infants ibuprofen')
+    assert len(url) == 1
+
+
+
+
+
