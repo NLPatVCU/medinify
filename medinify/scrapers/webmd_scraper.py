@@ -10,6 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
 import pandas as pd
+import warnings
 
 
 class WebMDScraper(Scraper):
@@ -22,9 +23,16 @@ class WebMDScraper(Scraper):
         Scrapes a single page of reviews
         :param url: String, url for review page
         """
+        assert url[:39] == 'https://www.webmd.com/drugs/drugreview-', 'Url must be link to a WebMD reviews page'
+
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
+        drug_name = soup.find('h1').text.replace('User Reviews & Ratings - ', '')
         reviews = soup.find_all('div', attrs={'class': 'userPost'})
+
+        if len(reviews) == 0:
+            warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
+            return 1
 
         rows = {'comment': []}
         if 'rating' in self.data_collected:
@@ -39,16 +47,17 @@ class WebMDScraper(Scraper):
             rows['url'] = []
 
         for review in reviews:
-            comment = (re.sub('\n+|\r+', '', (re.sub('\s+', ' ', review.find(
-                'p', {'id': re.compile("^comFull*")}).text).replace(
-                'Comment:', '').replace('Hide Full Comment', ''))))
-            rows['comment'].append(comment)
+            comment = review.find('p', {'id': re.compile("^comFull*")}).text
+            if type(comment) == float:
+                continue
+            clean_comment = re.sub('Comment:|Hide Full Comment', '', comment)
+            rows['comment'].append(clean_comment)
             if 'rating' in self.data_collected:
                 rating_set = {}
                 rates = review.find_all('span', attrs={'class': 'current-rating'})
-                rating_set['effectiveness'] = int(rates[0].text.replace('Current Rating:', '').strip())
-                rating_set['ease of use'] = int(rates[1].text.replace('Current Rating:', '').strip())
-                rating_set['satisfaction'] = int(rates[2].text.replace('Current Rating:', '').strip())
+                rating_set['effectiveness'] = float(rates[0].text.replace('Current Rating:', '').strip())
+                rating_set['ease of use'] = float(rates[1].text.replace('Current Rating:', '').strip())
+                rating_set['satisfaction'] = float(rates[2].text.replace('Current Rating:', '').strip())
                 rows['rating'].append(rating_set)
             if 'date' in self.data_collected:
                 rows['date'].append(review.find('div', {'class': 'date'}).text)
@@ -57,7 +66,7 @@ class WebMDScraper(Scraper):
             if 'user id' in self.data_collected:
                 rows['user id'].append(review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', ''))
             if 'drug' in self.data_collected:
-                rows['drug'].append(soup.find('h1').text.replace('User Reviews & Ratings - ', '').split()[0])
+                rows['drug'].append(drug_name)
 
         scraped_data = pd.DataFrame(rows, columns=self.data_collected)
         self.dataset = self.dataset.append(scraped_data, ignore_index=True)
@@ -87,7 +96,10 @@ class WebMDScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
-        name = re.sub('\s+', '-', drug_name.lower())
+
+        characters = list(drug_name.lower())
+        name = ''.join([x if x.isalnum() else hex(ord(x)).replace('0x', '%') for x in characters])
+
         url = 'https://www.webmd.com/drugs/2/search?type=drugs&query=' + name
         page = requests.get(url)
         search_soup = BeautifulSoup(page.text, 'html.parser')
