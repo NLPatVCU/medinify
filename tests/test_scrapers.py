@@ -2,7 +2,6 @@
 Tests for all drug review scrapers
 """
 
-import os
 import pytest
 from medinify.scrapers import WebMDScraper, DrugRatingzScraper, DrugsScraper, EverydayHealthScraper
 
@@ -303,6 +302,133 @@ def test_get_drug_url_drugs():
     assert len(url) == 1
 
 
+# DrugRatingz Scraper Tests
+def test_user_id_error_drugratingz():
+    """
+    Tests that setting use_user_ids attribute true causes error
+    """
+    with pytest.raises(AttributeError):
+        DrugRatingzScraper(collect_user_ids=True)
 
 
+def test_scrape_page_invalid_url_drugratingz():
+    """
+    Tests for error when scraping invalid url
+    """
+    scraper = DrugRatingzScraper()
+    with pytest.raises(AssertionError):
+        scraper.scrape_page('https://www.drugs.com/comments/methotrexate/')
+
+
+def test_scrape_page_drugratingz():
+    """
+    Tests that scrape page collects correct number of data
+    """
+    scraper = DrugRatingzScraper()
+    scraper.scrape_page('https://www.drugratingz.com/reviews/17597/Drug-Methotrxate.html')
+    assert scraper.dataset['comment'].shape[0] > 0
+    assert scraper.dataset['rating'].shape[0] > 0
+    assert scraper.dataset['date'].shape[0] > 0
+    assert scraper.dataset['drug'].shape[0] > 0
+
+
+def test_scrape_page_data_types_drugratingz():
+    """
+    Tests that scrape page function collects correct data types
+    """
+    scraper = DrugRatingzScraper()
+    scraper.scrape_page('https://www.drugratingz.com/reviews/17597/Drug-Methotrxate.html')
+    for row in scraper.dataset.itertuples():
+        assert type(row.rating) == dict
+
+
+def test_scrape_multiple_pages_drugratingz():
+    """
+    Tests that scrape page function appends to dataset correctly
+    """
+    scraper = DrugRatingzScraper()
+    scraper.scrape_page('https://www.drugratingz.com/reviews/17597/Drug-Methotrxate.html')
+    scraper.scrape_page('https://www.drugratingz.com/reviews/119/Drug-Prozac.html')
+    assert scraper.dataset['comment'].shape[0] > 5
+
+
+def test_get_url_no_url_drugratingz():
+    """
+    Tests that get_url() for drug name with no review page
+    """
+    scraper = DrugRatingzScraper()
+    url = scraper.get_url('sdhgfdsasdfgfrd')
+    assert len(url) == 0
+
+
+def test_get_url_one_page_drugratingz():
+    """
+    Tests that get_url() for drug name with 1 review page
+    """
+    scraper = DrugRatingzScraper()
+    url = scraper.get_url('methotrexate')
+    assert len(url) == 1
+
+
+def test_get_url_multiple_pages_drugratingz():
+    """
+    Tests that get_url() for drug name with multiple review pages
+    """
+    scraper = DrugRatingzScraper()
+    url = scraper.get_url('prozac')
+    assert len(url) > 1
+
+
+# EverydayHealth Scraper Tests
+def test_collect_user_id_error_everydayhealth():
+    """
+    Tests for error when setting collect_user_id true
+    """
+    with pytest.raises(AttributeError):
+        EverydayHealthScraper(collect_user_ids=True)
+
+
+def test_scrape_page_everdayhealth():
+    """
+    Tests that scrape page collects the correct number of data
+    """
+    scraper = EverydayHealthScraper(collect_urls=True)
+    scraper.scrape_page('https://www.everydayhealth.com/drugs/citalopram/reviews')
+    assert scraper.dataset['comment'].shape[0] == 20
+    assert scraper.dataset['rating'].shape[0] == 20
+    assert scraper.dataset['drug'].shape[0] == 20
+    assert scraper.dataset['date'].shape[0] == 20
+    assert scraper.dataset['url'].shape[0] == 20
+
+
+def test_scrape_multiple_pages_everydayhealth():
+    """
+    Tests that scrape_page() appends correctly to dataset
+    """
+    scraper = EverydayHealthScraper(collect_urls=True)
+    scraper.scrape_page('https://www.everydayhealth.com/drugs/citalopram/reviews')
+    scraper.scrape_page('https://www.everydayhealth.com/drugs/citalopram/reviews/2')
+    assert scraper.dataset['comment'].shape[0] == 40
+    assert scraper.dataset['rating'].shape[0] == 40
+    assert scraper.dataset['drug'].shape[0] == 40
+    assert scraper.dataset['date'].shape[0] == 40
+    assert scraper.dataset['url'].shape[0] == 40
+
+
+def test_get_url_no_page_everydayhealth():
+    """
+    Tests get_url function for drug name with no review page\
+    """
+    scraper = EverydayHealthScraper()
+    url = scraper.get_url('gkbvfyuilmnb')
+    assert len(url) == 0
+
+
+def test_get_url_everydayhealth():
+    """
+    Tests that get_url returns the correct url
+    """
+    scraper = EverydayHealthScraper()
+    url = scraper.get_url('methotrexate')
+    assert len(url) == 1
 
