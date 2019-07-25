@@ -75,7 +75,7 @@ class Classifier:
         self.save_model(model, output_file)
         print('Model fit.')
 
-    def evaluate(self, trained_model_file, eval_reviews_csv=None, data=None, target=None):
+    def evaluate(self, trained_model_file, eval_reviews_csv=None, data=None, target=None, verbose=True):
         """
         Evaluates the accuracy, precision, recall, and F-1 score
         of a trained model over a review dataset
@@ -99,13 +99,14 @@ class Classifier:
                     enumerate(f1_score(target, predictions, average=None))}
         matrix = confusion_matrix(target, predictions)
 
-        print('\nEvaluation Metrics:\n')
-        print('Accuracy: {:.4f}%'.format(accuracy))
-        print('\n'.join(['{} Precision: {:.4f}%'.format(x[0], x[1]) for x in list(precisions.items())]))
-        print('\n'.join(['{} Recall: {:.4f}%'.format(x[0], x[1]) for x in list(recalls.items())]))
-        print('\n'.join(['{} F Measure: {:.4f}%'.format(x[0], x[1]) for x in list(f_scores.items())]))
-        print('Confusion Matrix:')
-        print(matrix)
+        if verbose:
+            print('\nEvaluation Metrics:\n')
+            print('Accuracy: {:.4f}%'.format(accuracy))
+            print('\n'.join(['{} Precision: {:.4f}%'.format(x[0], x[1]) for x in list(precisions.items())]))
+            print('\n'.join(['{} Recall: {:.4f}%'.format(x[0], x[1]) for x in list(recalls.items())]))
+            print('\n'.join(['{} F Measure: {:.4f}%'.format(x[0], x[1]) for x in list(f_scores.items())]))
+            print('Confusion Matrix:')
+            print(matrix)
 
         return accuracy, precisions, recalls, f_scores, matrix
 
@@ -141,13 +142,10 @@ class Classifier:
             test_data = np.asarray([data[x] for x in test])
             test_target = np.asarray([target[x] for x in test])
 
-            print('\n')
-            self.fit('medinify/sentiment/temp_file.txt', data=train_data, target=train_target)
-            print('\n')
-
             print('Fold {}:'.format(num_fold))
+            self.fit('medinify/sentiment/temp_file.txt', data=train_data, target=train_target)
             accuracy, fold_precisions, fold_recalls, fold_f_measures, fold_matrix = self.evaluate(
-                'medinify/sentiment/temp_file.txt', data=test_data, target=test_target)
+                'medinify/sentiment/temp_file.txt', data=test_data, target=test_target, verbose=False)
 
             os.remove('medinify/sentiment/temp_file.txt')
 
