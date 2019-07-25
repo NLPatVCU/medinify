@@ -2,7 +2,6 @@
 Scrapes Drugs.com for drug reviews.
 """
 
-import re
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup

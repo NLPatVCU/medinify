@@ -1,6 +1,7 @@
 
 import numpy as np
 import pickle
+import os
 from medinify.datasets.dataset import Dataset
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
@@ -50,13 +51,13 @@ class Classifier:
         self.w2v_file = w2v_file
         self.pos = pos
 
-    def fit(self, reviews_file=None, data=None, target=None):
+    def fit(self, output_file, reviews_file=None, data=None, target=None):
         """
         Trains a model on review data
+        :param output_file: path to output trained model
         :param reviews_file: path to csv containing training data
         :param data: data ndarray
         :param target: target ndarray
-        :return: a trained model
         """
         if bool(reviews_file):
             data, target = self.load_data(reviews_file)
@@ -71,14 +72,14 @@ class Classifier:
 
         print('Fitting model...')
         model.fit(data, target)
+        self.save_model(model, output_file)
         print('Model fit.')
-        return model
 
-    def evaluate(self, trained_model, eval_reviews_csv=None, data=None, target=None):
+    def evaluate(self, trained_model_file, eval_reviews_csv=None, data=None, target=None):
         """
         Evaluates the accuracy, precision, recall, and F-1 score
         of a trained model over a review dataset
-        :param trained_model: trained model
+        :param trained_model_file: path to file with trained model
         :param eval_reviews_csv: path to csv of review data being evaluated
         :param data: ndarray of data
         :param target: ndarray of target
@@ -87,6 +88,7 @@ class Classifier:
         if eval_reviews_csv:
             data, target = self.load_data(eval_reviews_csv)
 
+        trained_model = self.load_model(trained_model_file)
         predictions = trained_model.predict(data)
         accuracy = accuracy_score(target, predictions) * 100
         precisions = {'Class {}'.format(i + 1): score * 100 for i, score in
@@ -140,12 +142,14 @@ class Classifier:
             test_target = np.asarray([target[x] for x in test])
 
             print('\n')
-            model = self.fit(data=train_data, target=train_target)
+            self.fit('medinify/sentiment/temp_file.txt', data=train_data, target=train_target)
             print('\n')
 
             print('Fold {}:'.format(num_fold))
             accuracy, fold_precisions, fold_recalls, fold_f_measures, fold_matrix = self.evaluate(
-                model, data=test_data, target=test_target)
+                'medinify/sentiment/temp_file.txt', data=test_data, target=test_target)
+
+            os.remove('medinify/sentiment/temp_file.txt')
 
             accuracies.append(accuracy)
             for i in range(self.num_classes):
@@ -187,6 +191,32 @@ class Classifier:
             print('\t{}'.format('\t'.join([str(x) for x in row])))
         print('\n**********************************************************************\n')
 
+    def classify(self, trained_model_file, reviews_csv, output_file):
+        """
+        Classifies the sentiment of a reviews csv
+        :param trained_model_file: path to file with trained model
+        :param reviews_csv: path to reviews being classified
+        :param output_file: path to output classifications
+        """
+        model = self.load_model(trained_model_file)
+        data, target, comments = self.load_data(reviews_csv, classifying=True)
+        predictions = model.predict(data)
+
+        class_2_sent = {}
+
+        if self.num_classes == 2:
+            class_2_sent = {0: 'Negative', 1: 'Positive'}
+        elif self.num_classes == 3:
+            class_2_sent = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
+        elif self.num_classes == 5:
+            class_2_sent = {0: 'One Star', 1: 'Two Star', 2: 'Three Star', 3: 'Four Star', 4: 'Five Star'}
+
+        with open(output_file, 'w') as f:
+            for i, prediction in enumerate(predictions):
+                    f.write('Comment: {}\n'.format(comments[i]))
+                    f.write('Predicted Class: {}\tActual Class: {}\n\n'.format(
+                        class_2_sent[prediction], class_2_sent[target[i]]))
+
     def save_model(self, trained_model, output_file):
         """
         Saves a trained model and its processor
@@ -208,10 +238,11 @@ class Classifier:
             self.processor = pickle.load(f)
         return model
 
-    def load_data(self, review_csv):
+    def load_data(self, review_csv, classifying=False):
         """
         Loads and processes data from csv
         :param review_csv: path to csv with review data
+        :param classifying: if running classification
         :return: data, target
         """
         dataset = Dataset(num_classes=self.num_classes,
@@ -223,18 +254,33 @@ class Classifier:
         if self.processor:
             dataset.processor = self.processor
 
+        unprocessed = None
         data, target = None, None
         if self.data_representation == 'count':
-            data, target = dataset.get_count_vectors()
+            if not classifying:
+                data, target = dataset.get_count_vectors()
+            else:
+                data, target, unprocessed = dataset.get_count_vectors(classifying=True)
         elif self.data_representation == 'tfidf':
-            data, target = dataset.get_tfidf_vectors()
+            if not classifying:
+                data, target = dataset.get_tfidf_vectors()
+            else:
+                data, target, unprocessed = dataset.get_tfidf_vectors(classifying=True)
         elif self.data_representation == 'embedding':
-            data, target = dataset.get_average_embeddings(w2v_file=self.w2v_file)
+            if not classifying:
+                data, target = dataset.get_average_embeddings(w2v_file=self.w2v_file)
+            else:
+                data, target, unprocessed = dataset.get_average_embeddings(w2v_file=self.w2v_file, classifying=True)
         elif self.data_representation == 'pos':
-            data, target = dataset.get_pos_vectors(pos=self.pos)
-
+            if not classifying:
+                data, target = dataset.get_pos_vectors(pos=self.pos)
+            else:
+                data, target, unprocessed = dataset.get_pos_vectors(pos=self.pos, classifying=True)
         if not self.processor:
             self.processor = dataset.processor
 
-        return data, target
+        if classifying:
+            return data, target, unprocessed
+        else:
+            return data, target
 

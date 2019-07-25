@@ -289,40 +289,67 @@ class Dataset:
         else:
             raise ValueError('This type of rating ({}) is not supported.'.format(type(ratings[0])))
 
-    def get_count_vectors(self):
+    def get_count_vectors(self, classifying=False):
         """
         Wraps around Processor function
+        :param classifying: if running classification on data
         :return: data, target
         """
-        data, target = self.processor.get_count_vectors(
-            self.data['comment'], self.data['rating'])
-        return data, target
+        if not classifying:
+            data, target = self.processor.get_count_vectors(
+                self.data['comment'], self.data['rating'])
+            return data, target
+        else:
+            data, target, unprocessed = self.processor.get_count_vectors(
+                self.data['comment'], self.data['rating'], return_unprocessed=True)
+            return data, target, unprocessed
 
-    def get_tfidf_vectors(self):
+    def get_tfidf_vectors(self, classifying=False):
         """
         Wraps around Processor function
+        :param classifying: if running classification on data
         :return: data, target
         """
-        data, target = self.processor.get_tfidf_vectors(
-            self.data['comment'], self.data['rating'])
-        return data, target
+        if not classifying:
+            data, target = self.processor.get_tfidf_vectors(
+                self.data['comment'], self.data['rating'])
+            return data, target
+        else:
+            data, target, unprocessed = self.processor.get_tfidf_vectors(
+                self.data['comment'], self.data['rating'], return_unprocessed=True)
+            return data, target, unprocessed
 
-    def get_average_embeddings(self, w2v_file):
+    def get_average_embeddings(self, w2v_file, classifying=False):
         """
         Wraps around Processor function
+        :param w2v_file: path to word embeddings file
+        :param classifying: if running classification on data
         :return: data, target
         """
-        data, target = self.processor.get_average_embeddings(
-            self.data['comment'], self.data['rating'], w2v_file)
-        return data, target
+        if not classifying:
+            data, target = self.processor.get_average_embeddings(
+                self.data['comment'], self.data['rating'], w2v_file)
+            return data, target
+        else:
+            data, target, unprocessed = self.processor.get_average_embeddings(
+                self.data['comment'], self.data['rating'], w2v_file, return_unprocessed=True)
+            return data, target, unprocessed
 
-    def get_pos_vectors(self, pos):
+    def get_pos_vectors(self, pos, classifying=False):
         """
         Wraps around Processor function
+        :param pos: part of speech
+        :param classifying: if running classification on data
         :return: data, target
         """
-        data, target = self.processor.get_pos_vectors(
-            self.data['comment'], self.data['rating'], part_of_speech=pos)
-        return data, target
+        if not classifying:
+            data, target = self.processor.get_pos_vectors(
+                self.data['comment'], self.data['rating'], part_of_speech=pos)
+            return data, target
+        else:
+            data, target, unprocessed = self.processor.get_pos_vectors(
+                self.data['comment'], self.data['rating'], part_of_speech=pos, return_unprocessed=True)
+            return data, target, unprocessed
+
 
 

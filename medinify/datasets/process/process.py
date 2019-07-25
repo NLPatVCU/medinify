@@ -43,11 +43,12 @@ class Processor:
         self.pos_threshold = pos_threshold
         self.neg_threshold = neg_threshold
 
-    def get_count_vectors(self, comments, ratings):
+    def get_count_vectors(self, comments, ratings, return_unprocessed=False):
         """
         Count vectorizes comments
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
+        :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
         comments = list(comments)
@@ -71,13 +72,17 @@ class Processor:
 
         target = np.asarray(target)
 
-        return data, target
+        if not return_unprocessed:
+            return data, target
+        else:
+            return data, target, comments
 
-    def get_tfidf_vectors(self, comments, ratings):
+    def get_tfidf_vectors(self, comments, ratings, return_unprocessed=False):
         """
         TF-IDF vectorizes comments
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
+        :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
         comments = list(comments)
@@ -100,14 +105,18 @@ class Processor:
             data = np.asarray([x.todense() for x in self.tfidf_vectorizer.transform(comments)]).squeeze(1)
 
         target = np.asarray(target)
-        return data, target
+        if not return_unprocessed:
+            return data, target
+        else:
+            return data, target, comments
 
-    def get_pos_vectors(self, comments, ratings, part_of_speech):
+    def get_pos_vectors(self, comments, ratings, part_of_speech, return_unprocessed=False):
         """
         Count vectorizes comments using only words of a specific part of speech
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
         :param part_of_speech: sptring representing the part-of-speech being selected
+        :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
         comments = list(comments)
@@ -129,11 +138,14 @@ class Processor:
                                  and token.pos_ == part_of_speech])
             pos_strings.append(only_pos)
 
+        unprocessed = []
         for i, pos_string in enumerate(pos_strings):
             if pos_string == '':
                 del pos_strings[i]
                 del target[i]
                 del indices[i]
+            else:
+                unprocessed.append(comments[i])
 
         if not self.pos_vectorizer:
             pos_vectorizer = CountVectorizer(tokenizer=self.tokenize)
@@ -143,14 +155,19 @@ class Processor:
             data = np.asarray([x.todense() for x in self.pos_vectorizer.transform(comments)]).squeeze(1)
 
         target = np.asarray(target)
-        return data, target
 
-    def get_average_embeddings(self, comments, ratings, w2v_file=None):
+        if not return_unprocessed:
+            return data, target
+        else:
+            return data, target, unprocessed
+
+    def get_average_embeddings(self, comments, ratings, w2v_file=None, return_unprocessed=False):
         """
         Count vectorizes comments using only words of a specific part of speech
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
         :param w2v_file: path to file containing trained word embeddings
+        :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
         assert w2v_file or self.w2v, 'A file containing word vectors must be specified'
@@ -185,15 +202,22 @@ class Processor:
                 average = np.average(token_embeddings, axis=0)
                 average_embeddings.append(average)
 
+        unprocessed = []
         for i, average in enumerate(average_embeddings):
             if type(average) == list:
                 del average_embeddings[i]
                 del target[i]
                 del indices[i]
+            else:
+                unprocessed.append(comments[i])
 
         data = np.asarray(average_embeddings)
         target = np.asarray(target)
-        return data, target
+
+        if not return_unprocessed:
+            return data, target
+        else:
+            return data, target, unprocessed
 
     def process_ratings(self, ratings):
         """

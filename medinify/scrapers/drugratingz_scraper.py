@@ -2,7 +2,6 @@
 Scrapes drugratingz.com for drug reviews.
 """
 
-import re
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
@@ -13,12 +12,22 @@ class DrugRatingzScraper(Scraper):
     """Scrapes drugratingz.com for drug reviews.
     """
 
+    def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
+                 collect_user_ids=False, collect_urls=False):
+        super(DrugRatingzScraper, self).__init__(collect_ratings, collect_dates,
+                                                 collect_drugs, collect_user_ids,
+                                                 collect_urls)
+        if 'user id' in self.data_collected:
+            raise AttributeError('DrugRatingz.com does not contain user id data')
+
     def scrape_page(self, url):
         """
         Scrapes a single page of drug reviews
         :param url: drug reviews page url
         :return:
         """
+        assert url[:36] == 'https://www.drugratingz.com/reviews/', 'Invalid url'
+
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
         drug_name = soup.find('title').text.split()[0]
@@ -34,14 +43,11 @@ class DrugRatingzScraper(Scraper):
             rows['date'] = []
         if 'drug' in self.data_collected:
             rows['drug'] = []
-        if 'user id' in self.data_collected:
-            raise AttributeError('DrugRatingz.com does to contain user ids.')
         if 'url' in self.data_collected:
             rows['url'] = []
 
         for review in reviews:
-            rows['comment'].append(re.sub('\n+|\r+', '', review.find(
-                'span', {'class': 'description'}).text.strip()))
+            rows['comment'].append(review.find('span', {'class': 'description'}).text.strip())
             if 'rating' in self.data_collected:
                 rating_types = ['effectiveness', 'no side effects', 'convenience', 'value']
                 nums = [int(x.text.strip()) for x in review.find_all('td', {'align': 'center'}) if not x.find('img')]
