@@ -86,123 +86,26 @@ class Classifier:
         """
         if eval_reviews_csv:
             data, target = self.load_data(eval_reviews_csv)
+
         predictions = trained_model.predict(data)
-        accuracy = accuracy_score(target, predictions)
-        precisions = precision_score(target, predictions, average=None)
-        recalls = recall_score(target, predictions, average=None)
-        f_scores = f1_score(target, predictions, average=None)
+        accuracy = accuracy_score(target, predictions) * 100
+        precisions = {'Class {}'.format(i + 1): score * 100 for i, score in
+                      enumerate(precision_score(target, predictions, average=None))}
+        recalls = {'Class {}'.format(i + 1): score * 100 for i, score in
+                   enumerate(recall_score(target, predictions, average=None))}
+        f_scores = {'Class {}'.format(i + 1): score * 100 for i, score in
+                    enumerate(f1_score(target, predictions, average=None))}
         matrix = confusion_matrix(target, predictions)
 
-        eval_metrics = {}
-
         print('\nEvaluation Metrics:\n')
-        print('Accuracy: {:.4f}%'.format(accuracy * 100))
+        print('Accuracy: {:.4f}%'.format(accuracy))
+        print('\n'.join(['{} Precision: {:.4f}%'.format(x[0], x[1]) for x in list(precisions.items())]))
+        print('\n'.join(['{} Recall: {:.4f}%'.format(x[0], x[1]) for x in list(recalls.items())]))
+        print('\n'.join(['{} F Measure: {:.4f}%'.format(x[0], x[1]) for x in list(f_scores.items())]))
+        print('Confusion Matrix:')
+        print(matrix)
 
-        if self.num_classes == 2:
-            neg_precision = precisions[0]
-            pos_precision = precisions[1]
-            neg_recall = recalls[0]
-            pos_recall = recalls[1]
-            neg_f_measure = f_scores[0]
-            pos_f_measure = f_scores[1]
-
-            print('Positive Precision: {:.4f}%'.format(pos_precision * 100))
-            print('Positive Recall: {:.4f}%'.format(pos_recall * 100))
-            print('Positive F-Score: {:.4f}%'.format(pos_f_measure * 100))
-            print('Negative Precision: {:.4f}%'.format(neg_precision * 100))
-            print('Negative Recall: {:.4f}%'.format(neg_recall * 100))
-            print('Negative F-Score: {:.4f}%'.format(neg_f_measure * 100))
-            print('Confusion Matrix:')
-            print(matrix)
-
-            eval_metrics = {'accuracy': accuracy, 'pos_precision': pos_precision,
-                            'pos_recall': pos_recall, 'neg_precision': neg_precision,
-                            'neg_recall': neg_recall, 'pos_f_measure': pos_f_measure,
-                            'neg_f_measure': neg_f_measure}
-
-        elif self.num_classes == 3:
-            neg_precision = precisions[0]
-            neutral_precision = precisions[1]
-            pos_precision = precisions[2]
-            neg_recall = recalls[0]
-            neutral_recall = recalls[1]
-            pos_recall = recalls[2]
-            neg_f_measure = f_scores[0]
-            neutral_f_measure = f_scores[1]
-            pos_f_measure = f_scores[2]
-
-            print('Positive Precision: {:.4f}%'.format(pos_precision * 100))
-            print('Positive Recall: {:.4f}%'.format(pos_recall * 100))
-            print('Positive F-Score: {:.4f}%'.format(pos_f_measure * 100))
-            print('Neutral Precision: {:.4f}%'.format(neutral_precision * 100))
-            print('Neutral Recall: {:.4f}%'.format(neutral_recall * 100))
-            print('Neutral F-Score: {:.4f}%'.format(neutral_f_measure * 100))
-            print('Negative Precision: {:.4f}%'.format(neg_precision * 100))
-            print('Negative Recall: {:.4f}%'.format(neg_recall * 100))
-            print('Negative F-Score: {:.4f}%'.format(neg_f_measure * 100))
-            print('Confusion Matrix:')
-            print(matrix)
-
-            eval_metrics = {'accuracy': accuracy, 'pos_precision': pos_precision,
-                            'pos_recall': pos_recall, 'pos_f_measure': pos_f_measure,
-                            'neutral_precision': neutral_precision, 'neutral_recall': neutral_recall,
-                            'neutral_f_measure': neutral_f_measure, 'neg_precision': neg_precision,
-                            'neg_recall': neg_recall, 'neg_f_measure': neg_f_measure}
-
-        elif self.num_classes == 5:
-            one_star_precision = precisions[0]
-            two_star_precision = precisions[1]
-            three_star_precision = precisions[2]
-            four_star_precision = precisions[3]
-            five_star_precision = precisions[4]
-            one_star_recall = recalls[0]
-            two_star_recall = recalls[1]
-            three_star_recall = recalls[2]
-            four_star_recall = recalls[3]
-            five_star_recall = recalls[4]
-            one_star_f_measure = f_scores[0]
-            two_star_f_measure = f_scores[1]
-            three_star_f_measure = f_scores[2]
-            four_star_f_measure = f_scores[3]
-            five_star_f_measure = f_scores[4]
-
-            print('One Star Precision: {:.4f}%'.format(one_star_precision * 100))
-            print('One Star Recall: {:.4f}%'.format(one_star_recall * 100))
-            print('One Star F-Score: {:.4f}%'.format(one_star_f_measure * 100))
-            print('Two Star Precision: {:.4f}%'.format(two_star_precision * 100))
-            print('Two Star Recall: {:.4f}%'.format(two_star_recall * 100))
-            print('Two Star F-Score: {:.4f}%'.format(two_star_f_measure * 100))
-            print('Three Star Precision: {:.4f}%'.format(three_star_precision * 100))
-            print('Three Star Recall: {:.4f}%'.format(three_star_recall * 100))
-            print('Three Star F-Score: {:.4f}%'.format(three_star_f_measure * 100))
-            print('Four Star Precision: {:.4f}%'.format(four_star_precision * 100))
-            print('Four Star Recall: {:.4f}%'.format(four_star_recall * 100))
-            print('Four Star F-Score: {:.4f}%'.format(four_star_f_measure * 100))
-            print('Five Star Precision: {:.4f}%'.format(five_star_precision * 100))
-            print('Five Star Recall: {:.4f}%'.format(five_star_recall * 100))
-            print('Five Star F-Score: {:.4f}%'.format(five_star_f_measure * 100))
-
-            print('Confusion Matrix:')
-            print(matrix)
-
-            eval_metrics = {'accuracy': accuracy,
-                            'one_star_precision': one_star_precision,
-                            'one_star_recall': one_star_recall,
-                            'one_star_f_measure': one_star_f_measure,
-                            'two_star_precision': two_star_precision,
-                            'two_star_recall': two_star_recall,
-                            'two_star_f_measure': two_star_f_measure,
-                            'three_star_precision': three_star_precision,
-                            'three_star_recall': three_star_recall,
-                            'three_star_f_measure': three_star_f_measure,
-                            'four_star_precision': four_star_precision,
-                            'four_star_recall': four_star_recall,
-                            'four_star_f_measure': four_star_f_measure,
-                            'five_star_precision': five_star_precision,
-                            'five_star_recall': five_star_recall,
-                            'five_star_f_measure': five_star_f_measure}
-
-        return eval_metrics
+        return accuracy, precisions, recalls, f_scores, matrix
 
     def validate(self, review_csv, k_folds=10):
         """
@@ -214,39 +117,20 @@ class Classifier:
         skf = StratifiedKFold(n_splits=k_folds)
 
         accuracies = []
+        precisions, recalls, f_measures = {}, {}, {}
         if self.num_classes == 2:
-            pos_precisions = []
-            neg_precisions = []
-            pos_recalls = []
-            neg_recalls = []
-            pos_f_scores = []
-            neg_f_scores = []
+            precisions = {'Class 1': [], 'Class 2': []}
+            recalls = {'Class 1': [], 'Class 2': []}
+            f_measures = {'Class 1': [], 'Class 2': []}
         elif self.num_classes == 3:
-            pos_precisions = []
-            neutral_precisions = []
-            neg_precisions = []
-            pos_recalls = []
-            neutral_recalls = []
-            neg_recalls = []
-            pos_f_scores = []
-            neutral_f_scores = []
-            neg_f_scores = []
+            precisions = {'Class 1': [], 'Class 2': [], 'Class 3': []}
+            recalls = {'Class 1': [], 'Class 2': [], 'Class 3': []}
+            f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': []}
         elif self.num_classes == 5:
-            one_star_precisions = []
-            one_star_recalls = []
-            one_star_f_scores = []
-            two_star_precisions = []
-            two_star_recalls = []
-            two_star_f_scores = []
-            three_star_precisions = []
-            three_star_recalls = []
-            three_star_f_scores = []
-            four_star_precisions = []
-            four_star_recalls = []
-            four_star_f_scores = []
-            five_star_precisions = []
-            five_star_recalls = []
-            five_star_f_scores = []
+            precisions = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
+            recalls = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
+            f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
+        overall_matrix = None
 
         num_fold = 1
         for train, test in skf.split(data, target):
@@ -255,196 +139,53 @@ class Classifier:
             test_data = np.asarray([data[x] for x in test])
             test_target = np.asarray([target[x] for x in test])
 
+            print('\n')
             model = self.fit(data=train_data, target=train_target)
-            print('Fold {}:'.format(num_fold))
-            eval_metrics = self.evaluate(model, data=test_data, target=test_target)
+            print('\n')
 
-            if self.num_classes == 2:
-                accuracies.append(eval_metrics['accuracy'])
-                pos_precisions.append(eval_metrics['pos_precision'])
-                neg_precisions.append(eval_metrics['neg_precision'])
-                pos_recalls.append(eval_metrics['pos_recall'])
-                neg_recalls.append(eval_metrics['neg_recall'])
-                pos_f_scores.append(eval_metrics['pos_f_measure'])
-                neg_f_scores.append(eval_metrics['neg_f_measure'])
-            elif self.num_classes == 3:
-                accuracies.append(eval_metrics['accuracy'])
-                pos_precisions.append(eval_metrics['pos_precision'])
-                neutral_precisions.append(eval_metrics['neutral_precision'])
-                neg_precisions.append(eval_metrics['neg_precision'])
-                pos_recalls.append(eval_metrics['pos_recall'])
-                neutral_recalls.append(eval_metrics['neutral_recall'])
-                neg_recalls.append(eval_metrics['neg_recall'])
-                pos_f_scores.append(eval_metrics['pos_f_measure'])
-                neutral_f_scores.append(eval_metrics['neutral_f_measure'])
-                neg_f_scores.append(eval_metrics['neg_f_measure'])
-            elif self.num_classes == 5:
-                accuracies.append(eval_metrics['accuracy'])
-                one_star_precisions.append(eval_metrics['one_star_precision'])
-                one_star_recalls.append(eval_metrics['one_star_recall'])
-                one_star_f_scores.append(eval_metrics['one_star_f_measure'])
-                two_star_precisions.append(eval_metrics['two_star_precision'])
-                two_star_recalls.append(eval_metrics['two_star_recall'])
-                two_star_f_scores.append(eval_metrics['two_star_f_measure'])
-                three_star_precisions.append(eval_metrics['three_star_precision'])
-                three_star_recalls.append(eval_metrics['three_star_recall'])
-                three_star_f_scores.append(eval_metrics['three_star_f_measure'])
-                four_star_precisions.append(eval_metrics['four_star_precision'])
-                four_star_recalls.append(eval_metrics['four_star_recall'])
-                four_star_f_scores.append(eval_metrics['four_star_f_measure'])
-                five_star_precisions.append(eval_metrics['five_star_precision'])
-                five_star_recalls.append(eval_metrics['five_star_recall'])
-                five_star_f_scores.append(eval_metrics['five_star_f_measure'])
+            print('Fold {}:'.format(num_fold))
+            accuracy, fold_precisions, fold_recalls, fold_f_measures, fold_matrix = self.evaluate(
+                model, data=test_data, target=test_target)
+
+            accuracies.append(accuracy)
+            for i in range(self.num_classes):
+                key_ = 'Class ' + str(i + 1)
+                precisions[key_].append(fold_precisions[key_])
+                recalls[key_].append(fold_recalls[key_])
+                f_measures[key_].append(fold_f_measures[key_])
+                if type(overall_matrix) == np.ndarray:
+                    overall_matrix += fold_matrix
+                else:
+                    overall_matrix = fold_matrix
 
             num_fold += 1
 
-        average_accuracy = np.mean(accuracies)
-        accuracy_std = np.std(accuracies)
+        self.print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix)
 
-        if self.num_classes == 2:
-            average_pos_precision = np.mean(pos_precisions)
-            average_neg_precision = np.mean(neg_precisions)
-            average_pos_recall = np.mean(pos_recalls)
-            average_neg_recall = np.mean(neg_recalls)
-            average_pos_f_measure = np.mean(pos_f_scores)
-            average_neg_f_measure = np.mean(neg_f_scores)
-            pos_precision_std = np.std(pos_precisions)
-            neg_precision_std = np.std(neg_precisions)
-            pos_recall_std = np.std(pos_recalls)
-            neg_recall_std = np.std(neg_recalls)
-            pos_f_measure_std = np.std(pos_f_scores)
-            neg_f_measure_std = np.std(neg_f_scores)
-
-            print('\nValidation Metrics:')
-            print('Average Accuracy: {:.4f}% +/-{:.4f}%'.format(
-                average_accuracy * 100, accuracy_std * 100))
-            print('Average Pos Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_pos_precision * 100, pos_precision_std * 100))
-            print('Average Pos Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_pos_recall * 100, pos_recall_std * 100))
-            print('Average Pos F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_pos_f_measure * 100, pos_f_measure_std * 100))
-            print('Average Neg Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_neg_precision * 100, neg_precision_std * 100))
-            print('Average Neg Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_neg_recall * 100, neg_recall_std * 100))
-            print('Average Neg F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_neg_f_measure * 100, neg_f_measure_std * 100))
-        elif self.num_classes == 3:
-            average_pos_precision = np.mean(pos_precisions)
-            average_neutral_precision = np.mean(neutral_precisions)
-            average_neg_precision = np.mean(neg_precisions)
-            average_pos_recall = np.mean(pos_recalls)
-            average_neutral_recall = np.mean(neutral_recalls)
-            average_neg_recall = np.mean(neg_recalls)
-            average_pos_f_measure = np.mean(pos_f_scores)
-            average_neutral_f_measure = np.mean(neutral_f_scores)
-            average_neg_f_measure = np.mean(neg_f_scores)
-            pos_precision_std = np.std(pos_precisions)
-            neutral_precision_std = np.std(neutral_precisions)
-            neg_precision_std = np.std(neg_precisions)
-            pos_recall_std = np.std(pos_recalls)
-            neutral_recall_std = np.std(neutral_recalls)
-            neg_recall_std = np.std(neg_recalls)
-            pos_f_measure_std = np.std(pos_f_scores)
-            neutral_f_measure_std = np.std(neutral_f_scores)
-            neg_f_measure_std = np.std(neg_f_scores)
-
-            print('\nValidation Metrics:')
-            print('Average Accuracy: {:.4f}% +/-{:.4f}%'.format(
-                average_accuracy * 100, accuracy_std * 100))
-            print('Average Pos Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_pos_precision * 100, pos_precision_std * 100))
-            print('Average Pos Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_pos_recall * 100, pos_recall_std * 100))
-            print('Average Pos F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_pos_f_measure * 100, pos_f_measure_std * 100))
-            print('Average Neutral Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_neutral_precision * 100, neutral_precision_std * 100))
-            print('Average Neutral Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_neutral_recall * 100, neutral_recall_std * 100))
-            print('Average Neutral F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_neutral_f_measure * 100, neutral_f_measure_std * 100))
-            print('Average Neg Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_neg_precision * 100, neg_precision_std * 100))
-            print('Average Neg Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_neg_recall * 100, neg_recall_std * 100))
-            print('Average Neg F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_neg_f_measure * 100, neg_f_measure_std * 100))
-        elif self.num_classes == 5:
-            average_one_star_precision = np.mean(one_star_precisions)
-            one_star_precision_std = np.std(one_star_precisions)
-            average_one_star_recall = np.mean(one_star_recalls)
-            one_star_recall_std = np.std(one_star_recalls)
-            average_one_star_f_measure = np.mean(one_star_f_scores)
-            one_star_f_measure_std = np.std(one_star_f_scores)
-
-            average_two_star_precision = np.mean(two_star_precisions)
-            two_star_precision_std = np.std(two_star_precisions)
-            average_two_star_recall = np.mean(two_star_recalls)
-            two_star_recall_std = np.std(two_star_recalls)
-            average_two_star_f_measure = np.mean(two_star_f_scores)
-            two_star_f_measure_std = np.std(two_star_f_scores)
-
-            average_three_star_precision = np.mean(three_star_precisions)
-            three_star_precision_std = np.std(three_star_precisions)
-            average_three_star_recall = np.mean(three_star_recalls)
-            three_star_recall_std = np.std(three_star_recalls)
-            average_three_star_f_measure = np.mean(three_star_f_scores)
-            three_star_f_measure_std = np.std(three_star_f_scores)
-
-            average_four_star_precision = np.mean(four_star_precisions)
-            four_star_precision_std = np.std(four_star_precisions)
-            average_four_star_recall = np.mean(four_star_recalls)
-            four_star_recall_std = np.std(four_star_recalls)
-            average_four_star_f_measure = np.mean(four_star_f_scores)
-            four_star_f_measure_std = np.std(four_star_f_scores)
-
-            average_five_star_precision = np.mean(five_star_precisions)
-            five_star_precision_std = np.std(five_star_precisions)
-            average_five_star_recall = np.mean(five_star_recalls)
-            five_star_recall_std = np.std(five_star_recalls)
-            average_five_star_f_measure = np.mean(five_star_f_scores)
-            five_star_f_measure_std = np.std(five_star_f_scores)
-
-            print('\nValidation Metrics:')
-            print('Average Accuracy: {:.4f}% +/-{:.4f}%'.format(
-                average_accuracy * 100, accuracy_std * 100))
-
-            print('Average One Star Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_one_star_precision * 100, one_star_precision_std * 100))
-            print('Average One Star Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_one_star_recall * 100, one_star_recall_std * 100))
-            print('Average One Star F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_one_star_f_measure * 100, one_star_f_measure_std * 100))
-
-            print('Average Two Star Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_two_star_precision * 100, two_star_precision_std * 100))
-            print('Average Two Star Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_two_star_recall * 100, two_star_recall_std * 100))
-            print('Average Two Star F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_two_star_f_measure * 100, two_star_f_measure_std * 100))
-
-            print('Average Three Star Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_three_star_precision * 100, three_star_precision_std * 100))
-            print('Average Three Star Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_three_star_recall * 100, three_star_recall_std * 100))
-            print('Average Three Star F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_three_star_f_measure * 100, three_star_f_measure_std * 100))
-
-            print('Average Four Star Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_four_star_precision * 100, four_star_precision_std * 100))
-            print('Average Four Star Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_four_star_recall * 100, four_star_recall_std * 100))
-            print('Average Four Star F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_four_star_f_measure * 100, four_star_f_measure_std * 100))
-
-            print('Average Five Star Precision: {:.4f}% +/-{:.4f}%'.format(
-                average_five_star_precision * 100, five_star_precision_std * 100))
-            print('Average Five Star Recall: {:.4f}% +/-{:.4f}%'.format(
-                average_five_star_recall * 100, five_star_recall_std * 100))
-            print('Average Five Star F-Measure: {:.4f}% +/-{:.4f}%'.format(
-                average_five_star_f_measure * 100, five_star_f_measure_std * 100))
+    def print_validation_metrics(self, accuracies, precisions, recalls, f_measures, overall_matrix):
+        """
+        Prints cross validation metrics
+        :param accuracies: list of accuracy scores
+        :param precisions: list of precision scores per class
+        :param recalls: list of recall scores per class
+        :param f_measures: list of f-measure scores per class
+        :param overall_matrix: total confusion matrix
+        """
+        print('\n**********************************************************************\n')
+        print('Validation Metrics:')
+        print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(accuracies), np.std(accuracies)))
+        for i in range(self.num_classes):
+            key_ = 'Class ' + str(i + 1)
+            print('\tClass {} Average Precision: {:.4f}% +/- {:.4f}%'.format(
+                i + 1, np.mean(precisions[key_]), np.std(precisions[key_])))
+            print('\tClass {} Average Recall: {:.4f}% +/- {:.4f}%'.format(
+                i + 1, np.mean(recalls[key_]), np.std(recalls[key_])))
+            print('\tClass {} Average F-Measure: {:.4f}% +/- {:.4f}%\n'.format(
+                i + 1, np.mean(f_measures[key_]), np.std(f_measures[key_])))
+        print('\tOverall Confusion Matrix:\n')
+        for row in overall_matrix:
+            print('\t{}'.format('\t'.join([str(x) for x in row])))
+        print('\n**********************************************************************\n')
 
     def save_model(self, trained_model, output_file):
         """
@@ -496,3 +237,4 @@ class Classifier:
             self.processor = dataset.processor
 
         return data, target
+
