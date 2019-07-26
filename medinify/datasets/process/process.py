@@ -27,8 +27,6 @@ class Processor:
     tfidf_vectorizer = None
     pos_vectorizer = None
     w2v = None
-    nlp = None
-    stops = None
     num_classes = None
     ratings_type = None
     pos_threshold = None
