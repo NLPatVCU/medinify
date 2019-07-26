@@ -10,6 +10,7 @@ from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
 from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
 from medinify.datasets.process.process import Processor
+from medinify import config
 
 
 class Dataset:
@@ -24,8 +25,6 @@ class Dataset:
         processor: The dataset's processor, defines how data is transformed into numeric representation
         start_timestamp: If collecting reviews, time when collection started
         end_timestamp: If collecting reviews, time when collection ended
-        pos_threshold: postive review threshold
-        neg_threshold: negative review threshold
         use_rating: whether or not to store rating data
         use_dates: whether or not to store date data
         use_drugs: whether or not to store drug name data
@@ -39,8 +38,8 @@ class Dataset:
     def __init__(self, scraper=None,
                  use_rating=True, use_dates=True,
                  use_drugs=True, use_user_ids=False,
-                 use_urls=False, rating_type='effectiveness',
-                 num_classes=2, pos_threshold=4.0, neg_threshold=2.0):
+                 use_urls=False):
+
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
@@ -78,13 +77,8 @@ class Dataset:
 
         self.start_timestamp = None
         self.end_timestamp = None
-        self.pos_threshold = pos_threshold
-        self.neg_threshold = neg_threshold
         self.data = pd.DataFrame(columns=self.data_used)
-        self.processor = Processor(num_classes=num_classes,
-                                   ratings_type=rating_type,
-                                   pos_threshold=pos_threshold,
-                                   neg_threshold=neg_threshold)
+        self.processor = Processor()
 
     def collect(self, url):
         """
@@ -252,11 +246,11 @@ class Dataset:
                 data[rating_type]['range'] = (np.amin(ratings_sets[rating_type]),
                                               np.amax(ratings_sets[rating_type]))
                 data[rating_type]['num_pos'] = len([x for x in ratings_sets[rating_type]
-                                                    if x >= self.pos_threshold])
+                                                    if x >= config.POS_THRESHOLD])
                 data[rating_type]['num_neg'] = len([x for x in ratings_sets[rating_type]
-                                                    if x <= self.neg_threshold])
+                                                    if x <= config.NEG_THRESHOLD])
                 data[rating_type]['num_neutral'] = len([x for x in ratings_sets[rating_type]
-                                                        if self.neg_threshold < x < self.pos_threshold])
+                                                        if config.NEG_THRESHOLD < x < config.POS_THRESHOLD])
 
             print('\nDataset Stats:\n')
             print('Number of reviews with ratings: {}'.format(num_reviews))
@@ -274,9 +268,9 @@ class Dataset:
             ratings = np.asarray([x for x in ratings if not np.isnan(x)])
             num_reviews = len(ratings)
             range_ = (np.amin(ratings), np.amax(ratings))
-            num_pos = len([x for x in ratings if x >= self.pos_threshold])
-            num_neg = len([x for x in ratings if x <= self.neg_threshold])
-            num_neutral = len([x for x in ratings if self.neg_threshold < x < self.pos_threshold])
+            num_pos = len([x for x in ratings if x >= config.POS_THRESHOLD])
+            num_neg = len([x for x in ratings if x <= config.NEG_THRESHOLD])
+            num_neutral = len([x for x in ratings if config.NEG_THRESHOLD < x < config.POS_THRESHOLD])
 
             print('\nDataset Stats:\n')
             print('Number of reviews with ratings: {}'.format(num_reviews))
@@ -328,11 +322,12 @@ class Dataset:
         """
         if not classifying:
             data, target = self.processor.get_average_embeddings(
-                self.data['comment'], self.data['rating'], w2v_file)
+                self.data['comment'], self.data['rating'], w2v_file=w2v_file)
             return data, target
         else:
             data, target, unprocessed = self.processor.get_average_embeddings(
-                self.data['comment'], self.data['rating'], w2v_file, return_unprocessed=True)
+                self.data['comment'], self.data['rating'],
+                return_unprocessed=True, w2v_file=w2v_file)
             return data, target, unprocessed
 
     def get_pos_vectors(self, pos, classifying=False):
@@ -342,13 +337,16 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
+        if not config.POS:
+            config.POS = pos
+
         if not classifying:
             data, target = self.processor.get_pos_vectors(
-                self.data['comment'], self.data['rating'], part_of_speech=pos)
+                self.data['comment'], self.data['rating'], part_of_speech=config.POS)
             return data, target
         else:
             data, target, unprocessed = self.processor.get_pos_vectors(
-                self.data['comment'], self.data['rating'], part_of_speech=pos, return_unprocessed=True)
+                self.data['comment'], self.data['rating'], part_of_speech=config.POS, return_unprocessed=True)
             return data, target, unprocessed
 
 

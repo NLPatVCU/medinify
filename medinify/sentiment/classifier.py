@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
+from medinify import config
 
 
 class Classifier:
@@ -22,13 +23,6 @@ class Classifier:
         tfidf_vectorizer: turns strings into tfidf vectors
         pos_count_vectorizer: turns string into count vectors for a certain part of speech
         processor: processes data and ratings into numeric representations
-        data_representation: how comment data should be numerically represented
-            ('count', 'tfidf', 'embedding', or 'pos')
-        num_classes: number of rating classes
-        rating_type: type of rating to use if multiple exist in the dataset
-        pos_threshold: postive rating threshold
-        neg_threshold: negative rating threshold
-        w2v_file: path to w2v file if using averaged embeddings
         pos: part of speech if using pos count vectors
     """
 
@@ -38,18 +32,11 @@ class Classifier:
     pos_count_vectorizer = None
     processor = None
 
-    def __init__(self, classifier_type=None, data_representation='count',
-                 num_classes=2, rating_type='effectiveness',
-                 pos_threshold=4.0, neg_threshold=2.0, w2v_file=None, pos=None):
+    def __init__(self, classifier_type=None, w2v_file=None, pos=None):
         assert classifier_type in ['nb', 'rf', 'svm'], 'Classifier Type must be \'nb\', \'rf\', or \'svm\''
         self.classifier_type = classifier_type
-        self.data_representation = data_representation
-        self.num_classes = num_classes
-        self.rating_type = rating_type
-        self.pos_threshold = pos_threshold
-        self.neg_threshold = neg_threshold
-        self.w2v_file = w2v_file
         self.pos = pos
+        self.w2v_file = w2v_file
 
     def fit(self, output_file, reviews_file=None, data=None, target=None):
         """
@@ -83,6 +70,7 @@ class Classifier:
         :param eval_reviews_csv: path to csv of review data being evaluated
         :param data: ndarray of data
         :param target: ndarray of target
+        :param verbose: whether or not to print metrics
         :return eval_metrics: calculated evaluation metrics (accuracy, precision, recall, f_measure)
         """
         if eval_reviews_csv:
@@ -121,15 +109,15 @@ class Classifier:
 
         accuracies = []
         precisions, recalls, f_measures = {}, {}, {}
-        if self.num_classes == 2:
+        if config.NUM_CLASSES == 2:
             precisions = {'Class 1': [], 'Class 2': []}
             recalls = {'Class 1': [], 'Class 2': []}
             f_measures = {'Class 1': [], 'Class 2': []}
-        elif self.num_classes == 3:
+        elif config.NUM_CLASSES == 3:
             precisions = {'Class 1': [], 'Class 2': [], 'Class 3': []}
             recalls = {'Class 1': [], 'Class 2': [], 'Class 3': []}
             f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': []}
-        elif self.num_classes == 5:
+        elif config.NUM_CLASSES == 5:
             precisions = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
             recalls = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
             f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
@@ -150,7 +138,7 @@ class Classifier:
             os.remove('medinify/sentiment/temp_file.txt')
 
             accuracies.append(accuracy)
-            for i in range(self.num_classes):
+            for i in range(config.NUM_CLASSES):
                 key_ = 'Class ' + str(i + 1)
                 precisions[key_].append(fold_precisions[key_])
                 recalls[key_].append(fold_recalls[key_])
@@ -176,7 +164,7 @@ class Classifier:
         print('\n**********************************************************************\n')
         print('Validation Metrics:')
         print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(accuracies), np.std(accuracies)))
-        for i in range(self.num_classes):
+        for i in range(config.NUM_CLASSES):
             key_ = 'Class ' + str(i + 1)
             print('\tClass {} Average Precision: {:.4f}% +/- {:.4f}%'.format(
                 i + 1, np.mean(precisions[key_]), np.std(precisions[key_])))
@@ -202,11 +190,11 @@ class Classifier:
 
         class_2_sent = {}
 
-        if self.num_classes == 2:
+        if config.NUM_CLASSES == 2:
             class_2_sent = {0: 'Negative', 1: 'Positive'}
-        elif self.num_classes == 3:
+        elif config.NUM_CLASSES == 3:
             class_2_sent = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
-        elif self.num_classes == 5:
+        elif config.NUM_CLASSES == 5:
             class_2_sent = {0: 'One Star', 1: 'Two Star', 2: 'Three Star', 3: 'Four Star', 4: 'Five Star'}
 
         with open(output_file, 'w') as f:
@@ -243,10 +231,7 @@ class Classifier:
         :param classifying: if running classification
         :return: data, target
         """
-        dataset = Dataset(num_classes=self.num_classes,
-                          rating_type=self.rating_type,
-                          pos_threshold=self.pos_threshold,
-                          neg_threshold=self.neg_threshold)
+        dataset = Dataset()
 
         dataset.load_file(review_csv)
         if self.processor:
@@ -254,22 +239,22 @@ class Classifier:
 
         unprocessed = None
         data, target = None, None
-        if self.data_representation == 'count':
+        if config.DATA_REPRESENTATION == 'count':
             if not classifying:
                 data, target = dataset.get_count_vectors()
             else:
                 data, target, unprocessed = dataset.get_count_vectors(classifying=True)
-        elif self.data_representation == 'tfidf':
+        elif config.DATA_REPRESENTATION == 'tfidf':
             if not classifying:
                 data, target = dataset.get_tfidf_vectors()
             else:
                 data, target, unprocessed = dataset.get_tfidf_vectors(classifying=True)
-        elif self.data_representation == 'embedding':
+        elif config.DATA_REPRESENTATION == 'embedding':
             if not classifying:
                 data, target = dataset.get_average_embeddings(w2v_file=self.w2v_file)
             else:
                 data, target, unprocessed = dataset.get_average_embeddings(w2v_file=self.w2v_file, classifying=True)
-        elif self.data_representation == 'pos':
+        elif config.DATA_REPRESENTATION == 'pos':
             if not classifying:
                 data, target = dataset.get_pos_vectors(pos=self.pos)
             else:

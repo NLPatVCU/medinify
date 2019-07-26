@@ -6,6 +6,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from nltk.corpus import stopwords
 from gensim.models import KeyedVectors
+from medinify import config
 
 
 class Processor:
@@ -16,30 +17,17 @@ class Processor:
         count_vectorizer: trained count vectorizer
         tfidf_vectorizer: trained tfidf vectorizer
         pos_vectorizer: count vectorizer trained over a part-of-speech based vocab
-        w2v: dictionary mapping words to vectors for getting average embeddings
         nlp: spacy english model for tokenizing and getting parts of speech
         stops: set of stop words
-        num_classes: number or rating classes
-        ratings_type: type of rating to process if review date contains multiple types of ratings
     """
 
     count_vectorizer = None
     tfidf_vectorizer = None
     pos_vectorizer = None
-    w2v = None
-    num_classes = None
-    ratings_type = None
-    pos_threshold = None
-    neg_threshold = None
 
-    def __init__(self, num_classes=2, ratings_type='effectiveness',
-                 pos_threshold=4.0, neg_threshold=2.0):
+    def __init__(self):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
-        self.num_classes = num_classes
-        self.ratings_type = ratings_type
-        self.pos_threshold = pos_threshold
-        self.neg_threshold = neg_threshold
 
     def get_count_vectors(self, comments, ratings, return_unprocessed=False):
         """
@@ -168,12 +156,12 @@ class Processor:
         :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
-        assert w2v_file or self.w2v, 'A file containing word vectors must be specified'
+        assert w2v_file or config.WORD_2_VEC, 'A file containing word vectors must be specified'
 
-        if not self.w2v:
+        if not config.WORD_2_VEC:
             wv = KeyedVectors.load_word2vec_format(w2v_file)
             w2v = dict(zip(list(wv.vocab.keys()), wv.vectors))
-            self.w2v = w2v
+            config.WORD_2_VEC = w2v
 
         comments = list(comments)
         target, indices = self.process_ratings(ratings)
@@ -191,7 +179,7 @@ class Processor:
             token_embeddings = []
             for token in tokens:
                 try:
-                    token_embeddings.append(self.w2v[token])
+                    token_embeddings.append(config.WORD_2_VEC[token])
                 except KeyError:
                     continue
             if len(token_embeddings) == 0:
@@ -227,7 +215,7 @@ class Processor:
         ratings_and_indices = []
         for i, rating in enumerate(ratings):
             if type(rating) == str:
-                ratings_and_indices.append({'target': float(ast.literal_eval(rating)[self.ratings_type]), 'index': i})
+                ratings_and_indices.append({'target': float(ast.literal_eval(rating)[config.RATING_TYPE]), 'index': i})
             else:
                 ratings_and_indices.append({'target': rating, 'index': i})
 
@@ -239,24 +227,24 @@ class Processor:
         indices = []
 
         for i, r_and_i in enumerate(ratings_and_indices):
-            if self.num_classes == 2:
-                if r_and_i['target'] >= self.pos_threshold:
+            if config.NUM_CLASSES == 2:
+                if r_and_i['target'] >= config.POS_THRESHOLD:
                     target.append('pos')
                     indices.append(r_and_i['index'])
-                elif r_and_i['target'] <= self.neg_threshold:
+                elif r_and_i['target'] <= config.NEG_THRESHOLD:
                     target.append('neg')
                     indices.append(r_and_i['index'])
-            elif self.num_classes == 3:
-                if r_and_i['target'] >= self.pos_threshold:
+            elif config.NUM_CLASSES == 3:
+                if r_and_i['target'] >= config.POS_THRESHOLD:
                     target.append('pos')
                     indices.append(r_and_i['index'])
-                elif r_and_i['target'] <= self.neg_threshold:
+                elif r_and_i['target'] <= config.NEG_THRESHOLD:
                     target.append('neg')
                     indices.append(r_and_i['index'])
-                elif self.neg_threshold < r_and_i['target'] < self.pos_threshold:
+                elif config.NEG_THRESHOLD < r_and_i['target'] < config.POS_THRESHOLD:
                     target.append('neutral')
                     indices.append(r_and_i['index'])
-            elif self.num_classes == 5:
+            elif config.NUM_CLASSES == 5:
                 target.append(str(r_and_i['target']))
                 indices.append(r_and_i['index'])
 
