@@ -5,6 +5,7 @@ import os
 import datetime
 import numpy as np
 import ast
+from gensim.models import KeyedVectors
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
@@ -38,7 +39,7 @@ class Dataset:
     def __init__(self, scraper=None,
                  use_rating=True, use_dates=True,
                  use_drugs=True, use_user_ids=False,
-                 use_urls=False):
+                 use_urls=False, w2v_file=None, pos=None):
 
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
@@ -79,6 +80,11 @@ class Dataset:
         self.end_timestamp = None
         self.data = pd.DataFrame(columns=self.data_used)
         self.processor = Processor()
+
+        wv = KeyedVectors.load_word2vec_format(w2v_file)
+        w2v = dict(zip(list(wv.vocab.keys()), wv.vectors))
+        config.WORD_2_VEC = w2v
+        config.POS = pos
 
     def collect(self, url):
         """
@@ -322,12 +328,12 @@ class Dataset:
         """
         if not classifying:
             data, target = self.processor.get_average_embeddings(
-                self.data['comment'], self.data['rating'], w2v_file=w2v_file)
+                self.data['comment'], self.data['rating'],)
             return data, target
         else:
             data, target, unprocessed = self.processor.get_average_embeddings(
                 self.data['comment'], self.data['rating'],
-                return_unprocessed=True, w2v_file=w2v_file)
+                return_unprocessed=True)
             return data, target, unprocessed
 
     def get_pos_vectors(self, pos, classifying=False):
@@ -342,11 +348,11 @@ class Dataset:
 
         if not classifying:
             data, target = self.processor.get_pos_vectors(
-                self.data['comment'], self.data['rating'], part_of_speech=config.POS)
+                self.data['comment'], self.data['rating'])
             return data, target
         else:
             data, target, unprocessed = self.processor.get_pos_vectors(
-                self.data['comment'], self.data['rating'], part_of_speech=config.POS, return_unprocessed=True)
+                self.data['comment'], self.data['rating'], return_unprocessed=True)
             return data, target, unprocessed
 
 

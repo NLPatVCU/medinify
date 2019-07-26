@@ -5,7 +5,6 @@ import spacy
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from nltk.corpus import stopwords
-from gensim.models import KeyedVectors
 from medinify import config
 
 
@@ -20,7 +19,6 @@ class Processor:
         nlp: spacy english model for tokenizing and getting parts of speech
         stops: set of stop words
     """
-
     count_vectorizer = None
     tfidf_vectorizer = None
     pos_vectorizer = None
@@ -40,7 +38,7 @@ class Processor:
         comments = list(comments)
         ratings = np.asarray(ratings)
 
-        target, indices = self.process_ratings(ratings)
+        target, indices = process_ratings(ratings)
         comments = [comments[x] for x in indices]
 
         for i, comment in enumerate(comments):
@@ -74,7 +72,7 @@ class Processor:
         comments = list(comments)
         ratings = np.asarray(ratings)
 
-        target, indices = self.process_ratings(ratings)
+        target, indices = process_ratings(ratings)
         comments = [comments[x] for x in indices]
 
         for i, comment in enumerate(comments):
@@ -96,19 +94,20 @@ class Processor:
         else:
             return data, target, comments
 
-    def get_pos_vectors(self, comments, ratings, part_of_speech, return_unprocessed=False):
+    def get_pos_vectors(self, comments, ratings, return_unprocessed=False):
         """
         Count vectorizes comments using only words of a specific part of speech
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
-        :param part_of_speech: sptring representing the part-of-speech being selected
         :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
+        assert config.POS, 'No part of speech specified when constructing Dataset'
+
         comments = list(comments)
         ratings = np.asarray(ratings)
 
-        target, indices = self.process_ratings(ratings)
+        target, indices = process_ratings(ratings)
         comments = [comments[x] for x in indices]
 
         for i, comment in enumerate(comments):
@@ -121,7 +120,7 @@ class Processor:
         for comment in comments:
             only_pos = ' '.join([token.text for token in self.nlp(comment.lower())
                                  if token.text not in self.stops and not token.is_punct
-                                 and token.pos_ == part_of_speech])
+                                 and token.pos_ == config.POS])
             pos_strings.append(only_pos)
 
         unprocessed = []
@@ -147,7 +146,7 @@ class Processor:
         else:
             return data, target, unprocessed
 
-    def get_average_embeddings(self, comments, ratings, w2v_file=None, return_unprocessed=False):
+    def get_average_embeddings(self, comments, ratings, return_unprocessed=False):
         """
         Count vectorizes comments using only words of a specific part of speech
         :param comments: list of comment strings
@@ -156,15 +155,10 @@ class Processor:
         :param return_unprocessed: whether or not to return unprocessed comments
         :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
         """
-        assert w2v_file or config.WORD_2_VEC, 'A file containing word vectors must be specified'
-
-        if not config.WORD_2_VEC:
-            wv = KeyedVectors.load_word2vec_format(w2v_file)
-            w2v = dict(zip(list(wv.vocab.keys()), wv.vectors))
-            config.WORD_2_VEC = w2v
+        assert config.WORD_2_VEC, 'No word embeddings file specified when constructing Dataset'
 
         comments = list(comments)
-        target, indices = self.process_ratings(ratings)
+        target, indices = process_ratings(ratings)
         comments = [comments[x] for x in indices]
 
         for i, comment in enumerate(comments):
@@ -205,53 +199,6 @@ class Processor:
         else:
             return data, target, unprocessed
 
-    def process_ratings(self, ratings):
-        """
-        Processes ratings into label vector
-        :param ratings: list of review ratings
-        :return: vectorized ratings, indicies indicating where in the original
-            list the processed ratings came from
-        """
-        ratings_and_indices = []
-        for i, rating in enumerate(ratings):
-            if type(rating) == str:
-                ratings_and_indices.append({'target': float(ast.literal_eval(rating)[config.RATING_TYPE]), 'index': i})
-            else:
-                ratings_and_indices.append({'target': rating, 'index': i})
-
-        for i, r_and_i in enumerate(ratings_and_indices):
-            if np.isnan(r_and_i['target']):
-                del ratings_and_indices[i]
-
-        target = []
-        indices = []
-
-        for i, r_and_i in enumerate(ratings_and_indices):
-            if config.NUM_CLASSES == 2:
-                if r_and_i['target'] >= config.POS_THRESHOLD:
-                    target.append('pos')
-                    indices.append(r_and_i['index'])
-                elif r_and_i['target'] <= config.NEG_THRESHOLD:
-                    target.append('neg')
-                    indices.append(r_and_i['index'])
-            elif config.NUM_CLASSES == 3:
-                if r_and_i['target'] >= config.POS_THRESHOLD:
-                    target.append('pos')
-                    indices.append(r_and_i['index'])
-                elif r_and_i['target'] <= config.NEG_THRESHOLD:
-                    target.append('neg')
-                    indices.append(r_and_i['index'])
-                elif config.NEG_THRESHOLD < r_and_i['target'] < config.POS_THRESHOLD:
-                    target.append('neutral')
-                    indices.append(r_and_i['index'])
-            elif config.NUM_CLASSES == 5:
-                target.append(str(r_and_i['target']))
-                indices.append(r_and_i['index'])
-
-        encoder = LabelEncoder()
-        target = list(encoder.fit_transform(target))
-        return target, indices
-
     def tokenize(self, comment):
         """
         Runs spacy tokenization
@@ -261,4 +208,52 @@ class Processor:
         tokens = [token.text for token in self.nlp.tokenizer(comment.lower())
                   if token.text not in self.stops and not token.is_punct]
         return tokens
+
+
+def process_ratings(ratings):
+    """
+    Processes ratings into label vector
+    :param ratings: list of review ratings
+    :return: vectorized ratings, indicies indicating where in the original
+        list the processed ratings came from
+    """
+    ratings_and_indices = []
+    for i, rating in enumerate(ratings):
+        if type(rating) == str:
+            ratings_and_indices.append({'target': float(ast.literal_eval(rating)[config.RATING_TYPE]), 'index': i})
+        else:
+            ratings_and_indices.append({'target': rating, 'index': i})
+
+    for i, r_and_i in enumerate(ratings_and_indices):
+        if np.isnan(r_and_i['target']):
+            del ratings_and_indices[i]
+
+    target = []
+    indices = []
+
+    for i, r_and_i in enumerate(ratings_and_indices):
+        if config.NUM_CLASSES == 2:
+            if r_and_i['target'] >= config.POS_THRESHOLD:
+                target.append('pos')
+                indices.append(r_and_i['index'])
+            elif r_and_i['target'] <= config.NEG_THRESHOLD:
+                target.append('neg')
+                indices.append(r_and_i['index'])
+        elif config.NUM_CLASSES == 3:
+            if r_and_i['target'] >= config.POS_THRESHOLD:
+                target.append('pos')
+                indices.append(r_and_i['index'])
+            elif r_and_i['target'] <= config.NEG_THRESHOLD:
+                target.append('neg')
+                indices.append(r_and_i['index'])
+            elif config.NEG_THRESHOLD < r_and_i['target'] < config.POS_THRESHOLD:
+                target.append('neutral')
+                indices.append(r_and_i['index'])
+        elif config.NUM_CLASSES == 5:
+            target.append(str(r_and_i['target']))
+            indices.append(r_and_i['index'])
+
+    encoder = LabelEncoder()
+    target = list(encoder.fit_transform(target))
+    return target, indices
 

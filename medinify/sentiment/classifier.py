@@ -22,7 +22,7 @@ class Classifier:
         count_vectorizer: turns strings into count vectors
         tfidf_vectorizer: turns strings into tfidf vectors
         pos_count_vectorizer: turns string into count vectors for a certain part of speech
-        processor: processes data and ratings into numeric representations
+        dataset: the classifier's Dataset (defines for data is loaded and processed)
         pos: part of speech if using pos count vectors
     """
 
@@ -30,13 +30,13 @@ class Classifier:
     count_vectorizer = None
     tfidf_vectorizer = None
     pos_count_vectorizer = None
-    processor = None
 
     def __init__(self, classifier_type=None, w2v_file=None, pos=None):
         assert classifier_type in ['nb', 'rf', 'svm'], 'Classifier Type must be \'nb\', \'rf\', or \'svm\''
         self.classifier_type = classifier_type
         self.pos = pos
         self.w2v_file = w2v_file
+        self.dataset = Dataset(w2v_file=w2v_file, pos=pos)
 
     def fit(self, output_file, reviews_file=None, data=None, target=None):
         """
@@ -150,32 +150,7 @@ class Classifier:
 
             num_fold += 1
 
-        self.print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix)
-
-    def print_validation_metrics(self, accuracies, precisions, recalls, f_measures, overall_matrix):
-        """
-        Prints cross validation metrics
-        :param accuracies: list of accuracy scores
-        :param precisions: list of precision scores per class
-        :param recalls: list of recall scores per class
-        :param f_measures: list of f-measure scores per class
-        :param overall_matrix: total confusion matrix
-        """
-        print('\n**********************************************************************\n')
-        print('Validation Metrics:')
-        print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(accuracies), np.std(accuracies)))
-        for i in range(config.NUM_CLASSES):
-            key_ = 'Class ' + str(i + 1)
-            print('\tClass {} Average Precision: {:.4f}% +/- {:.4f}%'.format(
-                i + 1, np.mean(precisions[key_]), np.std(precisions[key_])))
-            print('\tClass {} Average Recall: {:.4f}% +/- {:.4f}%'.format(
-                i + 1, np.mean(recalls[key_]), np.std(recalls[key_])))
-            print('\tClass {} Average F-Measure: {:.4f}% +/- {:.4f}%\n'.format(
-                i + 1, np.mean(f_measures[key_]), np.std(f_measures[key_])))
-        print('\tOverall Confusion Matrix:\n')
-        for row in overall_matrix:
-            print('\t{}'.format('\t'.join([str(x) for x in row])))
-        print('\n**********************************************************************\n')
+        print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix)
 
     def classify(self, trained_model_file, reviews_csv, output_file):
         """
@@ -211,7 +186,7 @@ class Classifier:
         """
         with open(output_file, 'wb') as f:
             pickle.dump(trained_model, f, protocol=pickle.HIGHEST_PROTOCOL)
-            pickle.dump(self.processor, f, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.dataset, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_model(self, model_file):
         """
@@ -221,7 +196,7 @@ class Classifier:
         """
         with open(model_file, 'rb') as f:
             model = pickle.load(f)
-            self.processor = pickle.load(f)
+            self.dataset = pickle.load(f)
         return model
 
     def load_data(self, review_csv, classifying=False):
@@ -231,39 +206,59 @@ class Classifier:
         :param classifying: if running classification
         :return: data, target
         """
-        dataset = Dataset()
-
-        dataset.load_file(review_csv)
-        if self.processor:
-            dataset.processor = self.processor
+        self.dataset.load_file(review_csv)
 
         unprocessed = None
         data, target = None, None
         if config.DATA_REPRESENTATION == 'count':
             if not classifying:
-                data, target = dataset.get_count_vectors()
+                data, target = self.dataset.get_count_vectors()
             else:
-                data, target, unprocessed = dataset.get_count_vectors(classifying=True)
+                data, target, unprocessed = self.dataset.get_count_vectors(classifying=True)
         elif config.DATA_REPRESENTATION == 'tfidf':
             if not classifying:
-                data, target = dataset.get_tfidf_vectors()
+                data, target = self.dataset.get_tfidf_vectors()
             else:
-                data, target, unprocessed = dataset.get_tfidf_vectors(classifying=True)
+                data, target, unprocessed = self.dataset.get_tfidf_vectors(classifying=True)
         elif config.DATA_REPRESENTATION == 'embedding':
             if not classifying:
-                data, target = dataset.get_average_embeddings(w2v_file=self.w2v_file)
+                data, target = self.dataset.get_average_embeddings(w2v_file=self.w2v_file)
             else:
-                data, target, unprocessed = dataset.get_average_embeddings(w2v_file=self.w2v_file, classifying=True)
+                data, target, unprocessed = self.dataset.get_average_embeddings(w2v_file=self.w2v_file, classifying=True)
         elif config.DATA_REPRESENTATION == 'pos':
             if not classifying:
-                data, target = dataset.get_pos_vectors(pos=self.pos)
+                data, target = self.dataset.get_pos_vectors(pos=self.pos)
             else:
-                data, target, unprocessed = dataset.get_pos_vectors(pos=self.pos, classifying=True)
-        if not self.processor:
-            self.processor = dataset.processor
+                data, target, unprocessed = self.dataset.get_pos_vectors(pos=self.pos, classifying=True)
 
         if classifying:
             return data, target, unprocessed
         else:
             return data, target
+
+
+def print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix):
+    """
+    Prints cross validation metrics
+    :param accuracies: list of accuracy scores
+    :param precisions: list of precision scores per class
+    :param recalls: list of recall scores per class
+    :param f_measures: list of f-measure scores per class
+    :param overall_matrix: total confusion matrix
+    """
+    print('\n**********************************************************************\n')
+    print('Validation Metrics:')
+    print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(accuracies), np.std(accuracies)))
+    for i in range(config.NUM_CLASSES):
+        key_ = 'Class ' + str(i + 1)
+        print('\tClass {} Average Precision: {:.4f}% +/- {:.4f}%'.format(
+            i + 1, np.mean(precisions[key_]), np.std(precisions[key_])))
+        print('\tClass {} Average Recall: {:.4f}% +/- {:.4f}%'.format(
+            i + 1, np.mean(recalls[key_]), np.std(recalls[key_])))
+        print('\tClass {} Average F-Measure: {:.4f}% +/- {:.4f}%\n'.format(
+            i + 1, np.mean(f_measures[key_]), np.std(f_measures[key_])))
+    print('\tOverall Confusion Matrix:\n')
+    for row in overall_matrix:
+        print('\t{}'.format('\t'.join([str(x) for x in row])))
+    print('\n**********************************************************************\n')
 
