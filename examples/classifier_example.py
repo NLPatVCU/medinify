@@ -11,6 +11,7 @@ def main():
     # Review sentiment classifier
     # review_classifier = ReviewClassifier('nb') # Try 'nb', 'dt', 'rf', and 'nn'
     # review_classifier.train('citalopram-reviews.csv')
+    # not correct^
     # review_classifier.save_model()
     # review_classifier.load_model()
     # review_classifier.evaluate_average_accuracy('citalopram-reviews.csv')
