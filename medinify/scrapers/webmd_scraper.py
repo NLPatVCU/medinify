@@ -99,6 +99,9 @@ class WebMDScraper(Scraper):
 
         characters = list(drug_name.lower())
         name = ''.join([x if x.isalnum() else hex(ord(x)).replace('0x', '%') for x in characters])
+        if len(name) < 4:
+            print('{} name too short; Please manually search for such reviews')
+            return
 
         url = 'https://www.webmd.com/drugs/2/search?type=drugs&query=' + name
         page = requests.get(url)
