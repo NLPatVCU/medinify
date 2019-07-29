@@ -99,7 +99,7 @@ class WebMDScraper(Scraper):
 
         if not drug_name or len(drug_name) < 4:
             print('{} name too short; Please manually search for such reviews'.format(drug_name))
-            return
+            return []
 
         characters = list(drug_name.lower())
         name = ''.join([x if x.isalnum() else hex(ord(x)).replace('0x', '%') for x in characters])
