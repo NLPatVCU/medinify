@@ -2,7 +2,7 @@
 Examples for how to use the Medinify ReviewDataset() class
 """
 
-from medinify.datasets import ReviewDataset
+from medinify.datasets import Dataset
 
 def main():
     """ Main function.
