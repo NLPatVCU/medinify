@@ -64,8 +64,7 @@ def collect(args):
     Scrapes reviews data
     :param args: command line arguments
     """
-    dataset = Dataset(args.scraper, w2v_file=args.word_embeddings, pos=args.pos,
-                      use_user_ids=args.collect_user, use_urls=args.collect_url)
+    dataset = Dataset(args.scraper, use_user_ids=args.collect_user, use_urls=args.collect_url)
 
     if args.names_file:
         dataset.collect_from_drug_names(args.names_file)
@@ -88,9 +87,9 @@ def main():
     parser.add_argument('-pt', '--pos-threshold', help='Ratings Positive Threshold.', default=4.0, type=float)
     parser.add_argument('-nt', '--neg-threshold', help='Ratings Negative Threshold.', default=2.0, type=float)
     parser.add_argument('-nc', '--num-classes', help='Number of ratings classes', default=2,
-                        type=float, choices=[2, 3, 5])
+                        type=int, choices=[2, 3, 5])
     parser.add_argument('-d', '--data-representation', help='How comment data should be represented numerically',
-                        default='count', choices=['count', 'tfidf', 'embedding', 'pos'])
+                        default='count', choices=['count', 'tfidf', 'embeddings', 'pos'])
     parser.add_argument('-t', '--rating-type', help='If dataset contains multiple types of ratings, which one to use',
                         default='effectiveness')
     subparsers = parser.add_subparsers()
@@ -99,8 +98,8 @@ def main():
     parser_train = subparsers.add_parser('train', help='Train a new model.')
     parser_train.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
     parser_train.add_argument('-wv', '--word-embeddings',
-                              help='Path to word embeddings file if using average embeddings')
-    parser_train.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors')
+                              help='Path to word embeddings file if using average embeddings', default=None)
+    parser_train.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser_train.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_train.add_argument('-o', '--output', help='Path to save model file', required=True)
     parser_train.set_defaults(func=train)
@@ -109,8 +108,8 @@ def main():
     parser_eval = subparsers.add_parser('evaluate', help='Evaluate a trained model.')
     parser_eval.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
     parser_eval.add_argument('-wv', '--word-embeddings',
-                             help='Path to word embeddings file if using average embeddings')
-    parser_eval.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors')
+                             help='Path to word embeddings file if using average embeddings', default=None)
+    parser_eval.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser_eval.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_eval.add_argument('-m', '--model', help='Path to saved model file', required=True)
     parser_eval.set_defaults(func=evaluate)
@@ -119,8 +118,8 @@ def main():
     parser_valid = subparsers.add_parser('validate', help='Cross validate a model.')
     parser_valid.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
     parser_valid.add_argument('-wv', '--word-embeddings',
-                              help='Path to word embeddings file if using average embeddings')
-    parser_valid.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors')
+                              help='Path to word embeddings file if using average embeddings', default=None)
+    parser_valid.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser_valid.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_valid.add_argument('-f', '--folds', help='Number of folds.', required=True, type=int)
     parser_valid.set_defaults(func=validate)
@@ -130,8 +129,9 @@ def main():
     parser_classify.add_argument('-c', '--classifier', help='Classifier type', default='nb',
                                  choices=['nb', 'rf', 'svm'])
     parser_classify.add_argument('-wv', '--word-embeddings',
-                                 help='Path to word embeddings file if using average embeddings')
-    parser_classify.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors')
+                                 help='Path to word embeddings file if using average embeddings', default=None)
+    parser_classify.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors',
+                                 default=None)
     parser_classify.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_classify.add_argument('-m', '--model', help='Path to saved model file', required=True)
     parser_classify.add_argument('-o', '--output', help='Path to save model file', required=True)

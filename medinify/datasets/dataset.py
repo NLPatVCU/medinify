@@ -81,10 +81,12 @@ class Dataset:
         self.data = pd.DataFrame(columns=self.data_used)
         self.processor = Processor()
 
-        wv = KeyedVectors.load_word2vec_format(w2v_file)
-        w2v = dict(zip(list(wv.vocab.keys()), wv.vectors))
-        config.WORD_2_VEC = w2v
-        config.POS = pos
+        if w2v_file:
+            wv = KeyedVectors.load_word2vec_format(w2v_file)
+            w2v = dict(zip(list(wv.vocab.keys()), wv.vectors))
+            config.WORD_2_VEC = w2v
+        if pos:
+            config.POS = pos
 
     def collect(self, url):
         """
@@ -165,6 +167,8 @@ class Dataset:
             columns.append('user id')
         if write_urls:
             columns.append('url')
+        self.remove_empty_comments()
+        self.remove_duplicate_comments()
         self.data.to_csv(output_file, columns=columns, index=False)
 
     def save_data(self, output_file):
