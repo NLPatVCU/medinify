@@ -164,6 +164,7 @@ class Dataset:
             columns.append('url')
         self.remove_empty_comments()
         self.remove_duplicate_comments()
+        self.remove_float_comments()
         self.data.to_csv(output_file, columns=columns, index=False)
 
     def save_data(self, output_file):
@@ -175,6 +176,7 @@ class Dataset:
             pickle.dump(self.data, pkl, protocol=pickle.HIGHEST_PROTOCOL)
             pickle.dump(self.start_timestamp, pkl, protocol=pickle.HIGHEST_PROTOCOL)
             pickle.dump(self.end_timestamp, pkl, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.processor, pkl, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_data(self, pickle_file):
         """
@@ -185,6 +187,7 @@ class Dataset:
             self.data = pickle.load(pkl)
             self.start_timestamp = pickle.load(pkl)
             self.end_timestamp = pickle.load(pkl)
+            self.processor = pickle.load(pkl)
         self.remove_float_comments()
 
     def load_file(self, csv_file):
@@ -193,7 +196,6 @@ class Dataset:
         :param csv_file: path to csv file to load
         """
         self.data = pd.read_csv(csv_file)
-        self.remove_float_comments()
 
     def remove_empty_comments(self):
         """
@@ -314,6 +316,10 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
+        self.remove_empty_comments()
+        self.remove_duplicate_comments()
+        self.remove_float_comments()
+
         reviews = self.processor.get_count_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
@@ -341,6 +347,10 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
+        self.remove_empty_comments()
+        self.remove_duplicate_comments()
+        self.remove_float_comments()
+
         reviews = self.processor.get_tfidf_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
@@ -368,6 +378,10 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
+        self.remove_empty_comments()
+        self.remove_duplicate_comments()
+        self.remove_float_comments()
+
         reviews = self.processor.get_average_embeddings(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
@@ -396,6 +410,10 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
+        self.remove_empty_comments()
+        self.remove_duplicate_comments()
+        self.remove_float_comments()
+
         reviews = self.processor.get_pos_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
