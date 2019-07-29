@@ -39,17 +39,14 @@ class Dataset:
                  use_rating=True, use_dates=True,
                  use_drugs=True, use_user_ids=False,
                  use_urls=False, w2v_file=None, pos=None):
-
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                         collect_urls=use_urls)
-
         elif scraper == 'Drugs':
             self.scraper = DrugsScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
                                         collect_urls=use_urls)
-
         elif scraper == 'DrugRatingz':
             self.scraper = DrugRatingzScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                               collect_drugs=use_drugs, collect_user_ids=use_user_ids,
@@ -61,7 +58,6 @@ class Dataset:
 
         if self.scraper:
             self.data_used = self.scraper.data_collected
-
         else:
             self.data_used.append('comment')
             if use_rating:
