@@ -3,9 +3,9 @@ import numpy as np
 import ast
 import spacy
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.preprocessing import LabelEncoder
 from nltk.corpus import stopwords
 from medinify import config
+from collections import namedtuple
 
 
 class Processor:
@@ -27,25 +27,18 @@ class Processor:
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
 
-    def get_count_vectors(self, comments, ratings, return_unprocessed=False):
+    def get_count_vectors(self, comments, ratings):
         """
         Count vectorizes comments
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
-        :param return_unprocessed: whether or not to return unprocessed comments
-        :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
+        :return: reviews: list of tuples with original comment, data, and target
         """
         comments = list(comments)
         ratings = np.asarray(ratings)
-
-        target, indices = process_ratings(ratings)
-        comments = [comments[x] for x in indices]
-
-        for i, comment in enumerate(comments):
-            if type(comment) == float:
-                del comments[i]
-                del indices[i]
-                del target[i]
+        target = process_rating(ratings)
+        review = namedtuple('review', 'comment, data, target')
+        reviews = np.empty(len(comments), dtype=tuple)
 
         if not self.count_vectorizer:
             count_vectorizer = CountVectorizer(tokenizer=self.tokenize)
@@ -54,32 +47,24 @@ class Processor:
         else:
             data = np.asarray([x.todense() for x in self.count_vectorizer.transform(comments)]).squeeze(1)
 
-        target = np.asarray(target)
+        for i in range(reviews.shape[0]):
+            datum = review(comment=comments[i], target=target[i], data=data[i])
+            reviews[i] = datum
 
-        if not return_unprocessed:
-            return data, target
-        else:
-            return data, target, comments
+        return reviews
 
-    def get_tfidf_vectors(self, comments, ratings, return_unprocessed=False):
+    def get_tfidf_vectors(self, comments, ratings):
         """
         TF-IDF vectorizes comments
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
-        :param return_unprocessed: whether or not to return unprocessed comments
-        :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
+        :return: reviews: list of tuples with original comment, data, and target
         """
         comments = list(comments)
         ratings = np.asarray(ratings)
-
-        target, indices = process_ratings(ratings)
-        comments = [comments[x] for x in indices]
-
-        for i, comment in enumerate(comments):
-            if type(comment) == float:
-                del comments[i]
-                del indices[i]
-                del target[i]
+        target = process_rating(ratings)
+        review = namedtuple('review', 'comment, data, target')
+        reviews = np.empty(len(comments), dtype=tuple)
 
         if not self.tfidf_vectorizer:
             tfidf_vectorizer = TfidfVectorizer(tokenizer=self.tokenize)
@@ -88,33 +73,26 @@ class Processor:
         else:
             data = np.asarray([x.todense() for x in self.tfidf_vectorizer.transform(comments)]).squeeze(1)
 
-        target = np.asarray(target)
-        if not return_unprocessed:
-            return data, target
-        else:
-            return data, target, comments
+        for i in range(reviews.shape[0]):
+            datum = review(comment=comments[i], target=target[i], data=data[i])
+            reviews[i] = datum
 
-    def get_pos_vectors(self, comments, ratings, return_unprocessed=False):
+        return reviews
+
+    def get_pos_vectors(self, comments, ratings):
         """
         Count vectorizes comments using only words of a specific part of speech
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
-        :param return_unprocessed: whether or not to return unprocessed comments
-        :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
+        :return: reviews: list of tuples with original comment, data, and target
         """
         assert config.POS, 'No part of speech specified when constructing Dataset'
 
         comments = list(comments)
         ratings = np.asarray(ratings)
-
-        target, indices = process_ratings(ratings)
-        comments = [comments[x] for x in indices]
-
-        for i, comment in enumerate(comments):
-            if type(comment) == float:
-                del comments[i]
-                del indices[i]
-                del target[i]
+        target = process_rating(ratings)
+        review = namedtuple('review', 'comment, data, target')
+        reviews = np.empty(len(comments), dtype=tuple)
 
         pos_strings = []
         for comment in comments:
@@ -123,15 +101,6 @@ class Processor:
                                  and token.pos_ == config.POS])
             pos_strings.append(only_pos)
 
-        unprocessed = []
-        for i, pos_string in enumerate(pos_strings):
-            if pos_string == '':
-                del pos_strings[i]
-                del target[i]
-                del indices[i]
-            else:
-                unprocessed.append(comments[i])
-
         if not self.pos_vectorizer:
             pos_vectorizer = CountVectorizer(tokenizer=self.tokenize)
             data = np.asarray([x.todense() for x in pos_vectorizer.fit_transform(comments)]).squeeze(1)
@@ -139,33 +108,26 @@ class Processor:
         else:
             data = np.asarray([x.todense() for x in self.pos_vectorizer.transform(comments)]).squeeze(1)
 
-        target = np.asarray(target)
+        for i in range(reviews.shape[0]):
+            datum = review(comment=comments[i], target=target[i], data=data[i])
+            reviews[i] = datum
 
-        if not return_unprocessed:
-            return data, target
-        else:
-            return data, target, unprocessed
+        return reviews
 
-    def get_average_embeddings(self, comments, ratings, return_unprocessed=False):
+    def get_average_embeddings(self, comments, ratings):
         """
         Count vectorizes comments using only words of a specific part of speech
         :param comments: list of comment strings
         :param ratings: list of numeric ratings
-        :param w2v_file: path to file containing trained word embeddings
-        :param return_unprocessed: whether or not to return unprocessed comments
-        :return: data (ndarray for vectorized comments) and target (ndarray of rating labels)
+        :return: reviews: list of tuples with original comment, data, and target
         """
         assert config.WORD_2_VEC, 'No word embeddings file specified when constructing Dataset'
 
         comments = list(comments)
-        target, indices = process_ratings(ratings)
-        comments = [comments[x] for x in indices]
-
-        for i, comment in enumerate(comments):
-            if type(comment) == float:
-                del comments[i]
-                del indices[i]
-                del target[i]
+        ratings = np.asarray(ratings)
+        target = process_rating(ratings)
+        review = namedtuple('review', 'comment, data, target')
+        reviews = np.empty(len(comments), dtype=tuple)
 
         average_embeddings = []
         for comment in comments:
@@ -177,27 +139,18 @@ class Processor:
                 except KeyError:
                     continue
             if len(token_embeddings) == 0:
-                average_embeddings.append([])
+                average_embeddings.append(np.zeros(100))
             else:
                 average = np.average(token_embeddings, axis=0)
                 average_embeddings.append(average)
 
-        unprocessed = []
-        for i, average in enumerate(average_embeddings):
-            if type(average) == list:
-                del average_embeddings[i]
-                del target[i]
-                del indices[i]
-            else:
-                unprocessed.append(comments[i])
-
         data = np.asarray(average_embeddings)
-        target = np.asarray(target)
 
-        if not return_unprocessed:
-            return data, target
-        else:
-            return data, target, unprocessed
+        for i in range(reviews.shape[0]):
+            datum = review(comment=comments[i], target=target[i], data=data[i])
+            reviews[i] = datum
+
+        return reviews
 
     def tokenize(self, comment):
         """
@@ -210,50 +163,37 @@ class Processor:
         return tokens
 
 
-def process_ratings(ratings):
+def process_rating(ratings):
     """
     Processes ratings into label vector
     :param ratings: list of review ratings
     :return: vectorized ratings, indicies indicating where in the original
         list the processed ratings came from
     """
-    ratings_and_indices = []
+    targets = np.empty(ratings.shape[0])
     for i, rating in enumerate(ratings):
         if type(rating) == str:
-            ratings_and_indices.append({'target': float(ast.literal_eval(rating)[config.RATING_TYPE]), 'index': i})
+            target = float(ast.literal_eval(rating)[config.RATING_TYPE])
         else:
-            ratings_and_indices.append({'target': rating, 'index': i})
-
-    for i, r_and_i in enumerate(ratings_and_indices):
-        if np.isnan(r_and_i['target']):
-            del ratings_and_indices[i]
-
-    target = []
-    indices = []
-
-    for i, r_and_i in enumerate(ratings_and_indices):
+            target = rating
         if config.NUM_CLASSES == 2:
-            if r_and_i['target'] >= config.POS_THRESHOLD:
-                target.append('pos')
-                indices.append(r_and_i['index'])
-            elif r_and_i['target'] <= config.NEG_THRESHOLD:
-                target.append('neg')
-                indices.append(r_and_i['index'])
+            if target >= config.POS_THRESHOLD:
+                target = 1
+            elif target <= config.NEG_THRESHOLD:
+                target = 0
+            elif config.NEG_THRESHOLD < target < config.POS_THRESHOLD:
+                target = None
         elif config.NUM_CLASSES == 3:
-            if r_and_i['target'] >= config.POS_THRESHOLD:
-                target.append('pos')
-                indices.append(r_and_i['index'])
-            elif r_and_i['target'] <= config.NEG_THRESHOLD:
-                target.append('neg')
-                indices.append(r_and_i['index'])
-            elif config.NEG_THRESHOLD < r_and_i['target'] < config.POS_THRESHOLD:
-                target.append('neutral')
-                indices.append(r_and_i['index'])
+            if target >= config.POS_THRESHOLD:
+                target = 2
+            elif target <= config.NEG_THRESHOLD:
+                target = 0
+            elif config.NEG_THRESHOLD < target < config.POS_THRESHOLD:
+                target = 1
         elif config.NUM_CLASSES == 5:
-            target.append(str(r_and_i['target']))
-            indices.append(r_and_i['index'])
+            target = target - 1
+        targets[i] = target
 
-    encoder = LabelEncoder()
-    target = list(encoder.fit_transform(target))
-    return target, indices
+    return targets
+
 

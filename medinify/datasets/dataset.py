@@ -32,7 +32,6 @@ class Dataset:
         use_user_ids: whether or not to store user id data
         use_urls: whether or not to store drug url data
     """
-
     scraper = None
     data_used = []
 
@@ -190,6 +189,7 @@ class Dataset:
             self.data = pickle.load(pkl)
             self.start_timestamp = pickle.load(pkl)
             self.end_timestamp = pickle.load(pkl)
+        self.remove_float_comments()
 
     def load_file(self, csv_file):
         """
@@ -197,6 +197,7 @@ class Dataset:
         :param csv_file: path to csv file to load
         """
         self.data = pd.read_csv(csv_file)
+        self.remove_float_comments()
 
     def remove_empty_comments(self):
         """
@@ -214,7 +215,7 @@ class Dataset:
 
         new_array = np.asarray(new_list)
         self.data = pd.DataFrame(new_array, columns=self.data_used)
-        print('Removed {} empty comments.'.format(num_empty))
+        print('Removed {} empty comment(s).'.format(num_empty))
 
     def remove_duplicate_comments(self):
         """
@@ -234,7 +235,25 @@ class Dataset:
 
         new_array = np.asarray(not_dupes)
         self.data = pd.DataFrame(new_array, columns=self.data_used)
-        print('Removed {} duplicate comments.'.format(num_dupes))
+        print('Removed {} duplicate comment(s).'.format(num_dupes))
+
+    def remove_float_comments(self):
+        """
+        Removes float comments from Dataset
+        """
+        data_array = self.data.to_numpy()
+        not_floats = []
+        num_floats = 0
+
+        for review in data_array:
+            if type(review[0]) == str:
+                not_floats.append(review)
+            else:
+                num_floats += 1
+
+        new_array = np.asarray(not_floats)
+        self.data = pd.DataFrame(new_array, columns=self.data_used)
+        print('Removed {} float comment(s).'.format(num_floats))
 
     def print_stats(self):
         """
@@ -299,14 +318,26 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
-        if not classifying:
-            data, target = self.processor.get_count_vectors(
-                self.data['comment'], self.data['rating'])
-            return data, target
+        reviews = self.processor.get_count_vectors(self.data['comment'], self.data['rating'])
+        data, target, comments = [], [], []
+        for review in reviews:
+            if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
+                data.append(review.data)
+                target.append(review.target)
+                comments.append(review.comment)
+            elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
+                data.append(review.data)
+                target.append(review.target)
+                comments.append(review.comment)
+            elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
+                data.append(review.data)
+                target.append(review.target)
+                comments.append(review.comment)
+
+        if classifying:
+            return data, target, comments
         else:
-            data, target, unprocessed = self.processor.get_count_vectors(
-                self.data['comment'], self.data['rating'], return_unprocessed=True)
-            return data, target, unprocessed
+            return data, target
 
     def get_tfidf_vectors(self, classifying=False):
         """
@@ -314,50 +345,82 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
-        if not classifying:
-            data, target = self.processor.get_tfidf_vectors(
-                self.data['comment'], self.data['rating'])
-            return data, target
-        else:
-            data, target, unprocessed = self.processor.get_tfidf_vectors(
-                self.data['comment'], self.data['rating'], return_unprocessed=True)
-            return data, target, unprocessed
+        reviews = self.processor.get_tfidf_vectors(self.data['comment'], self.data['rating'])
+        data, target, comments = [], [], []
+        for review in reviews:
+            if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
+                data.append(review.data)
+                target.append(review.target)
+                comments.append(review.comment)
+            elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
+                data.append(review.data)
+                target.append(review.target)
+                comments.append(review.comment)
+            elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
+                data.append(review.data)
+                target.append(review.target)
+                comments.append(review.comment)
 
-    def get_average_embeddings(self, w2v_file, classifying=False):
+        if classifying:
+            return data, target, comments
+        else:
+            return data, target
+
+    def get_average_embeddings(self, classifying=False):
         """
         Wraps around Processor function
-        :param w2v_file: path to word embeddings file
         :param classifying: if running classification on data
         :return: data, target
         """
-        if not classifying:
-            data, target = self.processor.get_average_embeddings(
-                self.data['comment'], self.data['rating'],)
-            return data, target
-        else:
-            data, target, unprocessed = self.processor.get_average_embeddings(
-                self.data['comment'], self.data['rating'],
-                return_unprocessed=True)
-            return data, target, unprocessed
+        reviews = self.processor.get_average_embeddings(self.data['comment'], self.data['rating'])
+        data, target, comments = [], [], []
+        for review in reviews:
+            if not np.sum(review.data) == 0:
+                if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
+                    data.append(review.data)
+                    target.append(review.target)
+                    comments.append(review.comment)
+                elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
+                    data.append(review.data)
+                    target.append(review.target)
+                    comments.append(review.comment)
+                elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
+                    data.append(review.data)
+                    target.append(review.target)
+                    comments.append(review.comment)
 
-    def get_pos_vectors(self, pos, classifying=False):
+        if classifying:
+            return data, target, comments
+        else:
+            return data, target
+
+    def get_pos_vectors(self, classifying=False):
         """
         Wraps around Processor function
-        :param pos: part of speech
         :param classifying: if running classification on data
         :return: data, target
         """
-        if not config.POS:
-            config.POS = pos
+        reviews = self.processor.get_pos_vectors(self.data['comment'], self.data['rating'])
+        data, target, comments = [], [], []
+        for review in reviews:
+            if not np.sum(review.data) == 0:
+                if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
+                    data.append(review.data)
+                    target.append(review.target)
+                    comments.append(review.comment)
+                elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
+                    data.append(review.data)
+                    target.append(review.target)
+                    comments.append(review.comment)
+                elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
+                    data.append(review.data)
+                    target.append(review.target)
+                    comments.append(review.comment)
 
-        if not classifying:
-            data, target = self.processor.get_pos_vectors(
-                self.data['comment'], self.data['rating'])
-            return data, target
+        if classifying:
+            return data, target, comments
         else:
-            data, target, unprocessed = self.processor.get_pos_vectors(
-                self.data['comment'], self.data['rating'], return_unprocessed=True)
-            return data, target, unprocessed
+            return data, target
 
 
 
