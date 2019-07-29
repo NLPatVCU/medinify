@@ -34,8 +34,6 @@ class Classifier:
     def __init__(self, classifier_type=None, w2v_file=None, pos=None):
         assert classifier_type in ['nb', 'rf', 'svm'], 'Classifier Type must be \'nb\', \'rf\', or \'svm\''
         self.classifier_type = classifier_type
-        self.pos = pos
-        self.w2v_file = w2v_file
         self.dataset = Dataset(w2v_file=w2v_file, pos=pos)
 
     def fit(self, output_file, reviews_file=None, data=None, target=None):
@@ -211,25 +209,13 @@ class Classifier:
         unprocessed = None
         data, target = None, None
         if config.DATA_REPRESENTATION == 'count':
-            if not classifying:
-                data, target = self.dataset.get_count_vectors()
-            else:
-                data, target, unprocessed = self.dataset.get_count_vectors(classifying=True)
+            data, target, unprocessed = self.dataset.get_count_vectors(classifying=True)
         elif config.DATA_REPRESENTATION == 'tfidf':
-            if not classifying:
-                data, target = self.dataset.get_tfidf_vectors()
-            else:
-                data, target, unprocessed = self.dataset.get_tfidf_vectors(classifying=True)
-        elif config.DATA_REPRESENTATION == 'embedding':
-            if not classifying:
-                data, target = self.dataset.get_average_embeddings(w2v_file=self.w2v_file)
-            else:
-                data, target, unprocessed = self.dataset.get_average_embeddings(w2v_file=self.w2v_file, classifying=True)
+            data, target, unprocessed = self.dataset.get_tfidf_vectors(classifying=True)
+        elif config.DATA_REPRESENTATION == 'embeddings':
+            data, target, unprocessed = self.dataset.get_average_embeddings(classifying=True)
         elif config.DATA_REPRESENTATION == 'pos':
-            if not classifying:
-                data, target = self.dataset.get_pos_vectors(pos=self.pos)
-            else:
-                data, target, unprocessed = self.dataset.get_pos_vectors(pos=self.pos, classifying=True)
+            data, target, unprocessed = self.dataset.get_pos_vectors(classifying=True)
 
         if classifying:
             return data, target, unprocessed

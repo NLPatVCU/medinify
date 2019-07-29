@@ -27,7 +27,7 @@ def train(args):
     :param args: command line arguments
     """
     clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
-    clf.fit(args.output, reviews_file=args.reviews)
+    clf.fit(output_file=args.output, reviews_file=args.reviews)
 
 
 def evaluate(args):
@@ -92,46 +92,32 @@ def main():
                         default='count', choices=['count', 'tfidf', 'embeddings', 'pos'])
     parser.add_argument('-t', '--rating-type', help='If dataset contains multiple types of ratings, which one to use',
                         default='effectiveness')
+    parser.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
+    parser.add_argument('-wv', '--word-embeddings',
+                              help='Path to word embeddings file if using average embeddings', default=None)
+    parser.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     subparsers = parser.add_subparsers()
 
     # Train arguments
     parser_train = subparsers.add_parser('train', help='Train a new model.')
-    parser_train.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
-    parser_train.add_argument('-wv', '--word-embeddings',
-                              help='Path to word embeddings file if using average embeddings', default=None)
-    parser_train.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser_train.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_train.add_argument('-o', '--output', help='Path to save model file', required=True)
     parser_train.set_defaults(func=train)
 
     # Evaluate arguments
     parser_eval = subparsers.add_parser('evaluate', help='Evaluate a trained model.')
-    parser_eval.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
-    parser_eval.add_argument('-wv', '--word-embeddings',
-                             help='Path to word embeddings file if using average embeddings', default=None)
-    parser_eval.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser_eval.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_eval.add_argument('-m', '--model', help='Path to saved model file', required=True)
     parser_eval.set_defaults(func=evaluate)
 
     # Validate arguments
     parser_valid = subparsers.add_parser('validate', help='Cross validate a model.')
-    parser_valid.add_argument('-c', '--classifier', help='Classifier type', default='nb', choices=['nb', 'rf', 'svm'])
-    parser_valid.add_argument('-wv', '--word-embeddings',
-                              help='Path to word embeddings file if using average embeddings', default=None)
-    parser_valid.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser_valid.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_valid.add_argument('-f', '--folds', help='Number of folds.', required=True, type=int)
     parser_valid.set_defaults(func=validate)
 
     # Classify arguments
     parser_classify = subparsers.add_parser('classify', help='Classifies the sentiment of reviews.')
-    parser_classify.add_argument('-c', '--classifier', help='Classifier type', default='nb',
-                                 choices=['nb', 'rf', 'svm'])
-    parser_classify.add_argument('-wv', '--word-embeddings',
-                                 help='Path to word embeddings file if using average embeddings', default=None)
-    parser_classify.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors',
-                                 default=None)
     parser_classify.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_classify.add_argument('-m', '--model', help='Path to saved model file', required=True)
     parser_classify.add_argument('-o', '--output', help='Path to save model file', required=True)
