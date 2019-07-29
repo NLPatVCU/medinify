@@ -90,6 +90,10 @@ class DrugsScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
+        if not drug_name or len(drug_name) < 4:
+            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            return []
+
         characters = list('+'.join(drug_name.lower().split()))
         name = ''.join([x if x.isalnum() or x == '+' else hex(ord(x)).replace('0x', '%') for x in characters])
 

@@ -78,6 +78,10 @@ class DrugRatingzScraper(Scraper):
         :param drug_name: name of drug being searched for
         :return: drug url on given review forum
         """
+        if not drug_name or len(drug_name) < 4:
+            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            return []
+
         search_url = 'https://www.drugratingz.com/searchResults.jsp?thingname=' + \
                      drug_name.lower().split()[0] + '&1=&2='
         search_page = requests.get(search_url)
