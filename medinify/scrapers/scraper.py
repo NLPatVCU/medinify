@@ -1,6 +1,7 @@
 
 from abc import ABC, abstractmethod
 import pandas as pd
+import os
 
 
 class Scraper(ABC):
@@ -81,15 +82,26 @@ class Scraper(ABC):
         print('Wrote review url file.')
         print('No urls found for {} drugs: {}'.format(len(unfound_drugs), unfound_drugs))
 
-    def scrape_urls(self, urls_file):
+    def scrape_urls(self, urls_file, output_file, start=0):
         """
         Given a file containing a list of drug urls, scrapes those urls
         :param urls_file: path to text file containing drug urls
+        :param start: which url to start from
         """
         with open(urls_file, 'r') as f:
-            for i, url in enumerate(f.readlines()):
-                print('\nScraping review page #{}'.format(i + 1))
-                reviews_url = url.strip()
-                self.scrape(reviews_url)
+            urls = []
+            for url in f.readlines():
+                urls.append(url.strip())
+        if os.path.exists(output_file):
+            df = pd.read_csv(output_file)
+            df.columns = self.data_collected
+            self.dataset = df
+        for i, url in enumerate(urls[start:]):
+            print('Scraping url {} of {}'.format(i + 1, len(urls)))
+            self.scrape(url)
+            self.dataset.to_csv(output_file)
+            print('Safe to quit. Start from {}.'.format(i + 1))
+
+
 
 

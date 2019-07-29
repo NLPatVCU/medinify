@@ -67,15 +67,9 @@ def collect(args):
     dataset = Dataset(args.scraper, use_user_ids=args.collect_user, use_urls=args.collect_url)
 
     if args.names_file:
-        dataset.collect_from_drug_names(args.names_file)
-        dataset.write_file(args.output,
-                           write_user_ids=args.collect_user,
-                           write_urls=args.collect_url)
+        dataset.collect_from_drug_names(args.names_file, args.output, args.start)
     elif args.urls_file:
-        dataset.collect_from_urls(args.urls_file)
-        dataset.write_file(args.output,
-                           write_user_ids=args.collect_user,
-                           write_urls=args.collect_url)
+        dataset.collect_from_urls(args.urls_file, args.output, args.start)
 
 
 def main():
@@ -135,6 +129,8 @@ def main():
     parser_collect.add_argument('--collect-user', help='Whether to collect user id data', action='store_true')
     parser_collect.add_argument('--collect-url', help='Whether to collect url data', action='store_true')
     parser_collect.add_argument('-o', '--output', help='Path to save model file', required=True)
+    parser_collect.add_argument('-st', '--start', help='Where to start collecting if continuing collection',
+                                default=0, type=int)
     parser_collect.set_defaults(func=collect)
 
     # Parse initial args

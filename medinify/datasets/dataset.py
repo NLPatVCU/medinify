@@ -98,7 +98,7 @@ class Dataset:
 
         self.end_timestamp = str(datetime.datetime.now())
 
-    def collect_from_drug_names(self, drug_names_file):
+    def collect_from_drug_names(self, drug_names_file, output_file, start=0):
         """
         Given a text file listing drug names, collects a dataset of reviews for those drugs
         :param drug_names_file: path to urls file
@@ -111,7 +111,7 @@ class Dataset:
         print('\nCollecting urls...')
         self.scraper.get_urls(drug_names_file, 'medinify/scrapers/temp_urls_file.txt')
         print('\nScraping urls...')
-        self.scraper.scrape_urls('medinify/scrapers/temp_urls_file.txt')
+        self.scraper.scrape_urls('medinify/scrapers/temp_urls_file.txt', output_file=output_file, start=start)
         self.data = self.data.append(self.scraper.dataset, ignore_index=True)
 
         os.remove('medinify/scrapers/temp_urls_file.txt')
@@ -119,7 +119,7 @@ class Dataset:
 
         self.end_timestamp = str(datetime.datetime.now())
 
-    def collect_from_urls(self, urls_file):
+    def collect_from_urls(self, urls_file, output_file, start=0):
         """
         Given a file listing drug urls, collects review data into Dataset
         :param urls_file: path to file listing drug urls
@@ -130,7 +130,7 @@ class Dataset:
             self.start_timestamp = str(datetime.datetime.now())
 
         print('\nScraping urls...')
-        self.scraper.scrape_urls(urls_file)
+        self.scraper.scrape_urls(urls_file, output_file=output_file, start=start)
         self.data = self.data.append(self.scraper.dataset, ignore_index=True)
 
         self.end_timestamp = str(datetime.datetime.now())
