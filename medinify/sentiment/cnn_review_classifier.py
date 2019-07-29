@@ -5,12 +5,6 @@ import pandas as pd
 # Evaluation
 from sklearn.model_selection import StratifiedKFold
 
-# Word Embeddings
-from gensim.models import Word2Vec
-
-# Medinify
-from medinify.sentiment.review_classifier import ReviewClassifier
-
 # PyTorch
 import torch
 import torch.nn as nn
@@ -347,33 +341,6 @@ class CNNReviewClassifier:
         print('Average Accuracy: ' + str(average_accuracy))
         print('Average Precision: ' + str(average_precision))
         print('Average Recall: ' + str(average_recall))
-
-    def train_word_embeddings(self, datasets, output_file, training_epochs):
-        """trains word embeddings from data files (csvs)
-        Parameters:
-            datasets - list of file paths to dataset csvs
-            output_file - string with name of w2v file
-            training_epochs - number of epochs to train embeddings
-        """
-
-        classifier = ReviewClassifier()
-        comments = []
-        dataset_num = 0
-        for csv in datasets:
-            dataset_num = dataset_num + 1
-            print('Gathering comments from dataset #' + str(dataset_num))
-            data_, target = classifier.preprocess(csv)
-            print('\nFinished gathering dataset #' + str(dataset_num))
-            comments = comments + data_
-        print('\nGenerating Word2Vec model')
-        w2v_model = Word2Vec(comments)
-        print('Training word embeddings...')
-        w2v_model.train(comments, total_examples=len(comments),
-                        total_words=len(w2v_model.wv.vocab),
-                        epochs=training_epochs)
-        print('Finished training!')
-        self.embeddings = w2v_model.wv
-        w2v_model.wv.save_word2vec_format(output_file)
 
 
 class SentimentNetwork(Module):
