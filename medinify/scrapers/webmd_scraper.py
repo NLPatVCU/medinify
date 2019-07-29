@@ -97,7 +97,7 @@ class WebMDScraper(Scraper):
         :return: drug url on given review forum
         """
 
-        if len(drug_name) < 4:
+        if not drug_name or len(drug_name) < 4:
             print('{} name too short; Please manually search for such reviews'.format(drug_name))
             return
 
