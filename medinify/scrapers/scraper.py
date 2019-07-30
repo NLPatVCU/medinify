@@ -86,6 +86,7 @@ class Scraper(ABC):
         """
         Given a file containing a list of drug urls, scrapes those urls
         :param urls_file: path to text file containing drug urls
+        :param output_file: file to output review data
         :param start: which url to start from
         """
         with open(urls_file, 'r') as f:

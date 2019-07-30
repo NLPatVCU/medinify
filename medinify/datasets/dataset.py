@@ -38,7 +38,10 @@ class Dataset:
     def __init__(self, scraper=None,
                  use_rating=True, use_dates=True,
                  use_drugs=True, use_user_ids=False,
-                 use_urls=False, w2v_file=None, pos=None):
+                 use_urls=False, w2v_file=None, pos=None,
+                 pos_threshold=4.0, neg_threshold=2.0,
+                 num_classes=2, rating_type='effectiveness',
+                 data_representation='count'):
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
@@ -83,6 +86,17 @@ class Dataset:
         if pos:
             config.POS = pos
 
+        if not config.POS_THRESHOLD:
+            config.POS_THRESHOLD = pos_threshold
+        if not config.NUM_CLASSES:
+            config.NUM_CLASSES = num_classes
+        if not config.NEG_THRESHOLD:
+            config.NEG_THRESHOLD = neg_threshold
+        if not config.RATING_TYPE:
+            config.RATING_TYPE = rating_type
+        if not config.DATA_REPRESENTATION:
+            config.DATA_REPRESENTATION = data_representation
+
     def collect(self, url):
         """
         Given a url, collects drug review data into Dataset
@@ -102,6 +116,8 @@ class Dataset:
         """
         Given a text file listing drug names, collects a dataset of reviews for those drugs
         :param drug_names_file: path to urls file
+        :param output_file: where to output data
+        :param start: from where in the urls file to start scraping
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
 
@@ -123,6 +139,8 @@ class Dataset:
         """
         Given a file listing drug urls, collects review data into Dataset
         :param urls_file: path to file listing drug urls
+        :param output_file: where to output data
+        :param start: from where in the urls file to start scraping
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
 
