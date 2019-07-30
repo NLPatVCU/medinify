@@ -31,10 +31,15 @@ class Classifier:
     tfidf_vectorizer = None
     pos_count_vectorizer = None
 
-    def __init__(self, classifier_type=None, w2v_file=None, pos=None):
+    def __init__(self, classifier_type=None, w2v_file=None, pos=None,
+                 pos_threshold=4.0, neg_threshold=2.0, num_classes=2,
+                 rating_type='effectiveness', data_representation='count'):
         assert classifier_type in ['nb', 'rf', 'svm'], 'Classifier Type must be \'nb\', \'rf\', or \'svm\''
         self.classifier_type = classifier_type
-        self.dataset = Dataset(w2v_file=w2v_file, pos=pos)
+        self.dataset = Dataset(w2v_file=w2v_file, pos=pos,
+                               pos_threshold=pos_threshold, neg_threshold=neg_threshold,
+                               num_classes=num_classes, rating_type=rating_type,
+                               data_representation=data_representation)
 
     def fit(self, output_file, reviews_file=None, data=None, target=None):
         """
