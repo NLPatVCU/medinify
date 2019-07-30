@@ -67,9 +67,9 @@ def collect(args):
     dataset = Dataset(args.scraper, use_user_ids=args.collect_user, use_urls=args.collect_url)
 
     if args.names_file:
-        dataset.collect_from_drug_names(args.names_file, args.output, args.start)
+        dataset.collect_from_drug_names(args.names_file, args.output, start=args.start)
     elif args.urls_file:
-        dataset.collect_from_urls(args.urls_file, args.output, args.start)
+        dataset.collect_from_urls(args.urls_file, args.output, start=args.start)
 
 
 def main():

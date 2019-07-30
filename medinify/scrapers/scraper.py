@@ -96,11 +96,13 @@ class Scraper(ABC):
             df = pd.read_csv(output_file)
             df.columns = self.data_collected
             self.dataset = df
-        for i, url in enumerate(urls[start:]):
-            print('Scraping url {} of {}'.format(i + 1, len(urls)))
+        num_url = start
+        for url in urls[start:]:
+            print('Scraping url {} of {}'.format(num_url + 1, len(urls)))
             self.scrape(url)
             self.dataset.to_csv(output_file, index=False)
-            print('Safe to quit. Start from {}.'.format(i + 1))
+            print('Safe to quit. Start from {}.'.format(num_url + 1))
+            num_url += 1
 
 
 
