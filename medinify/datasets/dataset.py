@@ -102,6 +102,8 @@ class Dataset:
         """
         Given a text file listing drug names, collects a dataset of reviews for those drugs
         :param drug_names_file: path to urls file
+        :param output_file: where to output data
+        :param start: from where in the urls file to start scraping
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
 
@@ -123,6 +125,8 @@ class Dataset:
         """
         Given a file listing drug urls, collects review data into Dataset
         :param urls_file: path to file listing drug urls
+        :param output_file: where to output data
+        :param start: from where in the urls file to start scraping
         """
         assert self.scraper, "In order to collect reviews, a scraper must be specified"
 
