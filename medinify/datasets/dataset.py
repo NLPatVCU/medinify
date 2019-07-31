@@ -33,7 +33,6 @@ class Dataset:
         use_urls: whether or not to store drug url data
     """
     scraper = None
-    data_used = []
 
     def __init__(self, scraper=None,
                  use_rating=True, use_dates=True,
@@ -42,6 +41,7 @@ class Dataset:
                  pos_threshold=4.0, neg_threshold=2.0,
                  num_classes=2, rating_type='effectiveness',
                  data_representation='count'):
+        self.data_used = []
         if scraper == 'WebMD':
             self.scraper = WebMDScraper(collect_ratings=use_rating, collect_dates=use_dates,
                                         collect_drugs=use_drugs, collect_user_ids=use_user_ids,
