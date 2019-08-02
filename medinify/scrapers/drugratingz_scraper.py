@@ -1,116 +1,105 @@
-"""Scrapes drugratingz.com for drug reviews.
+"""
+Scrapes drugratingz.com for drug reviews.
 """
 
-import csv
 import requests
 from bs4 import BeautifulSoup
-import os
+from medinify.scrapers.scraper import Scraper
+import pandas as pd
 
 
-class DrugRatingzScraper():
+class DrugRatingzScraper(Scraper):
     """Scrapes drugratingz.com for drug reviews.
     """
 
-    def scrape(self, drug_url):
-        """Scrape for drug reviews.
+    def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
+                 collect_user_ids=False, collect_urls=False):
+        super(DrugRatingzScraper, self).__init__(collect_ratings, collect_dates,
+                                                 collect_drugs, collect_user_ids,
+                                                 collect_urls)
+        if 'user id' in self.data_collected:
+            raise AttributeError('DrugRatingz.com does not contain user id data')
 
-        Args:
-            drug_url: Drugsratingz.com page to scrape
-            output_path: Path to the file where the output should be sent
+    def scrape_page(self, url):
         """
+        Scrapes a single page of drug reviews
+        :param url: drug reviews page url
+        :return:
+        """
+        assert url[:36] == 'https://www.drugratingz.com/reviews/', 'Invalid url'
 
-        page = requests.get(drug_url)
+        page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        comments = [comment.text.strip() for comment in soup.find_all(
-            'span', {'class': 'description'})]
-        ratings = [rating.text.strip() for rating in soup.find_all(
-            'td', {'align': 'center'}) if 'valign' in rating.attrs
-            and rating.text.strip().isdigit()]
+        drug_name = soup.find('title').text.split()[0]
+        reviews = [x for x in soup.find_all('tr', {'class': 'ratingstableodd'})
+                   if 'class' not in x.find('td').attrs] + \
+                  [x for x in soup.find_all('tr', {'class', 'ratingstableeven'})
+                   if 'class' not in x.find('td').attrs]
 
-        review_list = []
-        ratings_index = 0
-        comment_index = 0
+        rows = {'comment': []}
+        if 'rating' in self.data_collected:
+            rows['rating'] = []
+        if 'date' in self.data_collected:
+            rows['date'] = []
+        if 'drug' in self.data_collected:
+            rows['drug'] = []
+        if 'url' in self.data_collected:
+            rows['url'] = []
 
-        while ratings_index < len(ratings):
-            effectiveness = ratings[ratings_index]
-            nosideeffects = ratings[ratings_index + 1]
-            convenience = ratings[ratings_index + 2]
-            value = ratings[ratings_index + 3]
+        for review in reviews:
+            rows['comment'].append(review.find('span', {'class': 'description'}).text.strip())
+            if 'rating' in self.data_collected:
+                rating_types = ['effectiveness', 'no side effects', 'convenience', 'value']
+                nums = [int(x.text.strip()) for x in review.find_all('td', {'align': 'center'}) if not x.find('img')]
+                ratings = dict(zip(rating_types, nums))
+                rows['rating'].append(ratings)
+            if 'date' in self.data_collected:
+                date = [x.text.strip().replace(u'\xa0', u' ') for x in review.find_all(
+                    'td', {'valign': 'top'}) if not x.find('a') and 'align' not in x.attrs][0]
+                rows['date'].append(date)
+            if 'drug' in self.data_collected:
+                rows['drug'].append(drug_name)
+            if 'url' in self.data_collected:
+                rows['url'].append(url)
 
-            review_list.append({
-                'comment': comments[comment_index],
-                'effectiveness': effectiveness,
-                'no side effects': nosideeffects,
-                'convenience': convenience,
-                'value': value
-            })
+        scraped_data = pd.DataFrame(rows, columns=self.data_collected)
+        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
 
-            ratings_index = ratings_index + 4
-            comment_index = comment_index + 1
+    def scrape(self, url):
+        """
+        Scrapes all reviews of a given drug
+        :param url: drug reviews url
+        """
+        self.scrape_page(url)
 
-        print('Reviews scraped: ' + str(len(review_list)))
-        return review_list
+    def get_url(self, drug_name):
+        """
+        Given a drug name, finds the drug review page(s) on a given review forum
+        :param drug_name: name of drug being searched for
+        :return: drug url on given review forum
+        """
+        if not drug_name or len(drug_name) < 4:
+            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            return []
 
-    def get_drug_urls(self, file_path, output_file):
-        """Given a list of drug names, gets reviews pages on DrugRatingz.com"""
+        search_url = 'https://www.drugratingz.com/searchResults.jsp?thingname=' + \
+                     drug_name.lower().split()[0] + '&1=&2='
+        search_page = requests.get(search_url)
+        search_soup = BeautifulSoup(search_page.text, 'html.parser')
+        version_urls = []
+        if search_soup.find('td', {'align': 'center'}):
+            tags = search_soup.find_all('td', {'valign': 'middle'})
 
-        drugs = []
-        with open(file_path, 'r') as drug_names:
-            drugs_reader = csv.reader(drug_names)
-            for row in drugs_reader:
-                drugs.append(row[0])
+            version_urls = []
+            for tag in tags:
+                if tag.find('a') and 'reviews' in tag.find('a').attrs['href']:
+                    tag_urls = tag.find_all('a')
+                    for element in tag_urls:
+                        if 'reviews' in element.attrs['href']:
+                            version_urls.append('https://www.drugratingz.com' + element.attrs['href'])
 
-        # search for drug info pages
-        unfound_drugs = []
-        drug_review_urls = {}
-        review_urls = []
-
-        if not os.path.exists('drug_results.pickle'):
-            for drug in drugs:
-                print('Searching for {}'.format(drug))
-                search_url = 'https://www.drugratingz.com/searchResults.jsp?thingname=' + \
-                             drug.lower().split()[0] + '&1=&2='
-                search_page = requests.get(search_url)
-                search_soup = BeautifulSoup(search_page.text, 'html.parser')
-                if search_soup.find('td', {'align': 'center'}):
-                    tags = search_soup.find_all('td', {'valign': 'middle'})
-
-                    if not tags:
-                        unfound_drugs.append(drug)
-                        continue
-
-                    version_urls = []
-                    for tag in tags:
-                        if tag.find('a') and 'reviews' in tag.find('a').attrs['href']:
-                            tag_urls = tag.find_all('a')
-                            for element in tag_urls:
-                                if 'reviews' in element.attrs['href']:
-                                    version_urls.append('https://www.drugratingz.com' + element.attrs['href'])
-
-                    version_urls = list(set(version_urls))
-                    num_versions = len(version_urls)
-                    if num_versions == 1:
-                        drug_review_urls[drug] = version_urls[0]
-                    elif num_versions > 1:
-                        for i in range(num_versions):
-                            drug_review_urls[drug + ' ' + str(i + 1)] = version_urls[i]
-
-            drugs = list(drug_review_urls.keys())
-            for drug in drugs:
-                entry = {'Drug': drug, 'URL': drug_review_urls[drug]}
-                review_urls.append(entry)
-
-        print(str(len(unfound_drugs)) + ' drugs not found')
-        print(unfound_drugs)
-
-        # writes url csv file
-        with open(output_file, 'w') as url_csv:
-            fieldnames = ['Drug', 'URL']
-            writer = csv.DictWriter(url_csv, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(review_urls)
-
-        print('Finished writing!')
+            version_urls = list(set(version_urls))
+        return version_urls
 
 
 

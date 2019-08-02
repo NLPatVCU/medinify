@@ -1,11 +1,10 @@
 # Medinify
 
-Medical text extraction and classification.
+Sentiment analysis for online drug reviews.
 
 ## Requirements
 
 * Python 3.6
-* Cannot use Python 3.7 until TensorFlow supports it (12/2/18)
 
 ## Getting Started
 
@@ -23,28 +22,28 @@ pip install -e .
 
 ### Review Datasets
 
-Scrape for reviews from WebMD, save them, load them, print statistics, cleanse data, and export to CSV or JSON.
+Scrape for reviews from WebMD, Drugs.com, DrugRatingz.com, and EverdayHealth.com, save them, load them, get statistics, and export to CSV or JSON.
 
 #### Review Dataset Examples
 
 ```python
-from medinify.datasets import ReviewDataset
+from medinify.datasets import Dataset
 
 # For saving a Citalopram reviews dataset
-review_dataset = ReviewDataset('Citalopram')
-review_dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
-review_dataset.save()
+dataset = Dataset()
+dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
+dataset.save_data('output.pkl')
 ```
 
 ```python
-from medinify.datasets import ReviewDataset
+from medinify.datasets import Dataset
 
 # Load a saved citalopram dataset, cleanse the data, write CSV, and print stats
-review_dataset = ReviewDataset('Citalopram')
-review_dataset.load()
-review_dataset.generate_ratings()
-review_dataset.write_file('csv')
-review_dataset.print_stats()
+dataset = Dataset()
+dataset.load_data('output.pkl')
+dataset.generate_ratings()
+dataset.write_file('output.csv')
+dataset.print_stats()
 ```
 
 ## Classifiers
@@ -56,19 +55,13 @@ Train and test a model for running sentiment analysis on drug reviews. Models ca
 #### Review Classifier Examples
 
 ```python
-from medinify.sentiment import ReviewClassifier
-from medinify.sentiment import NeuralNetReviewClassifier
+from medinify.sentiment import Classifier
 
 # Train a use a classifier if you already have a Citalopram dataset
-review_classifier = ReviewClassifier('nb')
-review_classifier.train('citalopram-reviews.csv')
-review_classifier.evaluate_average_accuracy('citalopram-reviews.csv')
-review_classifier.classify('neutral.txt')
-
-# For Neural Network
-review_classifier = NeuralNetReviewClassifier()
-review_classifier.train('citalopram-reviews.csv')
-review_classifier.classify('neutral.txt')
+classifier = Classifier('nb')
+classifier.fit(output_file='model.pkl', reviews_file='citalopram-reviews.csv')
+classifier.validate('citalopram-reviews.csv', k_folds=5)
+classifier.classify(reviews_csv='neutral.txt', output_file='classified.txt', trained_model_file='model.pkl')
 ```
 
 ## Contributions
@@ -145,7 +138,7 @@ Navigate to the reviewers tab and request a reviewer to review the PR.
 
 ### Authors
 
-Bridget McInnes, Jorge Vargas, Gabby Gurdin, Nathan West, Mark Groves
+Bridget McInnes, Jorge Vargas, Gabby Gurdin, Nathan West, Ishaan Thakur, Mark Groves
 
 ## More Info
 
