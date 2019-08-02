@@ -102,7 +102,7 @@ class Scraper(ABC):
             print('Scraping url {} of {}'.format(num_url + 1, len(urls)))
             self.scrape(url)
             self.dataset.to_csv(output_file, index=False)
-            print('Safe to quit. Start from {}.'.format(num_url + 1))
+            print('\nSafe to quit. Start from {}.'.format(num_url + 1))
             num_url += 1
 
 
