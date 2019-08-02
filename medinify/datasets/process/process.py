@@ -159,7 +159,8 @@ class Processor:
         :return: tokens
         """
         tokens = [token.text for token in self.nlp.tokenizer(comment.lower())
-                  if token.text not in self.stops and not token.is_punct]
+                  if token.text not in self.stops and not token.is_punct
+                  and not token.is_space]
         return tokens
 
 
