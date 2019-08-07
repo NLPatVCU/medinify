@@ -334,10 +334,6 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
-        self.remove_empty_comments()
-        self.remove_duplicate_comments()
-        self.remove_float_comments()
-
         reviews = self.processor.get_count_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
@@ -365,10 +361,6 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
-        self.remove_empty_comments()
-        self.remove_duplicate_comments()
-        self.remove_float_comments()
-
         reviews = self.processor.get_tfidf_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
@@ -396,10 +388,6 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
-        self.remove_empty_comments()
-        self.remove_duplicate_comments()
-        self.remove_float_comments()
-
         reviews = self.processor.get_average_embeddings(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
@@ -428,10 +416,6 @@ class Dataset:
         :param classifying: if running classification on data
         :return: data, target
         """
-        self.remove_empty_comments()
-        self.remove_duplicate_comments()
-        self.remove_float_comments()
-
         reviews = self.processor.get_pos_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []
         for review in reviews:
