@@ -45,7 +45,7 @@ def validate(args):
     :param args: command line arguments
     """
     clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
-    clf.validate(args.reviews, args.folds)
+    clf.validate(args.reviews, temp_file_name=args.temp_file, k_folds=args.folds)
 
 
 def classify(args):
@@ -108,6 +108,7 @@ def main():
     parser_valid = subparsers.add_parser('validate', help='Cross validate a model.')
     parser_valid.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_valid.add_argument('-f', '--folds', help='Number of folds.', required=True, type=int)
+    parser_valid.add_argument('-tf', '--temp-file', help='Where to save temporary model files.', required=True)
     parser_valid.set_defaults(func=validate)
 
     # Classify arguments
