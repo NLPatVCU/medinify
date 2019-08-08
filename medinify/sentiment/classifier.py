@@ -56,7 +56,8 @@ class Classifier:
         if self.classifier_type == 'nb':
             model = MultinomialNB()
         elif self.classifier_type == 'rf':
-            model = RandomForestClassifier(n_estimators=100)
+            model = RandomForestClassifier(n_estimators=100, criterion='gini',
+                                           max_depth=None, bootstrap=False, max_features='auto')
         elif self.classifier_type == 'svm':
             model = SVC(kernel='rbf', C=10, gamma=0.01)
 
