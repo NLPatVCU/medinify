@@ -76,11 +76,12 @@ class Classifier:
         :param verbose: whether or not to print metrics
         :return eval_metrics: calculated evaluation metrics (accuracy, precision, recall, f_measure)
         """
+        trained_model = self.load_model(trained_model_file)
+
         if eval_reviews_csv:
             data, target = self.load_data(eval_reviews_csv)
 
-        trained_model = self.load_model(trained_model_file)
-        predictions = trained_model.predict(data)
+        predictions = trained_model.predict(np.asarray(data))
         accuracy = accuracy_score(target, predictions) * 100
         precisions = {'Class {}'.format(i + 1): score * 100 for i, score in
                       enumerate(precision_score(target, predictions, average=None))}
