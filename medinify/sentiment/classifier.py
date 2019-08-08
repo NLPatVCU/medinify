@@ -101,11 +101,12 @@ class Classifier:
 
         return accuracy, precisions, recalls, f_scores, matrix
 
-    def validate(self, review_csv, k_folds=10):
+    def validate(self, review_csv, temp_file_name, k_folds=10):
         """
         Runs k-fold cross validation
         :param k_folds: number of folds
         :param review_csv: csv with data to splits, train, and validate on
+        :param temp_file_name: where to save temporary trained model files
         """
         data, target = self.load_data(review_csv)
         skf = StratifiedKFold(n_splits=k_folds)
@@ -134,11 +135,11 @@ class Classifier:
             test_target = np.asarray([target[x] for x in test])
 
             print('Fold {}:'.format(num_fold))
-            self.fit('medinify/sentiment/temp_file.txt', data=train_data, target=train_target)
+            self.fit(temp_file_name, data=train_data, target=train_target)
             accuracy, fold_precisions, fold_recalls, fold_f_measures, fold_matrix = self.evaluate(
-                'medinify/sentiment/temp_file.txt', data=test_data, target=test_target, verbose=False)
+                temp_file_name, data=test_data, target=test_target, verbose=False)
 
-            os.remove('medinify/sentiment/temp_file.txt')
+            os.remove(temp_file_name)
 
             accuracies.append(accuracy)
             for i in range(config.NUM_CLASSES):
