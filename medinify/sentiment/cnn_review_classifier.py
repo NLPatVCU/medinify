@@ -1,7 +1,7 @@
 
-import numpy as np
 import pandas as pd
 import ast
+import numpy
 
 # Evaluation
 from sklearn.model_selection import StratifiedKFold
@@ -332,7 +332,7 @@ class CNNReviewClassifier:
         recalls = []
         f_measures = []
 
-        total_tp, total_tn, total_fp, total_fn = 0, 0, 0, 0
+        tps, tns, fps, fns = [], [], [], []
 
         for train, test in skf.split(comments, ratings):
             train_data = [comments[x] for x in train]
@@ -350,10 +350,10 @@ class CNNReviewClassifier:
             self.train(network, train_loader, num_epochs, evaluate=False)
             fold_accuracy, fold_precision, fold_recall, tp, tn, fp, fn = self.evaluate(network, valid_loader)
 
-            total_tp += tp
-            total_tn += tn
-            total_fp += fp
-            total_fn += fn
+            tps.append(tp)
+            tns.append(tn)
+            fps.append(fp)
+            fns.append(fn)
 
             """
             accuracies.append(fold_accuracy)
@@ -372,10 +372,57 @@ class CNNReviewClassifier:
         print('Average Recall: ' + str(average_recall))
         """
 
-        print('Total True Positive: {}'.format(total_tp))
-        print('Total True Negative: {}'.format(total_tn))
-        print('Total False Positive: {}'.format(total_fp))
-        print('Total False Negative: {}'.format(total_fn))
+        print('Total True Positive: {}'.format(sum(tps)))
+        print('Total True Negative: {}'.format(sum(tns)))
+        print('Total False Positive: {}'.format(sum(fps)))
+        print('Total False Negative: {}'.format(sum(fns)))
+
+        accuracies, pp, np, pr, nr, pf, nf = [], [], [], [], [], [], []
+
+        for i in range(len(tps)):
+            fold_accuracy = ((tps[i] + tns[i] * 1.0) / (tps[i] + tns[i] + fps[i] + fns[i])) * 100
+            fold_pos_precision = (tps[i] * 1.0 / tps[i] + fps[i]) * 100
+            fold_pos_recall = (tps[i] * 1.0 / tps[i] + fns[i]) * 100
+            fold_neg_precision = (tns[i] * 1.0 / tns[i] + fns[i]) * 100
+            fold_neg_recall = (tns[i] * 1.0 / tns[i] + fps[i]) * 100
+            fold_pos_f_measure = 2 * ((fold_pos_precision * fold_pos_recall) / (fold_pos_precision + fold_pos_recall))
+            fold_neg_f_measure = 2 * ((fold_neg_precision * fold_neg_recall) / (fold_neg_precision + fold_neg_recall))
+
+            accuracies.append(fold_accuracy)
+            pp.append(fold_pos_precision)
+            pr.append(fold_pos_recall)
+            pf.append(fold_pos_f_measure)
+            np.append(fold_neg_precision)
+            nr.append(fold_neg_recall)
+            nf.append(fold_neg_f_measure)
+
+            print('\nFold {}:\n'.format(i + 1))
+            print('Accuracy: {:.4f}%'.format(fold_accuracy))
+            print('Pos Recall: {:.4f}%'.format(fold_pos_recall))
+            print('Pos Precision: {:.4f}%'.format(fold_pos_precision))
+            print('Pos F-Measure: {:.4f}%'.format(fold_pos_f_measure))
+            print('Neg Recall: {:.4f}%'.format(fold_neg_recall))
+            print('Neg Precision: {:.4f}%'.format(fold_neg_precision))
+            print('Neg F-Measure: {:.4f}%\n'.format(fold_neg_f_measure))
+
+        accuracies = numpy.asarray(accuracies)
+        pp = numpy.asarray(pp)
+        pr = numpy.asarray(pr)
+        pf = numpy.asarray(pf)
+        np = numpy.asarray(np)
+        nr = numpy.asarray(nr)
+        nf = numpy.asarray(nf)
+
+        print('******************************************************************\n')
+        print('Validation Metrics:\n')
+        print('Overall Accuracy: {:.4f}% +/-{:.4f}%'.format(numpy.average(accuracies), numpy.std(accuracies)))
+        print('Positive Precision: {:.4f}% +/-{:.4f}%'.format(numpy.average(pp), numpy.std(pp)))
+        print('Positive Recall: {:.4f}% +/-{:.4f}%'.format(numpy.average(pr), numpy.std(pr)))
+        print('Positive F-Measure: {:.4f}% +/-{:.4f}%'.format(numpy.average(pf), numpy.std(pf)))
+        print('Negative Precision: {:.4f}% +/-{:.4f}%'.format(numpy.average(np), numpy.std(np)))
+        print('Negative Recall: {:.4f}% +/-{:.4f}%'.format(numpy.average(nr), numpy.std(nr)))
+        print('Negative F-Measure: {:.4f}% +/-{:.4f}%'.format(numpy.average(nf), numpy.std(nf)))
+        print('\n******************************************************************')
 
 
 class SentimentNetwork(Module):
