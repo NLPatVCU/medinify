@@ -1,6 +1,7 @@
 
 import numpy as np
 import pandas as pd
+import ast
 
 # Evaluation
 from sklearn.model_selection import StratifiedKFold
@@ -45,7 +46,7 @@ class CNNReviewClassifier:
         vectors = Vectors(w2v_file)
         self.vectors = vectors
 
-    def get_data_loaders(self, train_file, valid_file, batch_size):
+    def get_data_loaders(self, train_file, valid_file, batch_size, rating_type):
         """
         Generates data_loaders given file names
         :param train_file: file with train data
@@ -57,6 +58,16 @@ class CNNReviewClassifier:
         train_reviews = pd.read_csv(train_file).values.tolist()
         valid_reviews = pd.read_csv(valid_file).values.tolist()
 
+        for i, review in enumerate(train_reviews):
+            rating_dict = ast.literal_eval(review[1])
+            new_rating = int(rating_dict[rating_type])
+            train_reviews[i][1] = new_rating
+
+        for i, review in enumerate(valid_reviews):
+            rating_dict = ast.literal_eval(review[1])
+            new_rating = int(rating_dict[rating_type])
+            valid_reviews[i][1] = new_rating
+
         train_data = [str(review[0]).lower() for review in train_reviews if review[1] != 3]
         valid_data = [str(review[0]).lower() for review in valid_reviews if review[1] != 3]
         train_target = ['neg' if review[1] in [1, 2] else 'pos' for review in train_reviews if review[1] != 3]
@@ -66,15 +77,14 @@ class CNNReviewClassifier:
 
     def generate_data_loaders(self, train_data, train_target, valid_data, valid_target, batch_size):
         """
-        This function generates TorchText dataloaders for training and validation datasets
+        This function generates TorchText data-loaders for training and validation datasets
         :param train_data: training dataset (list of comment string)
         :param valid_data: validation dataset (list of comment string)
-        :param train_target: training data's assosated ratings (list of 'pos' and 'neg')
-        :param valid_target: validation data's assosated ratings (list of 'pos' and 'neg')
+        :param train_target: training data's associated ratings (list of 'pos' and 'neg')
+        :param valid_target: validation data's associated ratings (list of 'pos' and 'neg')
         :param batch_size: the loaders' batch sizes
         :return: train data loader and validation data loader
         """
-
         # create TorchText fields
         self.comment_field = data.Field(lower=True, dtype=torch.float64)
         self.rating_field = data.LabelField(dtype=torch.float64)
@@ -282,7 +292,7 @@ class CNNReviewClassifier:
             print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
                 total_tp, total_tn, total_fp, total_fn))
 
-        return average_accuracy, average_precision, average_recall
+        return average_accuracy, average_precision, average_recall, total_tp, total_tn, total_fp, total_fn
 
     def set_weights(self, network):
         """
@@ -296,7 +306,7 @@ class CNNReviewClassifier:
 
         return network
 
-    def evaluate_k_fold(self, input_file, num_folds, num_epochs):
+    def evaluate_k_fold(self, input_file, num_folds, num_epochs, rating_type):
         """
         Evaluates CNN's accuracy using stratified k-fold validation
         :param input_file: dataset file
@@ -307,14 +317,22 @@ class CNNReviewClassifier:
         df = pd.read_csv(input_file)
         dataset = df.values.tolist()
 
+        for i, review in enumerate(dataset):
+            ratings_dict = ast.literal_eval(review[1])
+            new_rating = int(ratings_dict[rating_type])
+            dataset[i][1] = new_rating
+
         comments = [review[0].lower() for review in dataset if review[1] != 3]
         ratings = ['neg' if review[1] in [1, 2] else 'pos' for review in dataset if review[1] != 3]
 
         skf = StratifiedKFold(n_splits=num_folds)
 
-        total_accuracy = 0
-        total_precision = 0
-        total_recall = 0
+        accuracies = []
+        precisions = []
+        recalls = []
+        f_measures = []
+
+        total_tp, total_tn, total_fp, total_fn = 0, 0, 0, 0
 
         for train, test in skf.split(comments, ratings):
             train_data = [comments[x] for x in train]
@@ -330,17 +348,34 @@ class CNNReviewClassifier:
             network.apply(self.set_weights)
 
             self.train(network, train_loader, num_epochs, evaluate=False)
-            fold_accuracy, fold_precision, fold_recall = self.evaluate(network, valid_loader)
-            total_accuracy += fold_accuracy
-            total_precision += fold_precision
-            total_recall += fold_recall
+            fold_accuracy, fold_precision, fold_recall, tp, tn, fp, fn = self.evaluate(network, valid_loader)
 
+            total_tp += tp
+            total_tn += tn
+            total_fp += fp
+            total_fn += fn
+
+            """
+            accuracies.append(fold_accuracy)
+            precisions.append(fold_precision)
+            recalls.append(fold_recall)
+            fold_f_measure = 2 * ((fold_precision * fold_recall) / (fold_precision + fold_recall))
+            f_measures.append(fold_f_measure)
+            """
+
+        """
         average_accuracy = total_accuracy / 5
         average_precision = total_precision / 5
         average_recall = total_recall / 5
         print('Average Accuracy: ' + str(average_accuracy))
         print('Average Precision: ' + str(average_precision))
         print('Average Recall: ' + str(average_recall))
+        """
+
+        print('Total True Positive: {}'.format(total_tp))
+        print('Total True Negative: {}'.format(total_tn))
+        print('Total False Positive: {}'.format(total_fp))
+        print('Total False Negative: {}'.format(total_fn))
 
 
 class SentimentNetwork(Module):
