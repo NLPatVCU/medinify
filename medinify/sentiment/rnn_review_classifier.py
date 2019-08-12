@@ -1,29 +1,25 @@
-import torch
-from torchtext import data
-
-from torchtext import datasets
-from sklearn.preprocessing import OneHotEncoder
+# Word2Vec
 from gensim.models import Word2Vec
 
 import random
-
-import torch.nn as nn
-
-import torch.optim as optim
-
+import spacy
 import time
+import ast
 
 import numpy as np
 import pandas as pd
 
-
-
+# PyTorch
+import torch
+import torch.nn as nn
 from torch.nn import Module
 from torch.nn import functional as F
 import torch.utils.data
+import torch.optim as optim
 
 # TorchText
-from torchtext.data import Example, Dataset, Iterator
+from torchtext.data import Example, Dataset, Iterator, Field, BucketIterator
+from torchtext import data, datasets
 from torchtext.vocab import Vectors
 
 class RNNReviewClassifier:
@@ -32,7 +28,14 @@ class RNNReviewClassifier:
     comment_field = None
     rating_field = None
     loss = nn.BCEWithLogitsLoss()
-    encoder = OneHotEncoder()
+
+    def __init__(self, w2v_file):
+        """
+        Initializes RNNReviewClassifier
+        :param w2v_file: embedding file
+        """
+        vectors = Vectors(w2v_file)
+        self.vectors = vectors
 
     def get_data_loaders(self, train_file, valid_file, batch_size):
         """
@@ -42,14 +45,27 @@ class RNNReviewClassifier:
         :param batch_size: the loaders' batch sizes
         :return: data loaders
         """
-
+        
+        #Reads file into a list
         train_reviews = pd.read_csv(train_file).values.tolist()
         valid_reviews = pd.read_csv(valid_file).values.tolist()
 
+        #Extracting rating from dictionaries
+        train_df = pd.read_csv(train_file)
+        train_ratings = list(train_df['rating'])
+        for index,rating in enumerate(train_ratings):
+            train_ratings[index] = ast.literal_eval(rating)
+                        
+        valid_df = pd.read_csv(valid_file)
+        valid_ratings = list(valid_df['rating'])
+        for index,rating in enumerate(valid_ratings):
+            valid_ratings[index] = ast.literal_eval(rating)
+        
+        #Assembling data and targets
         train_data = [str(review[0]).lower() for review in train_reviews if review[1] != 3]
         valid_data = [str(review[0]).lower() for review in valid_reviews if review[1] != 3]
-        train_target = ['neg' if review[1] in [1, 2] else 'pos' for review in train_reviews if review[1] != 3]
-        valid_target = ['neg' if review[1] in [1, 2] else 'pos' for review in valid_reviews if review[1] != 3]
+        train_target = ['neg' if int(rating["effectiveness"]) in [1, 2] else 'pos' for rating in train_ratings if rating != 3]
+        valid_target = ['neg' if int(rating["effectiveness"]) in [1, 2] else 'pos' for rating in valid_ratings if rating != 3]
 
         return self.generate_data_loaders(train_data, train_target, valid_data, valid_target, batch_size)
 
@@ -71,7 +87,6 @@ class RNNReviewClassifier:
         # iterate through dataset and generate examples with comment_field and rating_field
         train_examples = []
         valid_examples = []
-
         for i in range(len(train_data)):
             comment = train_data[i]
             rating = train_target[i]
@@ -80,7 +95,7 @@ class RNNReviewClassifier:
                                   fields={'comment': ('comment', self.comment_field),
                                           'rating': ('rating', self.rating_field)})
             train_examples.append(ex)
-
+        
         for i in range(len(valid_data)):
             comment = valid_data[i]
             rating = valid_target[i]
@@ -96,56 +111,20 @@ class RNNReviewClassifier:
         valid_dataset = Dataset(examples=valid_examples,
                                 fields={'comment': self.comment_field,
                                         'rating': self.rating_field})
-
         # build comment_field and rating_field vocabularies
         self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment,
-                                       max_size=10000, vectors='glove.6B.100d',
+                                       max_size=10000, vectors=self.vectors,
                                        unk_init = torch.Tensor.normal_)
         self.embeddings = self.comment_field.vocab.vectors
 
         self.rating_field.build_vocab(['pos', 'neg'])
-
+        #Gets index of pad and unk tokens
         PAD_IDX = self.comment_field.vocab.stoi[self.comment_field.pad_token]
         UNK_IDX = self.comment_field.vocab.stoi[self.comment_field.unk_token]
-        # create torchtext iterators for train data and validation data
         train_loader = Iterator(train_dataset, batch_size, sort_key=lambda x: len(x))
         valid_loader = Iterator(valid_dataset, batch_size, sort_key=lambda x: len(x))
+        
         return train_loader, valid_loader, PAD_IDX, UNK_IDX
-
-    #def generate_iterators:
-   
-
-
-
-    #print(len(train_data))
-    #print(len(valid_data))
-    #print(len(test_data))
-
-
-    
-
-    #print(model.embedding.weight.data)
-
-    #print(len(train_data))
-    #print(len(test_data))
-
-    #print(vars(train_data.examples[0]))
-
-
-    """
-    INPUT_DIM = len(TEXT.vocab)
-    EMBEDDING_DIM = 100
-    HIDDEN_DIM = 256
-    OUTPUT_DIM = 1
-    """
-
-    def count_parameters(self, model):
-        return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-    #print(count_parameters(model))
-
-
-    
 
     def binary_accuracy(self, preds, y):
         """
@@ -158,23 +137,27 @@ class RNNReviewClassifier:
         acc = correct.sum() / len(correct)
         return acc
 
-    def train(self, model, iterator):
-        
+    def train(self, network, train_loader):
+        """
+        Trains a network
+        :param network: network being trained
+        :param train_loader: train data iterator
+        """
         epoch_loss = 0
         epoch_acc = 0
-        optimizer = optim.Adam(model.parameters())
+        optimizer = optim.Adam(network.parameters())
         criterion = nn.BCEWithLogitsLoss()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         criterion = criterion.to(device)
-        model.train()
+        network.train()
         
-        for batch in iterator:
+        for batch in train_loader:
             
             optimizer.zero_grad()
                     
             text, text_lengths = batch.comment
             
-            predictions = model(text, text_lengths).squeeze(1)
+            predictions = network(text, text_lengths).squeeze(1)
             
             loss = criterion(predictions, batch.rating)
             
@@ -187,24 +170,28 @@ class RNNReviewClassifier:
             epoch_loss += loss.item()
             epoch_acc += acc.item()
             
-        return epoch_loss / len(iterator), epoch_acc / len(iterator)
+        return epoch_loss / len(train_loader), epoch_acc / len(train_loader)
 
-    def evaluate(self, model, iterator):
-        
+    def evaluate_loss_and_accuracy(self, network, valid_loader):
+        """
+        Evaluates the accuracy of a network with validation data
+        :param network: network being evaluated
+        :param valid_loader: validation data iterator
+        """
         epoch_loss = 0
         epoch_acc = 0
         criterion = nn.BCEWithLogitsLoss()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         criterion = criterion.to(device)
-        model.eval()
+        network.eval()
         
         with torch.no_grad():
         
-            for batch in iterator:
+            for batch in valid_loader:
 
                 text, text_lengths = batch.comment
                 
-                predictions = model(text, text_lengths).squeeze(1)
+                predictions = network(text, text_lengths).squeeze(1)
                 
                 loss = criterion(predictions, batch.rating)
                 
@@ -213,22 +200,14 @@ class RNNReviewClassifier:
                 epoch_loss += loss.item()
                 epoch_acc += acc.item()
             
-        return epoch_loss / len(iterator), epoch_acc / len(iterator)
-
-
-
-    def epoch_time(self, start_time, end_time):
-        elapsed_time = end_time - start_time
-        elapsed_mins = int(elapsed_time / 60)
-        elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
-        return elapsed_mins, elapsed_secs
-    def evaluate2(self, network, valid_loader):
+        return epoch_loss / len(valid_loader), epoch_acc / len(valid_loader)
+    
+    def evaluate(self, network, valid_loader):
         """
-        Evaluates the accuracy of a model with validation data
+        Evaluates the accuracy of a network with validation data
         :param network: network being evaluated
         :param valid_loader: validation data iterator
         """
-
         network.eval()
 
         total_loss = 0
@@ -240,7 +219,7 @@ class RNNReviewClassifier:
         num_batch = 1
 
         with torch.no_grad():
-
+            count = 0
             for batch in valid_loader:
                 text, text_lengths = batch.comment
                 predictions = network(text, text_lengths).squeeze(1)
@@ -269,6 +248,7 @@ class RNNReviewClassifier:
                 total_tp, total_tn, total_fp, total_fn))
 
         return average_accuracy, average_precision, average_recall
+
     def batch_metrics(self, predictions, ratings):
         """
         Calculates true positive, false positive, true negative, and false negative
@@ -301,7 +281,6 @@ class RNNReviewClassifier:
             i += 1
 
         return true_pos, false_pos, true_neg, false_neg
-    
 
 class RNNNetwork(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, n_layers, 
@@ -321,47 +300,25 @@ class RNNNetwork(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
         
+        #Manually setting seed, can be removed or changed
         SEED = 1234
 
         torch.manual_seed(SEED)
-        torch.backends.cudnn.deterministic = True
-
-        #train_data, valid_data = train_data.split(random_state = random.seed(SEED))
-
+        torch.backends.cudnn.deterministic = True  
         
-        
-        #MAX_VOCAB_SIZE = 25000
-
-
-        #print(TEXT.vocab.freqs.most_common(20))
-
-        #BATCH_SIZE = 64
-
-        #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')    
-
-        #model = self.to(device)
-        
-        
-
+        #Accounting for pad and unk tokens
         self.embedding.weight.data[unk_idx] = torch.zeros(embedding_dim)
         self.embedding.weight.data[pad_idx] = torch.zeros(embedding_dim)
         
     def forward(self, text, text_lengths):
 
-        #text = [sent len, batch size]
-        
         embedded = self.dropout(self.embedding(text))
         
-        #embedded = [sent len, batch size, emb dim]
-        #find out about enforce!!!
         packed_embedded = nn.utils.rnn.pack_padded_sequence(embedded, text_lengths, enforce_sorted=False)
         
         packed_output, (hidden, cell) = self.rnn(packed_embedded)
         
         output, output_lengths = nn.utils.rnn.pad_packed_sequence(packed_output)
-        
-        #output = [sent len, batch size, hid dim]
-        #hidden = [1, batch size, hid dim]
         
         hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
         
@@ -371,35 +328,3 @@ class RNNNetwork(nn.Module):
 
 
 
-
-    
-"""
-N_EPOCHS = 5
-
-best_valid_loss = float('inf')
-
-for epoch in range(N_EPOCHS):
-
-    start_time = time.time()
-    
-    train_loss, train_acc = train(model, train_iterator)
-    valid_loss, valid_acc = evaluate(model, valid_iterator)
-    
-    end_time = time.time()
-
-    epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-    
-    if valid_loss < best_valid_loss:
-        best_valid_loss = valid_loss
-        torch.save(model.state_dict(), 'tut2-model.pt')
-    
-    print(str(epoch) + " " + str(epoch_mins) + " " + str(epoch_secs))
-    print(str(train_loss) + " " + str(train_acc * 100) + "%")
-    print(str(valid_loss) + " " + str(valid_acc * 100) + "%")
-
-model.load_state_dict(torch.load('tut2-model.pt'))
-
-test_loss, test_acc = evaluate(model, test_iterator)
-
-print(str(test_loss) + " " + str(test_acc))
-"""
