@@ -6,3 +6,5 @@ DATA_REPRESENTATION = None
 WORD_2_VEC = {}
 POS = None
 RATING_TYPE = None
+BATCH_SIZE = None
+EPOCHS = None

@@ -1,26 +1,22 @@
 
+from medinify.datasets import CNNDataset
+from sklearn.model_selection import KFold
+from sklearn.metrics import confusion_matrix
+from torch.nn import functional as F
+from torch.nn import Module
+from medinify import config
+from time import time
 import pandas as pd
 import ast
 import numpy as np
-from time import time
 import datetime
-
-from medinify.datasets import CNNDataset
-
-# Evaluation
-from sklearn.model_selection import KFold
-from sklearn.metrics import confusion_matrix
-
-# PyTorch
 import torch
 import torch.nn as nn
-from torch.nn import Module
-from torch.nn import functional as F
 import torch.utils.data
 import torch.optim as optim
 
 
-def fit(rating_type, batch_size, n_epochs, reviews_file=None,
+def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
         w2v_file=None, train_loader=None, network=None):
     """Trains a CNN network
 
@@ -32,8 +28,15 @@ def fit(rating_type, batch_size, n_epochs, reviews_file=None,
     :param train_loader: training data loader -> torchtext BucketIterator
     :param network: CNN to fit -> SentimentCNN
     """
+    if not config.RATING_TYPE:
+        config.RATING_TYPE = rating_type
+    if not config.BATCH_SIZE:
+        config.BATCH_SIZE = batch_size
+    if not config.EPOCHS:
+        config.EPOCHS = n_epochs
+
     if reviews_file:
-        train_loader, network = setup(reviews_file, w2v_file, batch_size, rating_type)
+        train_loader, network = setup(reviews_file, w2v_file)
     network.apply(set_weights)
 
     optimizer = optim.Adam(network.parameters(), lr=0.001)
@@ -42,7 +45,7 @@ def fit(rating_type, batch_size, n_epochs, reviews_file=None,
     network.train()
 
     start_time = time()
-    for epoch in range(1, n_epochs + 1):
+    for epoch in range(1, config.EPOCHS + 1):
         epoch_start_time = time()
         print('Starting Epoch ' + str(epoch))
         epoch_losses = []
@@ -234,9 +237,9 @@ def set_weights(network):
     return network
 
 
-def setup(reviews_file, w2v_file, batch_size, rating_type):
-    data = CNNDataset(rating_type)
-    train_loader = data.get_data_loader(review_file=reviews_file, w2v_file=w2v_file, batch_size=batch_size)
+def setup(reviews_file, w2v_file):
+    data = CNNDataset(config.RATING_TYPE)
+    train_loader = data.get_data_loader(review_file=reviews_file, w2v_file=w2v_file)
     vocab_size = len(data.COMMENT.vocab.stoi)
     embeddings = data.COMMENT.vocab.vectors
     network = SentimentNetwork(vocab_size, embeddings)
