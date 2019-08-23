@@ -77,7 +77,7 @@ def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
     return network
 
 
-def evaluate(batch_size, rating_type, verbose=True, reviews_file=None, w2v_file=None,
+def evaluate(batch_size=None, rating_type=None, verbose=True, reviews_file=None, w2v_file=None,
              validation_loader=None, trained_model_file=None, trained_network=None):
     """Evaluates the accuracy of a model with validation data
 
@@ -90,8 +90,13 @@ def evaluate(batch_size, rating_type, verbose=True, reviews_file=None, w2v_file=
     :param trained_model_file: saved PyTorch model file
     :param trained_network: trained CNN -> SentimentCNN
     """
+    if not config.RATING_TYPE:
+        config.RATING_TYPE = rating_type
+    if not config.BATCH_SIZE:
+        config.BATCH_SIZE = batch_size
+
     if reviews_file and trained_model_file:
-        validation_loader, trained_network = setup(reviews_file, w2v_file, batch_size, rating_type)
+        validation_loader, trained_network = setup(reviews_file, w2v_file, trained_model_file=trained_model_file)
         trained_network.load_state_dict(torch.load(trained_model_file))
 
     trained_network.eval()
@@ -221,6 +226,7 @@ def save(network, output_file):
     :param network: trained network -> SentimentNetwork
     :param output_file: path to output file -> str
     """
+
     torch.save(network.state_dict(), output_file)
 
 
@@ -237,12 +243,19 @@ def set_weights(network):
     return network
 
 
-def setup(reviews_file, w2v_file):
+def setup(reviews_file, w2v_file, trained_model_file=None):
     data = CNNDataset(config.RATING_TYPE)
     train_loader = data.get_data_loader(review_file=reviews_file, w2v_file=w2v_file)
-    vocab_size = len(data.COMMENT.vocab.stoi)
-    embeddings = data.COMMENT.vocab.vectors
-    network = SentimentNetwork(vocab_size, embeddings)
+    if not trained_model_file:
+        vocab_size = len(data.COMMENT.vocab.stoi)
+        embeddings = data.COMMENT.vocab.vectors
+        network = SentimentNetwork(vocab_size, embeddings)
+    else:
+        state_dict = torch.load(trained_model_file)
+        vocab_size = state_dict['embed_words.weight'].shape[0]
+        embeddings = state_dict['embed_words.weight']
+        network = SentimentNetwork(vocab_size, embeddings)
+        network.load_state_dict(state_dict)
 
     return train_loader, network
 

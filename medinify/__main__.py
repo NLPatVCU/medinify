@@ -42,8 +42,11 @@ def _evaluate(args):
     Evaluates a trained model
     :param args: command line arguments
     """
-    clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
-    clf.evaluate(args.model, eval_reviews_csv=args.reviews)
+    if args.classifier != 'cnn':
+        clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
+        clf.evaluate(args.model, eval_reviews_csv=args.reviews)
+    else:
+        evaluate(reviews_file=args.reviews, w2v_file=args.word_embeddings, trained_model_file=args.model)
 
 
 def _validate(args):
@@ -98,14 +101,14 @@ def main():
                         help='Path to word embeddings file if using average embeddings', default=None)
     parser.add_argument('-p', '--pos', help='Part of speech if using part of speech count vectors', default=None)
     parser.add_argument('-b', '--batch-size', help='Batch size for dataloaders (For CNN)', default=25, type=int)
+    parser.add_argument('-e', '--epochs', help='If training a cnn, how many epochs to train',
+                              default=20, type=int)
     subparsers = parser.add_subparsers()
 
     # Train arguments
     parser_train = subparsers.add_parser('train', help='Train a new model.')
     parser_train.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_train.add_argument('-o', '--output', help='Path to save model file', required=True)
-    parser_train.add_argument('-e', '--epochs', help='If training a cnn, how many epochs to train',
-                              default=20, type=int)
     parser_train.set_defaults(func=_train)
 
     # Evaluate arguments
