@@ -5,8 +5,7 @@ import torch
 import pandas as pd
 from nltk.corpus import stopwords
 import tempfile
-
-# TorchText
+from medinify import config
 from torchtext.data import Field, LabelField, TabularDataset, Example, Dataset, BucketIterator
 from torchtext.vocab import Vectors
 
@@ -18,9 +17,10 @@ class CNNDataset:
     def __init__(self, rating_type):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
-        self.rating_type = rating_type
+        if not config.RATING_TYPE:
+            config.RATING_TYPE = rating_type
         self.COMMENT = Field(tokenize=self.tokenize, dtype=torch.float64)
-        self.RATING = LabelField(preprocessing=self.preprocess_rating, dtype=torch.float64)
+        self.RATING = LabelField(preprocessing=_preprocess_rating, dtype=torch.float64)
 
     def get_dataset(self, review_file=None, comments=None, ratings=None):
         if review_file:
@@ -52,13 +52,13 @@ class CNNDataset:
         self.COMMENT.build_vocab(*datasets, vectors=vectors)
         self.RATING.build_vocab(*datasets)
 
-    def get_data_loader(self, w2v_file, batch_size, review_file=None, comments=None, ratings=None):
+    def get_data_loader(self, w2v_file, review_file=None, comments=None, ratings=None):
         dataset = [self.get_dataset(review_file=review_file, comments=comments, ratings=ratings)]
         self._build_vocabs(dataset, w2v_file)
-        loader = BucketIterator(dataset[0], batch_size)
+        loader = BucketIterator(dataset=dataset[0], batch_size=config.BATCH_SIZE)
         return loader
 
-    def get_data_loaders(self, w2v_file, batch_size, train_file=None, validation_file=None,
+    def get_data_loaders(self, w2v_file, train_file=None, validation_file=None,
                          train_comments=None, train_rating=None,
                          validation_comment=None, validation_ratings=None):
         train_dataset = self.get_dataset(comments=train_comments,
@@ -71,8 +71,8 @@ class CNNDataset:
 
         self._build_vocabs(datasets, w2v_file)
 
-        train_loader = BucketIterator(train_dataset, batch_size)
-        validation_loader = BucketIterator(validation_dataset, batch_size)
+        train_loader = BucketIterator(train_dataset, config.BATCH_SIZE)
+        validation_loader = BucketIterator(validation_dataset, config.BATCH_SIZE)
         return train_loader, validation_loader
 
     def tokenize(self, comment):
@@ -80,13 +80,14 @@ class CNNDataset:
                   if not token.is_punct and not token.is_space and token.text not in self.stops]
         return tokens
 
-    def preprocess_rating(self, rating):
-        ratings_dict = ast.literal_eval(rating)
-        rating = int(ratings_dict[self.rating_type])
-        if rating == 3:
-            rating = 'neutral'
-        elif rating in [4, 5]:
-            rating = 'pos'
-        elif rating in [1, 2]:
-            rating = 'neg'
-        return rating
+
+def _preprocess_rating(rating):
+    ratings_dict = ast.literal_eval(rating)
+    rating = int(ratings_dict[config.RATING_TYPE])
+    if rating == 3:
+        rating = 'neutral'
+    elif rating in [4, 5]:
+        rating = 'pos'
+    elif rating in [1, 2]:
+        rating = 'neg'
+    return rating
