@@ -6,7 +6,7 @@ import pandas as pd
 from nltk.corpus import stopwords
 import tempfile
 from medinify import config
-from torchtext.data import Field, LabelField, TabularDataset, Example, Dataset, BucketIterator
+from torchtext.data import Field, LabelField, TabularDataset, BucketIterator
 from torchtext.vocab import Vectors
 
 

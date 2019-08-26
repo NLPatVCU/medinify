@@ -156,8 +156,9 @@ def validate(input_file, num_folds, w2v_file, rating_type=None, num_epochs=None,
     Evaluates CNN's accuracy using stratified k-fold validation
     :param input_file: dataset file
     :param num_folds: number of k-folds
-    :param num_epochs: number of epochs per fold
+    :param w2v_file: path to word embeddings file -> str
     :param rating_type: type of ratings to use -> str
+    :param num_epochs: number of epochs per fold
     :param batch_size: batch size -> int
     """
     if not config.RATING_TYPE:
