@@ -1,428 +1,283 @@
 
+from medinify.datasets import CNNDataset
+from sklearn.model_selection import KFold
+from sklearn.metrics import confusion_matrix
+from torch.nn import functional as F
+from torch.nn import Module
+from medinify import config
+from time import time
 import pandas as pd
 import ast
-import numpy
-
-# Evaluation
-from sklearn.model_selection import StratifiedKFold
-
-# PyTorch
+import numpy as np
+import datetime
 import torch
 import torch.nn as nn
-from torch.nn import Module
-from torch.nn import functional as F
 import torch.utils.data
 import torch.optim as optim
 
-# TorchText
-from torchtext import data
-from torchtext.data import Example, Dataset, Iterator
-from torchtext.vocab import Vectors
+
+def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
+        w2v_file=None, train_loader=None, network=None):
+    """Trains a CNN network
+
+    :param rating_type: type of ratings to use -> str
+    :param batch_size: data loader batch size -> int
+    :param n_epochs: number of training epochs -> int
+    :param reviews_file: path to file with reviews being trained over -> str
+    :param w2v_file: path to word embeddings file -> str
+    :param train_loader: training data loader -> torchtext BucketIterator
+    :param network: CNN to fit -> SentimentCNN
+    """
+    if not config.RATING_TYPE:
+        config.RATING_TYPE = rating_type
+    if not config.BATCH_SIZE:
+        config.BATCH_SIZE = batch_size
+    if not config.EPOCHS:
+        config.EPOCHS = n_epochs
+
+    if reviews_file:
+        train_loader, network = setup(reviews_file, w2v_file)
+    network.apply(set_weights)
+
+    optimizer = optim.Adam(network.parameters(), lr=0.001)
+    criterion = nn.BCEWithLogitsLoss()
+
+    network.train()
+
+    start_time = time()
+    for epoch in range(1, config.EPOCHS + 1):
+        epoch_start_time = time()
+        print('\n')
+        print('Starting Epoch ' + str(epoch))
+        epoch_losses = []
+
+        for batch in train_loader:
+            # if the sentences are shorter than the largest kernel, continue to next batch
+            if batch.comment.shape[0] < 4:
+                epoch += 1
+                continue
+
+            predictions = network(batch)
+            loss = criterion(predictions, batch.rating)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            epoch_losses.append(loss)
+
+        average_loss = sum(epoch_losses) / len(epoch_losses)
+        epoch_end_time = time()
+        epoch_elapsed = datetime.timedelta(seconds=(epoch_end_time - epoch_start_time))
+        print('Epoch {} average loss: {:.4f}'.format(epoch, average_loss))
+        print('Epoch {} time elapsed: {}'.format(epoch, epoch_elapsed))
+
+    end_time = time()
+    total_elapsed_time = datetime.timedelta(seconds=(end_time - start_time))
+    print('\nTotal Elapsed Time: {}\n'.format(total_elapsed_time))
+
+    return network
 
 
-class CNNReviewClassifier:
-    """For performing sentiment analysis on drug reviews
-        Using a PyTorch Convolutional Neural Network
+def evaluate(batch_size=None, rating_type=None, verbose=True, reviews_file=None, w2v_file=None,
+             validation_loader=None, trained_model_file=None, trained_network=None):
+    """Evaluates the accuracy of a model with validation data
 
-    Attributes:
-        vectors - TorchText word embedding vectors
-        embeddings: torch tensor of word2vec embeddings
-        comment_field - TorchText data field for comments
-        rating_field - TorchText LabelField for ratings
-        loss - CNN loss function
+    :param batch_size: data loader batch size -> int
+    :param rating_type: type of ratings to use -> str
+    :param verbose: whether or not to print evaluation metrics
+    :param reviews_file: path to file with reviews being evaluated
+    :param w2v_file: path to word embeddings file -> str
+    :param validation_loader: data loader -> torchtext BucketIterator
+    :param trained_model_file: saved PyTorch model file
+    :param trained_network: trained CNN -> SentimentCNN
+    """
+    if not config.RATING_TYPE:
+        config.RATING_TYPE = rating_type
+    if not config.BATCH_SIZE:
+        config.BATCH_SIZE = batch_size
+
+    if reviews_file and trained_model_file:
+        validation_loader, trained_network = setup(reviews_file, w2v_file, trained_model_file=trained_model_file)
+        trained_network.load_state_dict(torch.load(trained_model_file))
+
+    trained_network.eval()
+    criterion = nn.BCEWithLogitsLoss()
+
+    losses = []
+    total_confusion_matrix = []
+
+    with torch.no_grad():
+        for sample in validation_loader:
+            predictions = trained_network(sample)
+            sample_loss = criterion(predictions.to(torch.double),
+                                    sample.rating.to(torch.double))
+            losses.append(sample_loss)
+
+            batch_matrix = _batch_metrics(predictions, sample.rating)
+
+            if type(total_confusion_matrix) == list:
+                total_confusion_matrix = batch_matrix
+            else:
+                total_confusion_matrix += batch_matrix
+
+    tp, fp = total_confusion_matrix[1][1], total_confusion_matrix[1][0]
+    tn, fn = total_confusion_matrix[0][0], total_confusion_matrix[0][1]
+
+    accuracy = (tp + tn * 1.0) / (tp + tn + fp + fn) * 100
+    precision_1 = ((tp * 1.0) / (tp + fp)) * 100
+    precision_2 = ((tn * 1.0) / (tn + fn)) * 100
+
+    recall_1 = ((tp * 1.0) / (tp + fn)) * 100
+    recall_2 = ((tn * 1.0) / (tn + fp)) * 100
+
+    f_1 = (2 * ((precision_1 * recall_1) / (precision_1 + recall_1)))
+    f_2 = (2 * ((precision_2 * recall_2) / (precision_2 + recall_2)))
+
+    if verbose:
+        print('\nEvaluation Metrics:\n')
+        print('Accuracy: {:.4f}%'.format(accuracy))
+        print('Class 1 Precision: {:.4f}%'.format(precision_1))
+        print('Class 1 Recall: {:.4f}%'.format(recall_1))
+        print('Class 1 F-Measure: {:.4f}%'.format(f_1))
+        print('Class 2 Precision: {:.4f}%'.format(precision_2))
+        print('Class 2 Recall: {:.4f}%'.format(recall_2))
+        print('Class 2 F-Measure: {:.4f}%\n'.format(f_2))
+        print('Confusion Matrix:\n')
+        print(total_confusion_matrix)
+
+    precisions = [precision_1, precision_2]
+    recalls = [recall_1, recall_2]
+    f_measures = [f_1, f_2]
+    return accuracy, precisions, recalls, f_measures, total_confusion_matrix
+
+
+def validate(input_file, num_folds, w2v_file, rating_type=None, num_epochs=None, batch_size=None):
+    """
+    Evaluates CNN's accuracy using stratified k-fold validation
+    :param input_file: dataset file
+    :param num_folds: number of k-folds
+    :param w2v_file: path to word embeddings file -> str
+    :param rating_type: type of ratings to use -> str
+    :param num_epochs: number of epochs per fold
+    :param batch_size: batch size -> int
+    """
+    if not config.RATING_TYPE:
+        config.RATING_TYPE = rating_type
+    if not config.EPOCHS:
+        config.EPOCHS = num_epochs
+    if not config.BATCH_SIZE:
+        config.BATCH_SIZE = batch_size
+
+    reviews_list = [review for review in pd.read_csv(input_file).to_numpy()
+                    if int(ast.literal_eval(review[1])[config.RATING_TYPE]) != 3]
+    comments = [review[0] for review in reviews_list]
+    ratings = [review[1] for review in reviews_list]
+
+    skf = KFold(n_splits=num_folds)
+    dataset_maker = CNNDataset()
+
+    k_accuracies, k_precisions, k_recalls, k_f_measures = [], [], [], []
+    total_confusion_matrix = None
+    for train, test in skf.split(comments, ratings):
+        train_comments = [comments[x] for x in train]
+        train_ratings = [ratings[x] for x in train]
+        test_comments = [comments[x] for x in test]
+        test_ratings = [ratings[x] for x in test]
+
+        train_loader, test_loader = dataset_maker.get_data_loaders(
+            w2v_file=w2v_file, train_comments=train_comments, train_rating=train_ratings,
+            validation_comment=test_comments, validation_ratings=test_ratings)
+
+        network = SentimentNetwork(vocab_size=len(dataset_maker.COMMENT.vocab),
+                                   embeddings=dataset_maker.COMMENT.vocab.vectors)
+        network.apply(set_weights)
+        network = fit(w2v_file=w2v_file, train_loader=train_loader, network=network)
+
+        accuracy, precisions, recalls, f_measures, fold_confusion_matrix = evaluate(
+            verbose=False, w2v_file=w2v_file, validation_loader=test_loader, trained_network=network)
+
+        k_accuracies.append(accuracy)
+        k_precisions.append(precisions)
+        k_recalls.append(recalls)
+        k_f_measures.append(f_measures)
+        if type(total_confusion_matrix) != np.ndarray:
+            total_confusion_matrix = fold_confusion_matrix
+        else:
+            total_confusion_matrix += fold_confusion_matrix
+
+    print('\n**********************************************************************\n')
+    print('Validation Metrics:')
+    print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(k_accuracies), np.std(k_accuracies)))
+    print('\tClass 1 Average Precision: {:.4f}% +/- {:.4f}%'.format(
+        np.mean([x[0] for x in k_precisions]), np.std([x[0] for x in k_precisions])))
+    print('\tClass 1 Average Recall: {:.4f}% +/- {:.4f}%'.format(
+        np.mean([x[0] for x in k_recalls]), np.std([x[0] for x in k_recalls])))
+    print('\tClass 1 Average F-Measure: {:.4f}% +/- {:.4f}%\n'.format(
+        np.mean([x[0] for x in k_f_measures]), np.std([x[0] for x in k_f_measures])))
+    print('\tClass 2 Average Precision: {:.4f}% +/- {:.4f}%'.format(
+        np.mean([x[1] for x in k_precisions]), np.std([x[1] for x in k_precisions])))
+    print('\tClass 2 Average Recall: {:.4f}% +/- {:.4f}%'.format(
+        np.mean([x[1] for x in k_recalls]), np.std([x[1] for x in k_recalls])))
+    print('\tClass 2 Average F-Measure: {:.4f}% +/- {:.4f}%\n'.format(
+        np.mean([x[1] for x in k_f_measures]), np.std([x[1] for x in k_f_measures])))
+    print('\tOverall Confusion Matrix:\n')
+    for row in total_confusion_matrix:
+        print('\t{}'.format('\t'.join([str(x) for x in row])))
+    print('\n**********************************************************************\n')
+
+
+def save(network, output_file):
+    """
+    Save a trained network to a file
+    :param network: trained network -> SentimentNetwork
+    :param output_file: path to output file -> str
     """
 
-    vectors = None
-    embeddings = None
-    comment_field = None
-    rating_field = None
-    loss = nn.BCEWithLogitsLoss()
-
-    def __init__(self, w2v_file):
-        """
-        Initializes CNNReviewClassifier
-        :param w2v_file: embedding file
-        """
-        vectors = Vectors(w2v_file)
-        self.vectors = vectors
-
-    def get_data_loaders(self, train_file, valid_file, batch_size, rating_type):
-        """
-        Generates data_loaders given file names
-        :param train_file: file with train data
-        :param valid_file: file with validation data
-        :param batch_size: the loaders' batch sizes
-        :return: data loaders
-        """
-
-        train_reviews = pd.read_csv(train_file).values.tolist()
-        valid_reviews = pd.read_csv(valid_file).values.tolist()
-
-        for i, review in enumerate(train_reviews):
-            rating_dict = ast.literal_eval(review[1])
-            new_rating = int(rating_dict[rating_type])
-            train_reviews[i][1] = new_rating
-
-        for i, review in enumerate(valid_reviews):
-            rating_dict = ast.literal_eval(review[1])
-            new_rating = int(rating_dict[rating_type])
-            valid_reviews[i][1] = new_rating
-
-        train_data = [str(review[0]).lower() for review in train_reviews if review[1] != 3]
-        valid_data = [str(review[0]).lower() for review in valid_reviews if review[1] != 3]
-        train_target = ['neg' if review[1] in [1, 2] else 'pos' for review in train_reviews if review[1] != 3]
-        valid_target = ['neg' if review[1] in [1, 2] else 'pos' for review in valid_reviews if review[1] != 3]
-
-        return self.generate_data_loaders(train_data, train_target, valid_data, valid_target, batch_size)
-
-    def generate_data_loaders(self, train_data, train_target, valid_data, valid_target, batch_size):
-        """
-        This function generates TorchText data-loaders for training and validation datasets
-        :param train_data: training dataset (list of comment string)
-        :param valid_data: validation dataset (list of comment string)
-        :param train_target: training data's associated ratings (list of 'pos' and 'neg')
-        :param valid_target: validation data's associated ratings (list of 'pos' and 'neg')
-        :param batch_size: the loaders' batch sizes
-        :return: train data loader and validation data loader
-        """
-        # create TorchText fields
-        self.comment_field = data.Field(lower=True, dtype=torch.float64)
-        self.rating_field = data.LabelField(dtype=torch.float64)
-
-        # iterate through dataset and generate examples with comment_field and rating_field
-        train_examples = []
-        valid_examples = []
-
-        for i in range(len(train_data)):
-            comment = train_data[i]
-            rating = train_target[i]
-            review = {'comment': comment, 'rating': rating}
-            ex = Example.fromdict(data=review,
-                                  fields={'comment': ('comment', self.comment_field),
-                                          'rating': ('rating', self.rating_field)})
-            train_examples.append(ex)
-
-        for i in range(len(valid_data)):
-            comment = valid_data[i]
-            rating = valid_target[i]
-            review = {'comment': comment, 'rating': rating}
-            ex = Example.fromdict(data=review,
-                                  fields={'comment': ('comment', self.comment_field),
-                                          'rating': ('rating', self.rating_field)})
-            valid_examples.append(ex)
-
-        train_dataset = Dataset(examples=train_examples,
-                                fields={'comment': self.comment_field,
-                                        'rating': self.rating_field})
-        valid_dataset = Dataset(examples=valid_examples,
-                                fields={'comment': self.comment_field,
-                                        'rating': self.rating_field})
-
-        # build comment_field and rating_field vocabularies
-        self.comment_field.build_vocab(train_dataset.comment, valid_dataset.comment,
-                                       max_size=10000, vectors=self.vectors)
-        self.embeddings = self.comment_field.vocab.vectors
-
-        self.rating_field.build_vocab(['pos', 'neg'])
-
-        # create torchtext iterators for train data and validation data
-        train_loader = Iterator(train_dataset, batch_size, sort_key=lambda x: len(x))
-        valid_loader = Iterator(valid_dataset, batch_size, sort_key=lambda x: len(x))
-
-        return train_loader, valid_loader
-
-    def batch_metrics(self, predictions, ratings):
-        """
-        Calculates true positive, false positive, true negative, and false negative
-        given a batch's predictions and actual ratings
-        :param predictions: model predictions
-        :param ratings: actual ratings
-        :return: number of fp, tp, tn, and fn
-        """
-
-        rounded_preds = torch.round(torch.sigmoid(predictions))
-
-        preds = rounded_preds.to(torch.int64).numpy()
-        ratings = ratings.to(torch.int64).numpy()
-
-        true_pos = 0
-        false_pos = 0
-        true_neg = 0
-        false_neg = 0
-
-        i = 0
-        while i < len(preds):
-            if preds[i] == 0 and ratings[i] == 0:
-                true_neg += 1
-            elif preds[i] == 0 and ratings[i] == 1:
-                false_neg += 1
-            elif preds[i] == 1 and ratings[i] == 1:
-                true_pos += 1
-            elif preds[i] == 1 and ratings[i] == 0:
-                false_pos += 1
-            i += 1
-
-        return true_pos, false_pos, true_neg, false_neg
-
-    def train_from_files(self, train_file, valid_file, n_epochs, batch_size):
-        """
-        Trains a model given train file and validation file
-        """
-
-        train_loader, valid_loader = self.get_data_loaders(train_file, valid_file, batch_size)
-        network = SentimentNetwork(len(self.vectors.stoi), self.vectors.vectors)
-        self.train(network=network, train_loader=train_loader,
-                   valid_loader=valid_loader, n_epochs=n_epochs)
-
-    def train(self, network, train_loader, n_epochs, valid_loader=None, evaluate=True):
-        """
-        Trains network on training data
-        :param network: network being trained
-        :param train_loader: train data iterator
-        :param n_epochs: number of training epochs
-        :param valid_loader: validation loader
-        :param evaluate: whether or not to evaluate validation set after each epoch
-                (set to false during cross-validation)
-        """
-
-        optimizer = optim.Adam(network.parameters(), lr=0.001)
-
-        network.train()
-
-        num_epoch = 1
-        for epoch in range(num_epoch, n_epochs + 1):
-            print('Starting Epoch ' + str(num_epoch))
-
-            epoch_loss = 0
-            total_tp = 0
-            total_fp = 0
-            total_tn = 0
-            total_fn = 0
-
-            calculated = 0
-
-            batch_num = 1
-            for batch in train_loader:
-
-                if batch_num % 25 == 0:
-                    print('On batch ' + str(batch_num) + ' of ' + str(len(train_loader)))
-
-                optimizer.zero_grad()
-
-                # if the sentences are shorter than the largest kernel, continue to next batch
-                if batch.comment.shape[0] < 4:
-                    num_epoch = num_epoch + 1
-                    continue
-
-                predictions = network(batch).squeeze(1).to(torch.float64)
-                tp, fp, tn, fn = self.batch_metrics(predictions, batch.rating)
-                total_tp += tp
-                total_tn += tn
-                total_fn += fn
-                total_fp += fp
-                loss = self.loss(predictions, batch.rating)
-                loss.backward()
-                optimizer.step()
-
-                epoch_loss += loss.item()
-                calculated = calculated + 1
-
-                batch_num = batch_num + 1
-
-            epoch_accuracy = (total_tp + total_tn) * 1.0 / (total_tp + total_tn + total_fp + total_fn)
-            epoch_precision = total_tp * 1.0 / (total_tp + total_fp)
-            epoch_recall = total_tp * 1.0 / (total_tp + total_fn)
-            print('\nEpoch Loss: ' + str(epoch_loss / len(train_loader)))
-            print('Epoch Accuracy: ' + str(epoch_accuracy * 100) + '%')
-            print('Epoch Precision: ' + str(epoch_precision * 100) + '%')
-            print('Epoch Recall: ' + str(epoch_recall * 100) + '%')
-            print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
-                total_tp, total_tn, total_fp, total_fn))
-
-            if evaluate:
-                self.evaluate(network, valid_loader)
-
-            num_epoch = num_epoch + 1
-
-        return network
-
-    def evaluate(self, network, valid_loader):
-        """
-        Evaluates the accuracy of a model with validation data
-        :param network: network being evaluated
-        :param valid_loader: validation data iterator
-        """
-
-        network.eval()
-
-        total_loss = 0
-        total_tp = 0
-        total_tn = 0
-        total_fp = 0
-        total_fn = 0
-        calculated = 0
-
-        num_sample = 1
-
-        with torch.no_grad():
-
-            for sample in valid_loader:
-
-                predictions = network(sample).squeeze(1)
-                sample_loss = self.loss(predictions.to(torch.double),
-                                        sample.rating.to(torch.double))
-
-                tp, fp, tn, fn = self.batch_metrics(predictions, sample.rating)
-
-                total_tp += tp
-                total_tn += tn
-                total_fp += fp
-                total_fn += fn
-                calculated += 1
-                total_loss += sample_loss
-
-                num_sample = num_sample + 1
-
-            average_accuracy = ((total_tp + total_tn) * 1.0 / (total_tp + total_tn + total_fp + total_fn)) * 100
-            average_precision = (total_tp * 1.0 / (total_tp + total_fp)) * 100
-            average_recall = (total_tp * 1.0 / (total_tp + total_fn)) * 100
-            print('Evaluation Metrics:')
-            print('\nTotal Loss: {}\nAverage Accuracy: {}%\n\nAverage Precision: {}%\nAverage Recall: {}%'.format(
-                total_loss / len(valid_loader), average_accuracy, average_precision, average_recall))
-            print('True Positive: {}\tTrue Negative: {}\tFalse Positive: {}\tFalse Negative: {}\n'.format(
-                total_tp, total_tn, total_fp, total_fn))
-
-        return average_accuracy, average_precision, average_recall, total_tp, total_tn, total_fp, total_fn
-
-    def set_weights(self, network):
-        """
-        Randomly initializes weights for neural network
-        :param network: network being initialized
-        :return: initialized network
-        """
-        if type(network) == nn.Conv2d or type(network) == nn.Linear:
-            torch.nn.init.xavier_uniform_(network.weight)
-            network.bias.data.fill_(0.01)
-
-        return network
-
-    def evaluate_k_fold(self, input_file, num_folds, num_epochs, rating_type):
-        """
-        Evaluates CNN's accuracy using stratified k-fold validation
-        :param input_file: dataset file
-        :param num_folds: number of k-folds
-        :param num_epochs: number of epochs per fold
-        """
-
-        df = pd.read_csv(input_file)
-        dataset = df.values.tolist()
-
-        for i, review in enumerate(dataset):
-            ratings_dict = ast.literal_eval(review[1])
-            new_rating = int(ratings_dict[rating_type])
-            dataset[i][1] = new_rating
-
-        comments = [review[0].lower() for review in dataset if review[1] != 3]
-        ratings = ['neg' if review[1] in [1, 2] else 'pos' for review in dataset if review[1] != 3]
-
-        skf = StratifiedKFold(n_splits=num_folds)
-
-        accuracies = []
-        precisions = []
-        recalls = []
-        f_measures = []
-
-        tps, tns, fps, fns = [], [], [], []
-
-        for train, test in skf.split(comments, ratings):
-            train_data = [comments[x] for x in train]
-            train_target = [ratings[x] for x in train]
-            test_data = [comments[x] for x in test]
-            test_target = [ratings[x] for x in test]
-
-            train_loader, valid_loader = self.generate_data_loaders(train_data, train_target,
-                                                                    test_data, test_target, 25)
-
-            network = SentimentNetwork(vocab_size=len(self.comment_field.vocab), embeddings=self.embeddings)
-
-            network.apply(self.set_weights)
-
-            self.train(network, train_loader, num_epochs, evaluate=False)
-            fold_accuracy, fold_precision, fold_recall, tp, tn, fp, fn = self.evaluate(network, valid_loader)
-
-            tps.append(tp)
-            tns.append(tn)
-            fps.append(fp)
-            fns.append(fn)
-
-            """
-            accuracies.append(fold_accuracy)
-            precisions.append(fold_precision)
-            recalls.append(fold_recall)
-            fold_f_measure = 2 * ((fold_precision * fold_recall) / (fold_precision + fold_recall))
-            f_measures.append(fold_f_measure)
-            """
-
-        """
-        average_accuracy = total_accuracy / 5
-        average_precision = total_precision / 5
-        average_recall = total_recall / 5
-        print('Average Accuracy: ' + str(average_accuracy))
-        print('Average Precision: ' + str(average_precision))
-        print('Average Recall: ' + str(average_recall))
-        """
-
-        print('Total True Positive: {}'.format(sum(tps)))
-        print('Total True Negative: {}'.format(sum(tns)))
-        print('Total False Positive: {}'.format(sum(fps)))
-        print('Total False Negative: {}'.format(sum(fns)))
-
-        accuracies, pp, np, pr, nr, pf, nf = [], [], [], [], [], [], []
-
-        for i in range(len(tps)):
-            fold_accuracy = ((tps[i] + tns[i] * 1.0) / (tps[i] + tns[i] + fps[i] + fns[i])) * 100
-            fold_pos_precision = (tps[i] * 1.0 / tps[i] + fps[i]) * 100
-            fold_pos_recall = (tps[i] * 1.0 / tps[i] + fns[i]) * 100
-            fold_neg_precision = (tns[i] * 1.0 / tns[i] + fns[i]) * 100
-            fold_neg_recall = (tns[i] * 1.0 / tns[i] + fps[i]) * 100
-            fold_pos_f_measure = 2 * ((fold_pos_precision * fold_pos_recall) / (fold_pos_precision + fold_pos_recall))
-            fold_neg_f_measure = 2 * ((fold_neg_precision * fold_neg_recall) / (fold_neg_precision + fold_neg_recall))
-
-            accuracies.append(fold_accuracy)
-            pp.append(fold_pos_precision)
-            pr.append(fold_pos_recall)
-            pf.append(fold_pos_f_measure)
-            np.append(fold_neg_precision)
-            nr.append(fold_neg_recall)
-            nf.append(fold_neg_f_measure)
-
-            print('\nFold {}:\n'.format(i + 1))
-            print('Accuracy: {:.4f}%'.format(fold_accuracy))
-            print('Pos Recall: {:.4f}%'.format(fold_pos_recall))
-            print('Pos Precision: {:.4f}%'.format(fold_pos_precision))
-            print('Pos F-Measure: {:.4f}%'.format(fold_pos_f_measure))
-            print('Neg Recall: {:.4f}%'.format(fold_neg_recall))
-            print('Neg Precision: {:.4f}%'.format(fold_neg_precision))
-            print('Neg F-Measure: {:.4f}%\n'.format(fold_neg_f_measure))
-
-        accuracies = numpy.asarray(accuracies)
-        pp = numpy.asarray(pp)
-        pr = numpy.asarray(pr)
-        pf = numpy.asarray(pf)
-        np = numpy.asarray(np)
-        nr = numpy.asarray(nr)
-        nf = numpy.asarray(nf)
-
-        print('******************************************************************\n')
-        print('Validation Metrics:\n')
-        print('Overall Accuracy: {:.4f}% +/-{:.4f}%'.format(numpy.average(accuracies), numpy.std(accuracies)))
-        print('Positive Precision: {:.4f}% +/-{:.4f}%'.format(numpy.average(pp), numpy.std(pp)))
-        print('Positive Recall: {:.4f}% +/-{:.4f}%'.format(numpy.average(pr), numpy.std(pr)))
-        print('Positive F-Measure: {:.4f}% +/-{:.4f}%'.format(numpy.average(pf), numpy.std(pf)))
-        print('Negative Precision: {:.4f}% +/-{:.4f}%'.format(numpy.average(np), numpy.std(np)))
-        print('Negative Recall: {:.4f}% +/-{:.4f}%'.format(numpy.average(nr), numpy.std(nr)))
-        print('Negative F-Measure: {:.4f}% +/-{:.4f}%'.format(numpy.average(nf), numpy.std(nf)))
-        print('\n******************************************************************')
+    torch.save(network.state_dict(), output_file)
+
+
+def set_weights(network):
+    """
+    Randomly initializes weights for neural network
+    :param network: network being initialized
+    :return: initialized network
+    """
+    if type(network) == nn.Conv2d or type(network) == nn.Linear:
+        torch.nn.init.xavier_uniform_(network.weight)
+        network.bias.data.fill_(0.01)
+
+    return network
+
+
+def setup(reviews_file, w2v_file, trained_model_file=None):
+    data = CNNDataset(config.RATING_TYPE)
+    train_loader = data.get_data_loader(review_file=reviews_file, w2v_file=w2v_file)
+    if not trained_model_file:
+        vocab_size = len(data.COMMENT.vocab.stoi)
+        embeddings = data.COMMENT.vocab.vectors
+        network = SentimentNetwork(vocab_size, embeddings)
+    else:
+        state_dict = torch.load(trained_model_file)
+        vocab_size = state_dict['embed_words.weight'].shape[0]
+        embeddings = state_dict['embed_words.weight']
+        network = SentimentNetwork(vocab_size, embeddings)
+        network.load_state_dict(state_dict)
+
+    return train_loader, network
+
+
+def _batch_metrics(preds, ratings):
+    """
+    Calculates true positive, false positive, true negative, and false negative
+    given a batch's predictions and actual ratings
+    :param preds: model predictions
+    :param ratings: actual ratings
+    :return: confusion matrix
+    """
+    predictions = torch.round(torch.sigmoid(preds)).to(torch.int64).numpy()
+    ratings = ratings.to(torch.int64).numpy()
+    matrix = confusion_matrix(ratings, predictions)
+    return matrix
 
 
 class SentimentNetwork(Module):
@@ -438,19 +293,14 @@ class SentimentNetwork(Module):
         """
         super(SentimentNetwork, self).__init__()
 
-        # embedding layer
         self.embed_words = nn.Embedding(vocab_size, 100)
         self.embed_words.weight = nn.Parameter(embeddings)
 
-        # convolutional layers
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()  # bigrams
-        self.conv2 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(3, 100)).double()  # trigrams
-        self.conv3 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(4, 100)).double()  # 4-grams
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(2, 100)).double()
+        self.conv2 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(3, 100)).double()
+        self.conv3 = nn.Conv2d(in_channels=1, out_channels=100, kernel_size=(4, 100)).double()
 
-        # dropout layer
         self.dropout = nn.Dropout(0.5)
-
-        # fully-connected layers
         self.fc1 = nn.Linear(300, 50).float()
         self.out = nn.Linear(50, 1).float()
 
@@ -458,15 +308,9 @@ class SentimentNetwork(Module):
         """
         Performs forward pass for data batch on CNN
         """
-
-        # t starts as batch of shape [sentences length, batch size] with each word
-        # represented as integer index
-        # reshape to [batch size, sentence length]
         comments = t.comment.permute(1, 0).to(torch.long)
         embedded = self.embed_words(comments).unsqueeze(1).to(torch.double)
 
-        # convolve embedded outputs three times
-        # to find bigrams, tri-grams, and 4-grams (or different by adjusting kernel sizes)
         convolved1 = self.conv1(embedded).squeeze(3)
         convolved1 = F.relu(convolved1)
 
@@ -476,16 +320,13 @@ class SentimentNetwork(Module):
         convolved3 = self.conv3(embedded).squeeze(3)
         convolved3 = F.relu(convolved3)
 
-        # maxpool convolved outputs
         pooled_1 = F.max_pool1d(convolved1, convolved1.shape[2]).squeeze(2)
         pooled_2 = F.max_pool1d(convolved2, convolved2.shape[2]).squeeze(2)
         pooled_3 = F.max_pool1d(convolved3, convolved3.shape[2]).squeeze(2)
 
-        # concatenate maxpool outputs and dropout
         cat = self.dropout(torch.cat((pooled_1, pooled_2, pooled_3), dim=1)).to(torch.float32)
 
-        # fully connected layers
         linear = self.fc1(cat)
         linear = F.relu(linear)
-        return self.out(linear)
+        return self.out(linear).squeeze(1).to(torch.float64)
 
