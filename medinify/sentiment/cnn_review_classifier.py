@@ -47,6 +47,7 @@ def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
     start_time = time()
     for epoch in range(1, config.EPOCHS + 1):
         epoch_start_time = time()
+        print('\n')
         print('Starting Epoch ' + str(epoch))
         epoch_losses = []
 
@@ -72,7 +73,7 @@ def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
 
     end_time = time()
     total_elapsed_time = datetime.timedelta(seconds=(end_time - start_time))
-    print('\nTotal Elapsed Time: {}'.format(total_elapsed_time))
+    print('\nTotal Elapsed Time: {}\n'.format(total_elapsed_time))
 
     return network
 
@@ -150,22 +151,29 @@ def evaluate(batch_size=None, rating_type=None, verbose=True, reviews_file=None,
     return accuracy, precisions, recalls, f_measures, total_confusion_matrix
 
 
-def validate(input_file, num_folds, num_epochs, rating_type, batch=25):
+def validate(input_file, num_folds, w2v_file, rating_type=None, num_epochs=None, batch_size=None):
     """
     Evaluates CNN's accuracy using stratified k-fold validation
     :param input_file: dataset file
     :param num_folds: number of k-folds
     :param num_epochs: number of epochs per fold
     :param rating_type: type of ratings to use -> str
-    :param batch: batch size -> int
+    :param batch_size: batch size -> int
     """
+    if not config.RATING_TYPE:
+        config.RATING_TYPE = rating_type
+    if not config.EPOCHS:
+        config.EPOCHS = num_epochs
+    if not config.BATCH_SIZE:
+        config.BATCH_SIZE = batch_size
+
     reviews_list = [review for review in pd.read_csv(input_file).to_numpy()
-                    if int(ast.literal_eval(review[1])[rating_type]) != 3]
+                    if int(ast.literal_eval(review[1])[config.RATING_TYPE]) != 3]
     comments = [review[0] for review in reviews_list]
     ratings = [review[1] for review in reviews_list]
 
     skf = KFold(n_splits=num_folds)
-    dataset_maker = CNNDataset(rating_type=rating_type)
+    dataset_maker = CNNDataset()
 
     k_accuracies, k_precisions, k_recalls, k_f_measures = [], [], [], []
     total_confusion_matrix = None
@@ -176,19 +184,16 @@ def validate(input_file, num_folds, num_epochs, rating_type, batch=25):
         test_ratings = [ratings[x] for x in test]
 
         train_loader, test_loader = dataset_maker.get_data_loaders(
-            w2v_file='examples/new_w2v.model', batch_size=5,
-            train_comments=train_comments, train_rating=train_ratings,
+            w2v_file=w2v_file, train_comments=train_comments, train_rating=train_ratings,
             validation_comment=test_comments, validation_ratings=test_ratings)
 
         network = SentimentNetwork(vocab_size=len(dataset_maker.COMMENT.vocab),
                                    embeddings=dataset_maker.COMMENT.vocab.vectors)
         network.apply(set_weights)
-        network = fit(batch_size=batch, n_epochs=num_epochs, rating_type=rating_type,
-                      train_loader=train_loader, network=network)
+        network = fit(w2v_file=w2v_file, train_loader=train_loader, network=network)
 
         accuracy, precisions, recalls, f_measures, fold_confusion_matrix = evaluate(
-            batch_size=batch, rating_type=rating_type, verbose=False,
-            validation_loader=test_loader, trained_network=network)
+            verbose=False, w2v_file=w2v_file, validation_loader=test_loader, trained_network=network)
 
         k_accuracies.append(accuracy)
         k_precisions.append(precisions)
