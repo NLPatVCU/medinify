@@ -14,7 +14,7 @@ class CNNDataset:
 
     COMMENT = None
 
-    def __init__(self, rating_type):
+    def __init__(self, rating_type=None):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
         if not config.RATING_TYPE:
