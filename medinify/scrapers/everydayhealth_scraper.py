@@ -7,19 +7,17 @@ import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
 import pandas as pd
+from tqdm import tqdm
 
 
 class EverydayHealthScraper(Scraper):
     """Scrapes EverydayHealth.com for drug reviews.
     """
 
-    def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
-                 collect_user_ids=False, collect_urls=False):
-        super(EverydayHealthScraper, self).__init__(collect_ratings, collect_dates,
-                                                    collect_drugs, collect_user_ids,
-                                                    collect_urls)
-        if 'user id' in self.data_collected:
-            raise AttributeError('EverydayHealth.com does not contain user id data')
+    def __init__(self, collect_user_ids=False, collect_urls=False):
+        super(EverydayHealthScraper, self).__init__(collect_user_ids, collect_urls)
+        if collect_user_ids:
+            raise AttributeError('EverydayHealth.com does not collect user id data')
 
     def scrape_page(self, url):
         """
@@ -31,13 +29,7 @@ class EverydayHealthScraper(Scraper):
         reviews = soup.find_all('div', {'itemprop': 'review'})
         drug_name = soup.find('title').text.split()[0]
 
-        rows = {'comment': []}
-        if 'rating' in self.data_collected:
-            rows['rating'] = []
-        if 'date' in self.data_collected:
-            rows['date'] = []
-        if 'drug' in self.data_collected:
-            rows['drug'] = []
+        rows = {'comment': [], 'rating': [], 'date': [], 'drug': []}
         if 'url' in self.data_collected:
             rows['url'] = []
 
@@ -46,15 +38,12 @@ class EverydayHealthScraper(Scraper):
             if type(comment) == float:
                 continue
             rows['comment'].append(comment)
-            if 'rating' in self.data_collected:
-                rating = None
-                if review.find('span', {'itemprop': 'reviewRating'}):
-                    rating = float(review.find('span', {'itemprop': 'reviewRating'}).text)
-                rows['rating'].append(rating)
-            if 'date' in self.data_collected:
-                rows['date'].append(review.find('span', {'class': 'time'}).attrs['content'])
-            if 'drug' in self.data_collected:
-                rows['drug'].append(drug_name)
+            rating = None
+            if review.find('span', {'itemprop': 'reviewRating'}):
+                rating = float(review.find('span', {'itemprop': 'reviewRating'}).text)
+            rows['rating'].append(rating)
+            rows['date'].append(review.find('span', {'class': 'time'}).attrs['content'])
+            rows['drug'].append(drug_name)
             if 'url' in self.data_collected:
                 rows['url'].append(url)
 
@@ -69,12 +58,9 @@ class EverydayHealthScraper(Scraper):
         print('Scraping WebMD...')
         pages = max_pages(url)
 
-        for i in range(pages):
+        for i in tqdm(range(pages)):
             page_url = url + '/' + str(i + 1)
             self.scrape_page(page_url)
-
-            if (i + 1) % 10 == 0:
-                print('Scraped {} of {} pages...'.format(i + 1, pages))
 
     def get_url(self, drug_name):
         """

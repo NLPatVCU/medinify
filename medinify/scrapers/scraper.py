@@ -9,24 +9,13 @@ class Scraper(ABC):
     data_collected = []
     dataset = None
 
-    def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
-                 collect_user_ids=False, collect_urls=False):
+    def __init__(self, collect_user_ids=False, collect_urls=False):
         """
         The Scraper parent class defines the functions which any drug review scraper must implements
-        :param collect_ratings: whether or not to collect ratings data
-        :param collect_dates: whether or not to collect date posted data
-        :param collect_drugs: whether or not to collect drug name data
         :param collect_user_ids: whether or not to collect user id data
         :param collect_urls: whether or not to collect drug url data
         """
-        self.data_collected = []
-        self.data_collected.append('comment')
-        if collect_ratings:
-            self.data_collected.append('rating')
-        if collect_dates:
-            self.data_collected.append('date')
-        if collect_drugs:
-            self.data_collected.append('drug')
+        self.data_collected = ['comment', 'rating', 'date', 'drug']
         if collect_user_ids:
             self.data_collected.append('user id')
         if collect_urls:

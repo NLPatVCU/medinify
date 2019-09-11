@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
 import pandas as pd
 import warnings
+from tqdm import tqdm
 
 
 class WebMDScraper(Scraper):
@@ -52,21 +53,20 @@ class WebMDScraper(Scraper):
                 continue
             clean_comment = re.sub('Comment:|Hide Full Comment', '', comment)
             rows['comment'].append(clean_comment)
-            if 'rating' in self.data_collected:
-                rating_set = {}
-                rates = review.find_all('span', attrs={'class': 'current-rating'})
-                rating_set['effectiveness'] = float(rates[0].text.replace('Current Rating:', '').strip())
-                rating_set['ease of use'] = float(rates[1].text.replace('Current Rating:', '').strip())
-                rating_set['satisfaction'] = float(rates[2].text.replace('Current Rating:', '').strip())
-                rows['rating'].append(rating_set)
-            if 'date' in self.data_collected:
-                rows['date'].append(review.find('div', {'class': 'date'}).text)
+
+            rating_set = {}
+            rates = review.find_all('span', attrs={'class': 'current-rating'})
+            rating_set['effectiveness'] = float(rates[0].text.replace('Current Rating:', '').strip())
+            rating_set['ease of use'] = float(rates[1].text.replace('Current Rating:', '').strip())
+            rating_set['satisfaction'] = float(rates[2].text.replace('Current Rating:', '').strip())
+            rows['rating'].append(rating_set)
+            rows['date'].append(review.find('div', {'class': 'date'}).text)
+            rows['drug'].append(drug_name)
+
             if 'url' in self.data_collected:
                 rows['url'].append(url)
             if 'user id' in self.data_collected:
                 rows['user id'].append(review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', ''))
-            if 'drug' in self.data_collected:
-                rows['drug'].append(drug_name)
 
         scraped_data = pd.DataFrame(rows, columns=self.data_collected)
         self.dataset = self.dataset.append(scraped_data, ignore_index=True)
@@ -76,6 +76,10 @@ class WebMDScraper(Scraper):
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
+        if self.dataset.shape[0] > 0:
+            print('Clearing scraper\'s pre-existent dataset of {} '
+                  'collected reviews...'.format(self.dataset.shape[0]))
+            self.dataset = pd.DataFrame(columns=self.data_collected)
         print('Scraping WebMD...')
 
         quote_page1 = url + '&pageIndex='
@@ -83,12 +87,9 @@ class WebMDScraper(Scraper):
 
         pages = max_pages(url)
 
-        for i in range(pages):
+        for i in tqdm(range(pages)):
             page_url = quote_page1 + str(i) + quote_page2
             self.scrape_page(page_url)
-
-            if (i + 1) % 10 == 0:
-                print('Scraped {} of {} pages...'.format(i + 1, pages))
 
     def get_url(self, drug_name):
         """

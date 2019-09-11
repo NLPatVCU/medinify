@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
 import warnings
+from tqdm import tqdm
 
 
 class DrugsScraper(Scraper):
@@ -30,13 +31,7 @@ class DrugsScraper(Scraper):
             warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
             return 1
 
-        rows = {'comment': []}
-        if 'rating' in self.data_collected:
-            rows['rating'] = []
-        if 'date' in self.data_collected:
-            rows['date'] = []
-        if 'drug' in self.data_collected:
-            rows['drug'] = []
+        rows = {'comment': [], 'rating': [], 'date': [], 'drug': []}
         if 'user id' in self.data_collected:
             rows['user id'] = []
         if 'url' in self.data_collected:
@@ -45,15 +40,14 @@ class DrugsScraper(Scraper):
         for review in reviews:
             comment = review.find('p', {'class': 'ddc-comment-content'}).find('span').text.replace('"', '')
             rows['comment'].append(comment)
-            if 'rating' in self.data_collected:
-                rating = None
-                if review.find('div', {'class', 'rating-score'}):
-                    rating = float(review.find('div', {'class', 'rating-score'}).text)
-                rows['rating'].append(rating)
-            if 'date' in self.data_collected:
-                rows['date'].append(review.find('span', {'class': 'comment-date text-color-muted'}).text)
-            if 'drug' in self.data_collected:
-                rows['drug'] = drug_name.split()[0]
+
+            rating = None
+            if review.find('div', {'class', 'rating-score'}):
+                rating = float(review.find('div', {'class', 'rating-score'}).text)
+            rows['rating'].append(rating)
+
+            rows['date'].append(review.find('span', {'class': 'comment-date text-color-muted'}).text)
+            rows['drug'] = drug_name.split()[0]
             if 'url' in self.data_collected:
                 rows['url'].append(url)
             if 'user id' in self.data_collected:
@@ -77,12 +71,9 @@ class DrugsScraper(Scraper):
         base_url = url + '?page='
         num_pages = max_pages(url)
 
-        for i in range(num_pages):
+        for i in tqdm(range(num_pages)):
             full_url = base_url + str(i + 1)
             self.scrape_page(full_url)
-
-            if (i + 1) % 10 == 0:
-                print('Scraped {} of {} pages...'.format(i + 1, num_pages))
 
     def get_url(self, drug_name):
         """

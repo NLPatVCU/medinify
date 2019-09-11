@@ -12,13 +12,10 @@ class DrugRatingzScraper(Scraper):
     """Scrapes drugratingz.com for drug reviews.
     """
 
-    def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
-                 collect_user_ids=False, collect_urls=False):
-        super(DrugRatingzScraper, self).__init__(collect_ratings, collect_dates,
-                                                 collect_drugs, collect_user_ids,
-                                                 collect_urls)
-        if 'user id' in self.data_collected:
-            raise AttributeError('DrugRatingz.com does not contain user id data')
+    def __init__(self, collect_user_ids=False, collect_urls=False):
+        super(DrugRatingzScraper, self).__init__(collect_user_ids, collect_urls)
+        if collect_user_ids:
+            raise AttributeError('DrugRatingz.com does not collect user id data')
 
     def scrape_page(self, url):
         """
@@ -36,29 +33,22 @@ class DrugRatingzScraper(Scraper):
                   [x for x in soup.find_all('tr', {'class', 'ratingstableeven'})
                    if 'class' not in x.find('td').attrs]
 
-        rows = {'comment': []}
-        if 'rating' in self.data_collected:
-            rows['rating'] = []
-        if 'date' in self.data_collected:
-            rows['date'] = []
-        if 'drug' in self.data_collected:
-            rows['drug'] = []
+        rows = {'comment': [], 'rating': [], 'date': [], 'drug': []}
         if 'url' in self.data_collected:
             rows['url'] = []
 
         for review in reviews:
             rows['comment'].append(review.find('span', {'class': 'description'}).text.strip())
-            if 'rating' in self.data_collected:
-                rating_types = ['effectiveness', 'no side effects', 'convenience', 'value']
-                nums = [int(x.text.strip()) for x in review.find_all('td', {'align': 'center'}) if not x.find('img')]
-                ratings = dict(zip(rating_types, nums))
-                rows['rating'].append(ratings)
-            if 'date' in self.data_collected:
-                date = [x.text.strip().replace(u'\xa0', u' ') for x in review.find_all(
-                    'td', {'valign': 'top'}) if not x.find('a') and 'align' not in x.attrs][0]
-                rows['date'].append(date)
-            if 'drug' in self.data_collected:
-                rows['drug'].append(drug_name)
+
+            rating_types = ['effectiveness', 'no side effects', 'convenience', 'value']
+            nums = [int(x.text.strip()) for x in review.find_all('td', {'align': 'center'}) if not x.find('img')]
+            ratings = dict(zip(rating_types, nums))
+            rows['rating'].append(ratings)
+
+            date = [x.text.strip().replace(u'\xa0', u' ') for x in review.find_all(
+                'td', {'valign': 'top'}) if not x.find('a') and 'align' not in x.attrs][0]
+            rows['date'].append(date)
+            rows['drug'].append(drug_name)
             if 'url' in self.data_collected:
                 rows['url'].append(url)
 
