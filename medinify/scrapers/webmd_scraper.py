@@ -9,9 +9,9 @@ from time import sleep
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
-import pandas as pd
 import warnings
 from tqdm import tqdm
+import string
 
 
 class WebMDScraper(Scraper):
@@ -33,71 +33,68 @@ class WebMDScraper(Scraper):
 
         if len(reviews) == 0:
             warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
-            return 1
-
-        rows = {'comment': []}
-        if 'rating' in self.data_collected:
-            rows['rating'] = []
-        if 'date' in self.data_collected:
-            rows['date'] = []
-        if 'drug' in self.data_collected:
-            rows['drug'] = []
-        if 'user id' in self.data_collected:
-            rows['user id'] = []
-        if 'url' in self.data_collected:
-            rows['url'] = []
+            return
 
         for review in reviews:
+            row = {}
             comment = review.find('p', {'id': re.compile("^comFull*")}).text
             if type(comment) == float:
+                warnings.warn('Skipping invalid comment (Not a string)', UserWarning)
                 continue
-            clean_comment = re.sub('Comment:|Hide Full Comment', '', comment)
-            rows['comment'].append(clean_comment)
+            comment = re.sub('Comment:|Hide Full Comment', '', comment)
+            row['comment'] = comment
 
-            rating_set = {}
+            rating_dict = {}
             rates = review.find_all('span', attrs={'class': 'current-rating'})
-            rating_set['effectiveness'] = float(rates[0].text.replace('Current Rating:', '').strip())
-            rating_set['ease of use'] = float(rates[1].text.replace('Current Rating:', '').strip())
-            rating_set['satisfaction'] = float(rates[2].text.replace('Current Rating:', '').strip())
-            rows['rating'].append(rating_set)
-            rows['date'].append(review.find('div', {'class': 'date'}).text)
-            rows['drug'].append(drug_name)
+            rating_dict['effectiveness'] = float(rates[0].text.replace('Current Rating:', '').strip())
+            rating_dict['ease of use'] = float(rates[1].text.replace('Current Rating:', '').strip())
+            rating_dict['satisfaction'] = float(rates[2].text.replace('Current Rating:', '').strip())
+            row['rating'] = rating_dict
+            row['date'] = review.find('div', {'class': 'date'}).text
+            row['drug'] = drug_name
 
             if 'url' in self.data_collected:
-                rows['url'].append(url)
+                row['url'] = url
             if 'user id' in self.data_collected:
-                rows['user id'].append(review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', ''))
-
-        scraped_data = pd.DataFrame(rows, columns=self.data_collected)
-        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
+                row['user id'] = review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', '')
+            self.reviews.append(row)
 
     def scrape(self, url):
         """
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        if self.dataset.shape[0] > 0:
+        if len(self.reviews) > 0:
             print('Clearing scraper\'s pre-existent dataset of {} '
-                  'collected reviews...'.format(self.dataset.shape[0]))
-            self.dataset = pd.DataFrame(columns=self.data_collected)
-        print('Scraping WebMD...')
+                  'collected reviews...'.format(len(self.reviews)))
+            self.reviews = []
+        front_page = requests.get(url)
+        front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
+        title = front_page_soup.find('h1').text
+        if 'User Reviews & Ratings - ' in title:
+            drug_name = re.sub('User Reviews & Ratings - ', '', title)
+            drug_name = string.capwords(drug_name)
+        else:
+            warnings.warn('Invalid URL entered: {}'.format(url), UserWarning)
+            return
+        print('Scraping WebMD for {} Reviews...'.format(drug_name))
 
         quote_page1 = url + '&pageIndex='
         quote_page2 = '&sortby=3&conditionFilter=-1'
 
-        pages = max_pages(url)
+        num_pages = max_pages(url)
 
-        for i in tqdm(range(pages)):
+        for i in tqdm(range(num_pages)):
             page_url = quote_page1 + str(i) + quote_page2
             self.scrape_page(page_url)
 
-    def get_url(self, drug_name):
+    def get_url(self, drug_name, return_multiple=False):
         """
         Given a drug name, finds the drug review page(s) on a given review forum
         :param drug_name: name of drug being searched for
+        :param return_multiple: if multiple urls are found, whether or not to return all of them
         :return: drug url on given review forum
         """
-
         if not drug_name or len(drug_name) < 4:
             print('{} name too short; Please manually search for such reviews'.format(drug_name))
             return []
@@ -125,7 +122,12 @@ class WebMDScraper(Scraper):
                 review_urls.append(review_url)
 
         print('Found {} Review Page(s) for {}'.format(len(review_urls), drug_name))
-        return review_urls
+        if return_multiple:
+            return review_urls
+        elif len(review_urls) > 0:
+            return review_urls[0]
+        else:
+            return None
 
 
 def max_pages(input_url):
@@ -139,7 +141,8 @@ def max_pages(input_url):
         try:
             page = requests.get(input_url)
             soup = BeautifulSoup(page.text, 'html.parser')
-            if 'Be the first to share your experience with this treatment.' in soup.find('div', {'id': 'heading'}).text:
+            if 'Be the first to share your experience with this treatment.' in \
+                    soup.find('div', {'id': 'heading'}).text:
                 return 0
             break
         except AttributeError:
@@ -149,11 +152,9 @@ def max_pages(input_url):
     total_reviews_text = soup.find('span', {'class': 'totalreviews'}).text
     total_reviews = [int(s) for s in total_reviews_text.split() if s.isdigit()][0]
 
-    # Does the equivalent of max_pages = ceil(total_reviews / 5) without the math library
-    max_pages = total_reviews // 5
+    pages = total_reviews // 5
     if total_reviews % 5 != 0:
-        max_pages += 1
+        pages += 1
 
-    print('Found ' + str(total_reviews) + ' reviews.')
-    print('Scraping ' + str(max_pages) + ' pages...')
-    return max_pages
+    print('Found {} reviews ({} pages).'.format(total_reviews, pages))
+    return pages

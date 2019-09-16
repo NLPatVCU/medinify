@@ -6,9 +6,6 @@ import os
 
 class Scraper(ABC):
 
-    data_collected = []
-    dataset = None
-
     def __init__(self, collect_user_ids=False, collect_urls=False):
         """
         The Scraper parent class defines the functions which any drug review scraper must implements
@@ -21,7 +18,7 @@ class Scraper(ABC):
         if collect_urls:
             self.data_collected.append('url')
 
-        self.dataset = pd.DataFrame(columns=self.data_collected)
+        self.reviews = []
 
     @abstractmethod
     def scrape_page(self, url):
@@ -41,20 +38,22 @@ class Scraper(ABC):
         pass
 
     @abstractmethod
-    def get_url(self, drug_name):
+    def get_url(self, drug_name, return_multiple=False):
         """
         Given a drug name, finds the drug review page(s) on a given review forum
         :param drug_name: name of drug being searched for
+        :param return_multiple: if multiple urls are found, whether or not to return all of them
         :return: drug url on given review forum
         """
         pass
 
+    """
     def get_urls(self, drug_names_file, output_file):
-        """
+        
         Given a text file of drug names, searches for and writes file with review urls
         :param drug_names_file: path to text file containing review urls
         :param output_file: path to file to output urls
-        """
+        
         review_urls = []
         unfound_drugs = []
         with open(drug_names_file, 'r') as f:
@@ -70,14 +69,16 @@ class Scraper(ABC):
                 url_f.write(url + '\n')
         print('Wrote review url file.')
         print('No urls found for {} drugs: {}'.format(len(unfound_drugs), unfound_drugs))
+    """
 
+    """
     def scrape_urls(self, urls_file, output_file, start=0):
-        """
+        
         Given a file containing a list of drug urls, scrapes those urls
         :param urls_file: path to text file containing drug urls
         :param output_file: file to output review data
         :param start: which url to start from
-        """
+        
         with open(urls_file, 'r') as f:
             urls = []
             for url in f.readlines():
@@ -85,7 +86,7 @@ class Scraper(ABC):
         if os.path.exists(output_file):
             df = pd.read_csv(output_file)
             df.columns = self.data_collected
-            self.dataset = df
+            self.reviews = df
         num_url = start
         for url in urls[start:]:
             print('Scraping url {} of {}'.format(num_url + 1, len(urls)))
@@ -93,6 +94,7 @@ class Scraper(ABC):
             self.dataset.to_csv(output_file, index=False)
             print('\nSafe to quit. Start from {}.'.format(num_url + 1))
             num_url += 1
+    """
 
 
 
