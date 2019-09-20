@@ -16,6 +16,8 @@ import torch.utils.data
 import torch.optim as optim
 
 
+
+
 def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
         w2v_file=None, train_loader=None, network=None):
     """Trains a CNN network
@@ -36,6 +38,7 @@ def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
         config.EPOCHS = n_epochs
 
     if reviews_file:
+        print(reviews_file, w2v_file)
         train_loader, network = setup(reviews_file, w2v_file)
     network.apply(set_weights)
 

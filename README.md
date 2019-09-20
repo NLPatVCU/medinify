@@ -1,14 +1,32 @@
 # Medinify
 
-Sentiment analysis for online drug reviews.
+
+Sentiment analysis for online drug reviews. 
+###Scraper/Review Data
+Medinify does several things: it has scraper functionality where it takes public drug review data and outputs a csv file with the comment along with the rating data and other metadata.
 
 ## Requirements
 
 * Python 3.6
 
 ## Getting Started
-
-To install medinify and requirements in a virtual environment, run:
+###Using Git Version Control to grab Medinify
+Ensure that you have git installed.  If using Mac open the terminal using ⌘ + T.  Then type into the terminal:
+```
+git --version
+```
+This should open a prompt to install git if you don't have it.  
+For linux (usually ctrl + alt + t) to open terminal:
+```
+sudo apt install git
+```
+Then for either Mac or Linux type into the terminal (to install to current folder don't use the last argument):
+```
+git clone https://github.com/NanoNLP/medinify [Intended Directory](e.g.: Programs/Programfolder)
+```
+###Virtual environment setup
+In order to manage dependencies/configuration virtual environments are used.  To set one up for this project use the terminal and go to the project installation directory.
+From there enter the following commands:
 
 ```bash
 python3 -m venv venv
@@ -16,7 +34,24 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
+python -m spacy download en_core_web_sm
 ```
+This creates a folder in the directory that contains a python installation for the specific python version and a specific version of the various dependencies for the project.  To check if it worked type:
+```
+which python
+```
+It should say something like: 
+```text
+medinify/venv/bin/python
+```
+### Installation check via a classifier
+To see if it worked we can train a classifier on example drug reviews. Via the terminal go to the project folder and type:
+```
+python medinify train -r examples/heart_drugs.csv -o out
+```
+If no errors are generated and an output file was produced the project was successful installed.  By default it ran a naive bayesian classifier on the data set.  
+
+
 
 ## Datasets
 
@@ -47,10 +82,18 @@ dataset.print_stats()
 ```
 
 ## Classifiers
-
+![medinify structure](readmeassets/projectdiagram.png)
 ### Review Classifier
 
 Train and test a model for running sentiment analysis on drug reviews. Models can currently use Naive Bayes, Decision Tree, or a Tensorflow Neural Network.
+
+####Naive Bayes 
+ A probabilistic supervised machine learning algorithm that takes into account the frequency of positive and negative words
+####Neural Network 
+### Random Forest 
+Ensemble machine learning algorithm which generates a series of decision trees and classifies based on the mean output of each tree
+###Support Vector Machine 
+Generates a hyperplane for separating data into two categories, positive or negative
 
 #### Review Classifier Examples
 
