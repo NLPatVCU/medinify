@@ -35,7 +35,10 @@ class Scraper(ABC):
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        pass
+        if len(self.reviews) > 0:
+            print('Clearing scraper\'s pre-existent dataset of {} '
+                  'collected reviews...'.format(len(self.reviews)))
+            self.reviews = []
 
     @abstractmethod
     def get_url(self, drug_name, return_multiple=False):

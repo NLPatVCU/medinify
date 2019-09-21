@@ -7,7 +7,6 @@ import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
 from tqdm import tqdm
-import warnings
 
 
 class EverydayHealthScraper(Scraper):
@@ -33,13 +32,13 @@ class EverydayHealthScraper(Scraper):
         drug_name = soup.find('title').text.split()[0]
 
         if len(reviews) == 0:
-            warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
+            print('No reviews found for drug %s' % drug_name)
             return
 
         for review in reviews:
             row = {'comment': review.find('p', {'itemprop': 'reviewBody'}).text[:-7]}
             if type(row['comment']) == float:
-                warnings.warn('Skipping invalid comment (Not a string)', UserWarning)
+                print('Skipping invalid comment (Not a string)')
                 continue
             row['rating'] = None
             if review.find('span', {'itemprop': 'reviewRating'}):
@@ -55,18 +54,15 @@ class EverydayHealthScraper(Scraper):
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        if len(self.reviews) > 0:
-            print('Clearing scraper\'s pre-existent dataset of {} '
-                  'collected reviews...'.format(len(self.reviews)))
-            self.reviews = []
+        super().scrape(url)
         front_page = requests.get(url)
         front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
         if front_page_soup.find('span', {'itemprop': 'name'}):
             drug_name = front_page_soup.find('span', {'itemprop': 'name'}).text
         else:
-            warnings.warn('Invalid URL entered: {}'.format(url), UserWarning)
+            print('Invalid URL entered: %s' % url)
             return
-        print('Scraping EverydayHealth for {} Reviews...'.format(drug_name))
+        print('Scraping EverydayHealth for %s Reviews...' % drug_name)
 
         num_pages = max_pages(url)
 
@@ -82,21 +78,23 @@ class EverydayHealthScraper(Scraper):
         :return: drug url on given review forum
         """
         if not drug_name or len(drug_name) < 4:
-            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            print('%s name too short; Please manually search for such reviews' % drug_name)
             return []
 
-        url = []
+        review_urls = []
         drug = re.sub('\s+', '-', drug_name.lower())
         search_url = 'https://www.everydayhealth.com/drugs/' + drug + '/reviews'
         page = requests.get(search_url)
         search_soup = BeautifulSoup(page.text, 'html.parser')
         if 'Reviews' in search_soup.find('title').text.split():
-            url.append(search_url)
-        if return_multiple:
-            return url
-        elif len(url) > 0:
-            return url[0]
+            review_urls.append(search_url)
+        if return_multiple and len(review_urls) > 0:
+            print('Found %d Review Page(s) for %s' % (len(review_urls), drug_name))
+            return review_urls
+        elif len(review_urls) > 0:
+            return review_urls[0]
         else:
+            print('Found no %s reviews' % drug_name)
             return None
 
 
@@ -125,5 +123,5 @@ def max_pages(input_url):
         'class': 'review-pagination__section--info'}).text.split()
     pages = int(max_pages_foot[2])
 
-    print('Found {} reviews ({} pages).'.format(total_reviews, pages))
+    print('Found %d reviews (%d pages).' % (total_reviews, pages))
     return pages

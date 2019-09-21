@@ -9,7 +9,6 @@ from time import sleep
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
-import warnings
 from tqdm import tqdm
 import string
 
@@ -32,14 +31,14 @@ class WebMDScraper(Scraper):
         reviews = soup.find_all('div', attrs={'class': 'userPost'})
 
         if len(reviews) == 0:
-            warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
+            print('No reviews found for drug %s' % drug_name)
             return
 
         for review in reviews:
             row = {}
             comment = review.find('p', {'id': re.compile("^comFull*")}).text
             if type(comment) == float:
-                warnings.warn('Skipping invalid comment (Not a string)', UserWarning)
+                print('Skipping invalid comment (Not a string)')
                 continue
             comment = re.sub('Comment:|Hide Full Comment', '', comment)
             row['comment'] = comment
@@ -64,10 +63,7 @@ class WebMDScraper(Scraper):
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        if len(self.reviews) > 0:
-            print('Clearing scraper\'s pre-existent dataset of {} '
-                  'collected reviews...'.format(len(self.reviews)))
-            self.reviews = []
+        super().scrape(url)
         front_page = requests.get(url)
         front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
         title = front_page_soup.find('h1').text
@@ -75,9 +71,9 @@ class WebMDScraper(Scraper):
             drug_name = re.sub('User Reviews & Ratings - ', '', title)
             drug_name = string.capwords(drug_name)
         else:
-            warnings.warn('Invalid URL entered: {}'.format(url), UserWarning)
+            print('Invalid URL entered: %s' % url)
             return
-        print('Scraping WebMD for {} Reviews...'.format(drug_name))
+        print('Scraping WebMD for %s Reviews...' % drug_name)
 
         quote_page1 = url + '&pageIndex='
         quote_page2 = '&sortby=3&conditionFilter=-1'
@@ -96,7 +92,7 @@ class WebMDScraper(Scraper):
         :return: drug url on given review forum
         """
         if not drug_name or len(drug_name) < 4:
-            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            print('%s name too short; Please manually search for such reviews' % drug_name)
             return []
 
         characters = list(drug_name.lower())
@@ -121,12 +117,13 @@ class WebMDScraper(Scraper):
                 review_url = 'https://www.webmd.com' + info_soup.find('a', {'class': 'drug-review'}).attrs['href']
                 review_urls.append(review_url)
 
-        print('Found {} Review Page(s) for {}'.format(len(review_urls), drug_name))
-        if return_multiple:
+        if return_multiple and len(review_urls) > 0:
+            print('Found %d Review Page(s) for %s' % (len(review_urls), drug_name))
             return review_urls
         elif len(review_urls) > 0:
             return review_urls[0]
         else:
+            print('Found no %s reviews' % drug_name)
             return None
 
 
@@ -156,5 +153,5 @@ def max_pages(input_url):
     if total_reviews % 5 != 0:
         pages += 1
 
-    print('Found {} reviews ({} pages).'.format(total_reviews, pages))
+    print('Found %d reviews (%d pages).' % (total_reviews, pages))
     return pages

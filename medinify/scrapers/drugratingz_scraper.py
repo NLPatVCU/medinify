@@ -5,7 +5,7 @@ Scrapes drugratingz.com for drug reviews.
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
-import pandas as pd
+from tqdm import tqdm
 
 
 class DrugRatingzScraper(Scraper):
@@ -29,67 +29,74 @@ class DrugRatingzScraper(Scraper):
         soup = BeautifulSoup(page.text, 'html.parser')
         drug_name = soup.find('title').text.split()[0]
         reviews = [x for x in soup.find_all('tr', {'class': 'ratingstableodd'})
-                   if 'class' not in x.find('td').attrs] + \
+                   if x.find('span', {'class': 'description'})] + \
                   [x for x in soup.find_all('tr', {'class', 'ratingstableeven'})
-                   if 'class' not in x.find('td').attrs]
+                   if x.find('span', {'class': 'description'})]
 
-        rows = {'comment': [], 'rating': [], 'date': [], 'drug': []}
-        if 'url' in self.data_collected:
-            rows['url'] = []
+        if len(reviews) == 0:
+            print('No reviews found for drug %s' % drug_name)
+            return
 
-        for review in reviews:
-            rows['comment'].append(review.find('span', {'class': 'description'}).text.strip())
-
+        print('Scraping DrugRatingz.com for %s Reviews...' % drug_name)
+        for review in tqdm(reviews):
+            row = {'comment': review.find('span', {'class': 'description'}).text.strip()}
             rating_types = ['effectiveness', 'no side effects', 'convenience', 'value']
-            nums = [int(x.text.strip()) for x in review.find_all('td', {'align': 'center'}) if not x.find('img')]
-            ratings = dict(zip(rating_types, nums))
-            rows['rating'].append(ratings)
+            nums = [x for x in review.find_all('td', {'align': 'center'}) if 'valign'
+                    in x.attrs and not x.find('a') and not x.find('img')]
+            ratings = [int(x.text.replace(u'\xa0', u'')) for x in nums]
+            row['rating'] = dict(zip(rating_types, ratings))
 
-            date = [x.text.strip().replace(u'\xa0', u' ') for x in review.find_all(
+            row['date'] = [x.text.strip().replace(u'\xa0', u' ') for x in review.find_all(
                 'td', {'valign': 'top'}) if not x.find('a') and 'align' not in x.attrs][0]
-            rows['date'].append(date)
-            rows['drug'].append(drug_name)
+            row['drug'] = drug_name
             if 'url' in self.data_collected:
-                rows['url'].append(url)
-
-        scraped_data = pd.DataFrame(rows, columns=self.data_collected)
-        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
+                row['url'] = url
+            self.reviews.append(row)
 
     def scrape(self, url):
         """
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
+        super().scrape(url)
         self.scrape_page(url)
 
-    def get_url(self, drug_name):
+    def get_url(self, drug_name, return_multiple=False):
         """
         Given a drug name, finds the drug review page(s) on a given review forum
         :param drug_name: name of drug being searched for
+        :param return_multiple: if multiple urls are found, whether or not to return all of them
         :return: drug url on given review forum
         """
         if not drug_name or len(drug_name) < 4:
-            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            print('%s name too short; Please manually search for such reviews' % drug_name)
             return []
 
         search_url = 'https://www.drugratingz.com/searchResults.jsp?thingname=' + \
                      drug_name.lower().split()[0] + '&1=&2='
         search_page = requests.get(search_url)
         search_soup = BeautifulSoup(search_page.text, 'html.parser')
-        version_urls = []
+        review_urls = []
         if search_soup.find('td', {'align': 'center'}):
             tags = search_soup.find_all('td', {'valign': 'middle'})
 
-            version_urls = []
+            review_urls = []
             for tag in tags:
                 if tag.find('a') and 'reviews' in tag.find('a').attrs['href']:
                     tag_urls = tag.find_all('a')
                     for element in tag_urls:
                         if 'reviews' in element.attrs['href']:
-                            version_urls.append('https://www.drugratingz.com' + element.attrs['href'])
+                            review_urls.append('https://www.drugratingz.com' + element.attrs['href'])
 
-            version_urls = list(set(version_urls))
-        return version_urls
+            review_urls = list(set(review_urls))
+        if return_multiple and len(review_urls) > 0:
+            print('Found %d Review Page(s) for %s' % (len(review_urls), drug_name))
+            return review_urls
+        elif len(review_urls) > 0:
+            return review_urls[0]
+        else:
+            print('Found no %s reviews' % drug_name)
+            return None
 
 
 

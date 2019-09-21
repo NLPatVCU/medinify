@@ -2,12 +2,11 @@
 Scrapes Drugs.com for drug reviews.
 """
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
-import warnings
 from tqdm import tqdm
+import re
 
 
 class DrugsScraper(Scraper):
@@ -24,65 +23,66 @@ class DrugsScraper(Scraper):
 
         page = requests.get(url)
         soup = BeautifulSoup(page.text, 'html.parser')
-        drug_name = soup.find('h1').text.replace('User Reviews for ', '')
-        reviews = soup.find_all('div', {'class': 'ddc-comment'})
+        drug_name = re.split('User Reviews for | \(Page', soup.find('h1').text)[1]
+
+        reviews = list(soup.find_all('div', {'class': 'ddc-comment'}))
 
         if len(reviews) == 0:
-            warnings.warn('No reviews found for drug {}'.format(drug_name), UserWarning)
-            return 1
-
-        rows = {'comment': [], 'rating': [], 'date': [], 'drug': []}
-        if 'user id' in self.data_collected:
-            rows['user id'] = []
-        if 'url' in self.data_collected:
-            rows['url'] = []
+            print('No reviews found: %s' % url)
+            return
 
         for review in reviews:
-            comment = review.find('p', {'class': 'ddc-comment-content'}).find('span').text.replace('"', '')
-            rows['comment'].append(comment)
-
+            row = {'comment': review.find('p', {'class': 'ddc-comment-content'}).find('span').text.replace('"', '')}
             rating = None
             if review.find('div', {'class', 'rating-score'}):
                 rating = float(review.find('div', {'class', 'rating-score'}).text)
-            rows['rating'].append(rating)
-
-            rows['date'].append(review.find('span', {'class': 'comment-date text-color-muted'}).text)
-            rows['drug'] = drug_name.split()[0]
+            row['rating'] = rating
+            row['date'] = review.find('span', {'class': 'comment-date text-color-muted'}).text
+            row['drug'] = drug_name.split()[0]
             if 'url' in self.data_collected:
-                rows['url'].append(url)
+                row['url'] = url
             if 'user id' in self.data_collected:
                 id_ = None
                 if review.find('span', {'class', 'user-name user-type user-type-1_standard_member'}):
                     id_ = review.find('span', {'class', 'user-name user-type user-type-1_standard_member'}).text
                 elif review.find('span', {'class': 'user-name user-type user-type-2_non_member'}):
                     id_ = review.find('span', {'class': 'user-name user-type user-type-2_non_member'}).text
-                rows['user id'].append(id_)
-
-        scraped_data = pd.DataFrame(rows, columns=self.data_collected)
-        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
+                row['user id'] = id_
+            self.reviews.append(row)
 
     def scrape(self, url):
         """
         Scrapes all reviews of a given drug
         :param url: drug reviews url
         """
-        print('Scraping Drugs.com...')
+        super().scrape(url)
+        front_page = requests.get(url)
+        front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
+        title = front_page_soup.find('h1').text
 
+        if 'User Reviews for ' in title:
+            drug_name = re.split('User Reviews for | \(Page', front_page_soup.find('h1').text)[1]
+        else:
+            print('Invalid URL entered: %s' % url)
+            return
+
+        print('Scraping Drugs.com for %s Reviews...' % drug_name)
         base_url = url + '?page='
-        num_pages = max_pages(url)
 
+        num_pages = max_pages(url)
         for i in tqdm(range(num_pages)):
             full_url = base_url + str(i + 1)
             self.scrape_page(full_url)
 
-    def get_url(self, drug_name):
+    def get_url(self, drug_name, return_multiple=False):
         """
         Given a drug name, finds the drug review page(s) on a given review forum
         :param drug_name: name of drug being searched for
+        :param return_multiple: if multiple urls are found, whether or not to return all of them
         :return: drug url on given review forum
         """
         if not drug_name or len(drug_name) < 4:
-            print('{} name too short; Please manually search for such reviews'.format(drug_name))
+            print('%s name too short; Please manually search for such reviews' % drug_name)
             return []
 
         characters = list('+'.join(drug_name.lower().split()))
@@ -92,19 +92,27 @@ class DrugsScraper(Scraper):
         search_page = requests.get(search_url)
         search_soup = BeautifulSoup(search_page.text, 'html.parser')
 
+        reviews_url = None
+
         if search_soup.find('p', {'class': 'user-reviews-title mgb-1'}):
             reviews_url = 'https://www.drugs.com' + search_soup.find(
                 'p', {'class': 'user-reviews-title mgb-1'}).find('a').attrs['href']
-            return [reviews_url]
         elif search_soup.find('img', {'src': '/img/icons/star.png'}):
             url = search_soup.find('h3').find('a').attrs['href']
-            reviews_url = url[:22] + 'comments' + url[21:]
-            reviews_page = requests.get(reviews_url)
+            candidate_url = url[:22] + 'comments' + url[21:]
+            reviews_page = requests.get(candidate_url)
             reviews_soup = BeautifulSoup(reviews_page.text, 'html.parser')
-            if reviews_soup.find('h1').text[:16] == 'User Reviews for':
-                return [reviews_url]
+            if not reviews_soup.find('h1').text[:16] == 'User Reviews for':
+                reviews_url = candidate_url
 
-        return []
+        if return_multiple and reviews_url:
+            print('Found 1 Review Page for %s' % drug_name)
+            return [reviews_url]
+        elif reviews_url:
+            return reviews_url
+        else:
+            print('Found no %s reviews' % drug_name)
+            return None
 
 
 def max_pages(drug_url):
@@ -130,7 +138,6 @@ def max_pages(drug_url):
     if total_reviews % 25 != 0:
         max_pages_ += 1
 
-    print('Found ' + str(total_reviews) + ' reviews.')
-    print('Scraping ' + str(max_pages_) + ' pages...')
+    print('Found %d reviews (%d pages).' % (total_reviews, max_pages_))
     return max_pages_
 
