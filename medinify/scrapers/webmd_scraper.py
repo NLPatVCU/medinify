@@ -27,10 +27,23 @@ class WebMDScraper(Scraper):
         reviews:         (list[dict]) Scraped review data
     """
     def __init__(self, collect_user_ids=False, collect_urls=False):
+        """
+        Constructor for WebMD scraper, used to collecting review data from WebMD.com
+        Sets up what data ought to be collected, and sets up how that data will be
+        stored (in the list attribute 'reviews')
+        :param collect_user_ids: whether or not this scraper will collect user ids
+        :param collect_urls: whether or not this scraper will collect each drug review's associated url
+        """
         super().__init__(collect_urls=collect_urls)
         self.collect_user_ids = collect_user_ids
 
     def scrape_page(self, url):
+        """
+        Collects data from one page of WebMD drug reviews into the 'reviews' attribute,
+        a list of dictionaries containing each requisite piece of data
+        (comment, rating, date, drug, user id (if specified), and url (if specified))
+        :param url: the url for the page to be scraped
+        """
         assert url[:39] == 'https://www.webmd.com/drugs/drugreview-', 'Url must be link to a WebMD reviews page'
 
         page = requests.get(url)
@@ -45,9 +58,6 @@ class WebMDScraper(Scraper):
         for review in reviews:
             row = {}
             comment = review.find('p', {'id': re.compile("^comFull*")}).text
-            if type(comment) == float:
-                print('Skipping invalid comment (Not a string)')
-                continue
             comment = re.sub('Comment:|Hide Full Comment', '', comment)
             row['comment'] = comment
 
@@ -67,6 +77,10 @@ class WebMDScraper(Scraper):
             self.reviews.append(row)
 
     def scrape(self, url):
+        """
+        Scrapes all review pages for a given drug on WebMD into 'reviews' attribute
+        :param url: url to the first page of drug reviews for this drug
+        """
         super().scrape(url)
         front_page = requests.get(url)
         front_page_soup = BeautifulSoup(front_page.text, 'html.parser')

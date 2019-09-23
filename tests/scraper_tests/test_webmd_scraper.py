@@ -91,6 +91,19 @@ def test_scrape_with_parameters():
     assert 'url' in data_collected
 
 
+def test_scrape_assert_title_error():
+    scraper = WebMDScraper()
+    returned = scraper.scrape('https://www.webmd.com/drugs/2/index')
+    assert returned == 0
+
+
+def test_scrape_no_reviews():
+    scraper = WebMDScraper()
+    scraper.scrape('https://www.webmd.com/drugs/drugreview-174349-8HR-Muscle-Aches-'
+                   'Pain-oral.aspx?drugid=174349&drugname=8HR-Muscle-Aches-Pain-oral')
+    assert len(scraper.reviews) == 0
+
+
 def test_get_url_real_drug_name():
     scraper = WebMDScraper()
     url = scraper.get_url('actos')
