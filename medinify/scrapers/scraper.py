@@ -1,37 +1,65 @@
+"""
+Medinify scrapers facilitate the collection of drug review data from online forums
+Currently, Medinify can specifically scrape certain data from the following websites:
 
+    --> WebMD.com
+        -> Comments (Review text)
+        -> 5-Point Scale Star Ratings ('Effectiveness', 'Ease of Use', and 'Satisfaction')
+        -> Post Dates
+        -> Use IDs
+    --> Drugs.com
+        -> Comments (Review text)
+        -> Star Rating (0.0-10.0 Point Scale)
+        -> Post Dates
+        -> Use IDs
+    --> DrugRatingz.com
+        -> Comments (Review text)
+        -> 5-Point Scale Star Ratings ('Effectiveness', 'Convenience', 'No Side Effects', and 'Value')
+        -> Post Dates
+    --> EverydayHealth.com
+        -> Comments (Review text)
+        -> 5-Point Scale Star Rating
+        }
+        -> Post Dates
+
+    (Additionally, review URLs can be stored alongside each review's scraped data)
+"""
 from abc import ABC, abstractmethod
 
 
 class Scraper(ABC):
+    """
+    The Scraper abstract class describes the required functionality of any drug forum scraper
+    and implements some functionality that is identical across all scrapers
 
-    def __init__(self, collect_user_ids=False, collect_urls=False):
+    Attributes:
+        collect_urls:   (Boolean) Whether or not to collect each review's associated url
+        reviews:        (list[dict]) Scraped review data
+    """
+    def __init__(self, collect_urls=False):
         """
-        The Scraper parent class defines the functions which any drug review scraper must implements
-        :param collect_user_ids: whether or not to collect user id data
-        :param collect_urls: whether or not to collect drug url data
+        Standard constructor for all drug forum scrapers
+        :param collect_urls: (Boolean) whether or not to collects the urls associated with each review
         """
-        self.data_collected = ['comment', 'rating', 'date', 'drug']
-        if collect_user_ids:
-            self.data_collected.append('user id')
-        if collect_urls:
-            self.data_collected.append('url')
-
+        self.collect_urls = collect_urls
         self.reviews = []
 
     @abstractmethod
     def scrape_page(self, url):
         """
-        Scrapes a single page of drug reviews
-        :param url: drug reviews page url
-        :return:
+        Function for collecting the reviews data from one page of a drug review forum
+        Scraped data is stored in scraper's review attribute
+        :param url: (str) url for the particular website being scraped
         """
         pass
 
     @abstractmethod
     def scrape(self, url):
         """
-        Scrapes all reviews of a given drug
-        :param url: drug reviews url
+        Scrapes all the review data for a particular drug on a particular drug review forum
+        Scraped data is stored in scraper's review attribute
+        (If scraper already has scraped review data, it is discarded before continued scraping)
+        :param url: (str) url for the first page of reviews for this drug
         """
         if len(self.reviews) > 0:
             print('Clearing scraper\'s pre-existent dataset of {} '
@@ -39,36 +67,37 @@ class Scraper(ABC):
             self.reviews = []
 
     @abstractmethod
-    def get_url(self, drug_name, return_multiple=False):
+    def get_url(self, drug_name):
         """
-        Given a drug name, finds the drug review page(s) on a given review forum
-        :param drug_name: name of drug being searched for
-        :param return_multiple: if multiple urls are found, whether or not to return all of them
-        :return: drug url on given review forum
+        Searches drug forum for reviews for a certain drug
+        :param drug_name: (str) drug name
+        :return: drug url (str) if found, None if not found
         """
         pass
 
     def get_urls(self, drug_names_file, output_file):
         """
-        Given a text file of drug names, searches for and writes file with review urls
-        :param drug_names_file: path to text file containing review urls
-        :param output_file: path to file to output urls
+        Given drug names, collects urls for those names on a particular drug forum
+        and writes them to a file
+        :param drug_names_file: (str) path to file containing drug names
+        :param output_file: (str) path to output drug urls file
         """
         review_urls = []
-        unfound_drugs = []
+        not_found_drugs = []
         with open(drug_names_file, 'r') as f:
             for line in f.readlines():
                 drug_name = line.strip()
-                drug_review_urls = self.get_url(drug_name, return_multiple=True)
-                if drug_review_urls:
-                    review_urls.extend(drug_review_urls)
+                drug_review_url = self.get_url(drug_name)
+                if drug_review_url:
+                    review_urls.append(drug_review_url)
                 else:
-                    unfound_drugs.append(drug_name)
+                    not_found_drugs.append(drug_name)
         with open(output_file, 'w') as url_f:
             for url in review_urls:
                 url_f.write(url + '\n')
         print('Wrote review url file.')
-        print('No urls found for %d drugs: %s' % (len(unfound_drugs), ', '.join(unfound_drugs)))
+        print('No urls found for %d drugs: %s' % (
+            len(not_found_drugs), ', '.join(not_found_drugs)))
 
 
 
