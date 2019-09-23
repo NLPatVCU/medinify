@@ -31,8 +31,8 @@ class WebMDScraper(Scraper):
         Constructor for WebMD scraper, used to collecting review data from WebMD.com
         Sets up what data ought to be collected, and sets up how that data will be
         stored (in the list attribute 'reviews')
-        :param collect_user_ids: whether or not this scraper will collect user ids
-        :param collect_urls: whether or not this scraper will collect each drug review's associated url
+        :param collect_user_ids: (Boolean) whether or not this scraper will collect user ids
+        :param collect_urls: (Boolean) whether or not this scraper will collect each drug review's associated url
         """
         super().__init__(collect_urls=collect_urls)
         self.collect_user_ids = collect_user_ids
@@ -42,7 +42,7 @@ class WebMDScraper(Scraper):
         Collects data from one page of WebMD drug reviews into the 'reviews' attribute,
         a list of dictionaries containing each requisite piece of data
         (comment, rating, date, drug, user id (if specified), and url (if specified))
-        :param url: the url for the page to be scraped
+        :param url: (str) the url for the page to be scraped
         """
         assert url[:39] == 'https://www.webmd.com/drugs/drugreview-', 'Url must be link to a WebMD reviews page'
 
@@ -79,7 +79,7 @@ class WebMDScraper(Scraper):
     def scrape(self, url):
         """
         Scrapes all review pages for a given drug on WebMD into 'reviews' attribute
-        :param url: url to the first page of drug reviews for this drug
+        :param url: (str) url to the first page of drug reviews for this drug
         """
         super().scrape(url)
         front_page = requests.get(url)
@@ -108,6 +108,13 @@ class WebMDScraper(Scraper):
             self.scrape_page(page_url)
 
     def get_url(self, drug_name):
+        """
+        Searches WebMD for reviews for a certain drug
+        :param drug_name: (str) name of the drug to search for
+        :return review_url: (str or None) if reviews for a drug with a matching name are found,
+            this is the url for the first page of those reviews
+            if a match was not found, returns None
+        """
         if len(drug_name) < 4:
             print('%s name too short; Please manually search for such reviews' % drug_name)
             return None
@@ -134,6 +141,11 @@ class WebMDScraper(Scraper):
 
 
 def max_pages(input_url):
+    """
+    Get the number of review pages for a given drug
+    :param input_url: (str) first page of reviews for a drug
+    :return pages: (int) number of review pages on WebMD for the drug
+    """
     page = requests.get(input_url)
     soup = BeautifulSoup(page.text, 'html.parser')
     if 'Be the first to share your experience with this treatment.' in \
