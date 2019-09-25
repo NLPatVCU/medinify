@@ -1,3 +1,16 @@
+"""
+Drug review scraper for Drugs.com
+Implements the ability to collect the following data:
+
+    -> Comments (Review text)
+    -> Star Rating (0.0-10.0 scale)
+    -> Post Dates
+    -> Use IDs
+    -> Each review's associated url
+    -> Each review's associated drug name
+
+and to search for review urls given a drug name
+"""
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
@@ -6,12 +19,32 @@ import re
 
 
 class DrugsScraper(Scraper):
+    """
+    The DrugsScraper class implements drug review scraping functionality for Drugs.com
 
+    Attributes:
+        collect_urls:    (Boolean) Whether or not to collect each review's associated url
+        collect_use_ids: (Boolean) Whether or not to collect user ids
+        reviews:         (list[dict]) Scraped review data
+    """
     def __init__(self, collect_user_ids=False, collect_urls=False):
+        """
+        Constructor for Drugs scraper, used to collecting review data from Drugs.com
+        Sets up what data ought to be collected, and sets up how that data will be
+        stored (in the list attribute 'reviews')
+        :param collect_user_ids: (Boolean) whether or not this scraper will collect user ids
+        :param collect_urls: (Boolean) whether or not this scraper will collect each drug review's associated url
+        """
         super().__init__(collect_urls=collect_urls)
         self.collect_user_ids = collect_user_ids
 
     def scrape_page(self, url):
+        """
+        Collects data from one page of Drugs.com drug reviews into the 'reviews' attribute,
+        a list of dictionaries containing each requisite piece of data
+        (comment, rating, date, drug, user id (if specified), and url (if specified))
+        :param url: (str) the url for the page to be scraped
+        """
         assert url[:31] == 'https://www.drugs.com/comments/', 'Invalid Drugs.com Reviews Page URL'
 
         page = requests.get(url)
@@ -44,6 +77,10 @@ class DrugsScraper(Scraper):
             self.reviews.append(row)
 
     def scrape(self, url):
+        """
+        Scrapes all review pages for a given drug on Drugs.com into 'reviews' attribute
+        :param url: (str) url to the first page of drug reviews for this drug
+        """
         super().scrape(url)
         front_page = requests.get(url)
         front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
@@ -67,6 +104,13 @@ class DrugsScraper(Scraper):
             self.scrape_page(full_url)
 
     def get_url(self, drug_name):
+        """
+        Searches Drugs.com for reviews for a certain drug
+        :param drug_name: (str) name of the drug to search for
+        :return review_url: (str or None) if reviews for a drug with a matching name are found,
+            this is the url for the first page of those reviews
+            if a match was not found, returns None
+        """
         if len(drug_name) < 4:
             print('%s name too short; Please manually search for such reviews' % drug_name)
             return None
@@ -86,8 +130,13 @@ class DrugsScraper(Scraper):
         return reviews_url
 
 
-def max_pages(drug_url):
-    page = requests.get(drug_url)
+def max_pages(input_url):
+    """
+    Get the number of review pages for a given drug
+    :param input_url: (str) first page of reviews for a drug
+    :return pages: (int) number of review pages on Drugs.com for the drug
+    """
+    page = requests.get(input_url)
     soup = BeautifulSoup(page.text, 'html.parser')
     table_footer = None
     if soup.find('table', {'class': 'data-list ddc-table-sortable'}):
@@ -98,10 +147,10 @@ def max_pages(drug_url):
         return 0
     total_reviews = int(''.join([ch for ch in table_footer[2].text if ch.isdigit()]))
 
-    max_pages_ = total_reviews // 25
+    pages = total_reviews // 25
     if total_reviews % 25 != 0:
-        max_pages_ += 1
+        pages += 1
 
-    print('Found %d reviews (%d pages).' % (total_reviews, max_pages_))
-    return max_pages_
+    print('Found %d reviews (%d pages).' % (total_reviews, pages))
+    return pages
 

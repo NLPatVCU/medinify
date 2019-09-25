@@ -6,6 +6,8 @@ Implements the ability to collect the following data:
     -> 5-Point Scale Star Ratings ('Effectiveness', 'Ease of Use', and 'Satisfaction')
     -> Post Dates
     -> Use IDs
+    -> Each review's associated url
+    -> Each review's associated drug name
 
 and to search for review urls given a drug name
 """
