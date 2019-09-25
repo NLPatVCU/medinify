@@ -1,7 +1,3 @@
-"""
-Scrapes Drugs.com for drug reviews.
-"""
-
 import requests
 from bs4 import BeautifulSoup
 from medinify.scrapers.scraper import Scraper
@@ -10,15 +6,12 @@ import re
 
 
 class DrugsScraper(Scraper):
-    """Scrapes Drugs.com for drug reviews.
-    """
+
+    def __init__(self, collect_user_ids=False, collect_urls=False):
+        super().__init__(collect_urls=collect_urls)
+        self.collect_user_ids = collect_user_ids
 
     def scrape_page(self, url):
-        """
-        Scrapes a single page of drug reviews
-        :param url: drug reviews page url
-        :return:
-        """
         assert url[:31] == 'https://www.drugs.com/comments/', 'Invalid Drugs.com Reviews Page URL'
 
         page = requests.get(url)
@@ -29,7 +22,7 @@ class DrugsScraper(Scraper):
 
         if len(reviews) == 0:
             print('No reviews found: %s' % url)
-            return
+            return 0
 
         for review in reviews:
             row = {'comment': review.find('p', {'class': 'ddc-comment-content'}).find('span').text.replace('"', '')}
@@ -39,9 +32,9 @@ class DrugsScraper(Scraper):
             row['rating'] = rating
             row['date'] = review.find('span', {'class': 'comment-date text-color-muted'}).text
             row['drug'] = drug_name.split()[0]
-            if 'url' in self.data_collected:
+            if self.collect_urls:
                 row['url'] = url
-            if 'user id' in self.data_collected:
+            if self.collect_user_ids:
                 id_ = None
                 if review.find('span', {'class', 'user-name user-type user-type-1_standard_member'}):
                     id_ = review.find('span', {'class', 'user-name user-type user-type-1_standard_member'}).text
@@ -51,20 +44,19 @@ class DrugsScraper(Scraper):
             self.reviews.append(row)
 
     def scrape(self, url):
-        """
-        Scrapes all reviews of a given drug
-        :param url: drug reviews url
-        """
         super().scrape(url)
         front_page = requests.get(url)
         front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
-        title = front_page_soup.find('h1').text
-
-        if 'User Reviews for ' in title:
+        try:
+            title = front_page_soup.find('h1').text
+            assert 'User Reviews for ' in title
             drug_name = re.split('User Reviews for | \(Page', front_page_soup.find('h1').text)[1]
-        else:
+        except AssertionError:
             print('Invalid URL entered: %s' % url)
-            return
+            return 0
+        except AttributeError:
+            print('Invalid URL entered: %s' % url)
+            return 0
 
         print('Scraping Drugs.com for %s Reviews...' % drug_name)
         base_url = url + '?page='
@@ -74,17 +66,10 @@ class DrugsScraper(Scraper):
             full_url = base_url + str(i + 1)
             self.scrape_page(full_url)
 
-    def get_url(self, drug_name, return_multiple=False):
-        """
-        Given a drug name, finds the drug review page(s) on a given review forum
-        :param drug_name: name of drug being searched for
-        :param return_multiple: if multiple urls are found, whether or not to return all of them
-        :return: drug url on given review forum
-        """
-        if not drug_name or len(drug_name) < 4:
+    def get_url(self, drug_name):
+        if len(drug_name) < 4:
             print('%s name too short; Please manually search for such reviews' % drug_name)
-            return []
-
+            return None
         characters = list('+'.join(drug_name.lower().split()))
         name = ''.join([x if x.isalnum() or x == '+' else hex(ord(x)).replace('0x', '%') for x in characters])
 
@@ -97,32 +82,11 @@ class DrugsScraper(Scraper):
         if search_soup.find('p', {'class': 'user-reviews-title mgb-1'}):
             reviews_url = 'https://www.drugs.com' + search_soup.find(
                 'p', {'class': 'user-reviews-title mgb-1'}).find('a').attrs['href']
-        elif search_soup.find('img', {'src': '/img/icons/star.png'}):
-            url = search_soup.find('h3').find('a').attrs['href']
-            candidate_url = url[:22] + 'comments' + url[21:]
-            reviews_page = requests.get(candidate_url)
-            reviews_soup = BeautifulSoup(reviews_page.text, 'html.parser')
-            if not reviews_soup.find('h1').text[:16] == 'User Reviews for':
-                reviews_url = candidate_url
 
-        if return_multiple and reviews_url:
-            print('Found 1 Review Page for %s' % drug_name)
-            return [reviews_url]
-        elif reviews_url:
-            return reviews_url
-        else:
-            print('Found no %s reviews' % drug_name)
-            return None
+        return reviews_url
 
 
 def max_pages(drug_url):
-    """Finds number of review pages for this drug.
-
-    Args:
-        drug_url: URL for the first page of reviews.
-    Returns:
-        (int) Highest page number
-    """
     page = requests.get(drug_url)
     soup = BeautifulSoup(page.text, 'html.parser')
     table_footer = None

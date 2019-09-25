@@ -29,6 +29,18 @@ def test_no_reviews():
     assert returned == 0
 
 
+def test_scrape_correct_review_data():
+    scraper = WebMDScraper(collect_user_ids=True, collect_urls=True)
+    scraper.scrape('https://www.webmd.com/drugs/drugreview-8953-A-G-Pro-oral.aspx?drugid=8953&drugname=A-G-Pro-oral')
+    assert scraper.reviews[-1]['comment'][:10] == 'I started '
+    assert scraper.reviews[-1]['comment'][-10:] == 'vitamin :)'
+    assert scraper.reviews[-1]['user id'] == 'A95, 13-18 Female  on Treatment for 1 to 6 months (Patient)'
+    assert scraper.reviews[-1]['rating']['effectiveness'] == 5
+    assert scraper.reviews[-1]['rating']['ease of use'] == 5
+    assert scraper.reviews[-1]['rating']['satisfaction'] == 5
+    assert scraper.reviews[-1]['date'] == '10/6/2010 10:10:35 PM'
+
+
 def test_scrape_page_default_parameters():
     scraper = WebMDScraper()
     scraper.scrape_page('https://www.webmd.com/drugs/drugreview-64439-abilify.aspx?drugid=64439&drugname=abilify')

@@ -73,7 +73,7 @@ class WebMDScraper(Scraper):
             if self.collect_urls:
                 row['url'] = url
             if self.collect_user_ids:
-                row['user id'] = review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', '')
+                row['user id'] = review.find('p', {'class': 'reviewerInfo'}).text.replace('Reviewer: ', '').strip()
             self.reviews.append(row)
 
     def scrape(self, url):
