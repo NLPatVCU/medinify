@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 class EverydayHealthScraper(Scraper):
     """
-    The WebMDScraper class implements drug review scraping functionality for WebMD.com
+    The EverydayHealthScraper class implements drug review scraping functionality for EverydayHealth.com
 
     Attributes:
         collect_urls:    (Boolean) Whether or not to collect each review's associated url
@@ -107,7 +107,7 @@ def max_pages(input_url):
     """
     Get the number of review pages for a given drug
     :param input_url: (str) first page of reviews for a drug
-    :return pages: (int) number of review pages on WebMD for the drug
+    :return pages: (int) number of review pages on EverydayHealth.com for the drug
     """
     page = requests.get(input_url)
     soup = BeautifulSoup(page.text, 'html.parser')
