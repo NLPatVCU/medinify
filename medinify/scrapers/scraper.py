@@ -19,10 +19,9 @@ Currently, Medinify can specifically scrape certain data from the following webs
     --> EverydayHealth.com
         -> Comments (Review text)
         -> 5-Point Scale Star Rating
-        }
         -> Post Dates
 
-    (Additionally, review URLs can be stored alongside each review's scraped data)
+    (Additionally, review URLs and associated drug names can be stored alongside each review's scraped data)
 """
 from abc import ABC, abstractmethod
 
