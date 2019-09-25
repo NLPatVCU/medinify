@@ -1,7 +1,15 @@
 """
-EverydayHealth.com drug review scraper
-"""
+Drug review scraper for EverydayHealth.com
+Implements the ability to collect the following data:
 
+    -> Comments (Review text)
+    -> 5-Point Scale Star Ratings
+    -> Post Dates
+    -> Each review's associated url
+    -> Each review's associated drug name
+
+and to search for review urls given a drug name
+"""
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -10,18 +18,19 @@ from tqdm import tqdm
 
 
 class EverydayHealthScraper(Scraper):
-    """Scrapes EverydayHealth.com for drug reviews.
     """
+    The WebMDScraper class implements drug review scraping functionality for WebMD.com
 
-    def __init__(self, collect_user_ids=False, collect_urls=False):
-        super(EverydayHealthScraper, self).__init__(collect_user_ids, collect_urls)
-        if collect_user_ids:
-            raise AttributeError('EverydayHealth.com does not collect user id data')
-
+    Attributes:
+        collect_urls:    (Boolean) Whether or not to collect each review's associated url
+        reviews:         (list[dict]) Scraped review data
+    """
     def scrape_page(self, url):
         """
-        Scrapes a single page of drug reviews
-        :param url: drug reviews page url
+        Collects data from one page of EverydayHealth drug reviews into the 'reviews' attribute,
+        a list of dictionaries containing each requisite piece of data
+        (comment, rating, date, drug, and url (if specified))
+        :param url: (str) the url for the page to be scraped
         """
         assert url[:30] == 'https://www.everydayhealth.com', \
             'Url must be link to an EverydayHealth.com reviews page'
@@ -45,80 +54,71 @@ class EverydayHealthScraper(Scraper):
                 row['rating'] = float(review.find('span', {'itemprop': 'reviewRating'}).text)
             row['date'] = review.find('span', {'class': 'time'}).attrs['content']
             row['drug'] = drug_name
-            if 'url' in self.data_collected:
+            if self.collect_urls:
                 row['url'] = url
             self.reviews.append(row)
 
     def scrape(self, url):
         """
-        Scrapes all reviews of a given drug
-        :param url: drug reviews url
+        Scrapes all review pages for a given drug on EverydayHealth into 'reviews' attribute
+        :param url: (str) url to the first page of drug reviews for this drug
         """
         super().scrape(url)
         front_page = requests.get(url)
         front_page_soup = BeautifulSoup(front_page.text, 'html.parser')
-        if front_page_soup.find('span', {'itemprop': 'name'}):
-            drug_name = front_page_soup.find('span', {'itemprop': 'name'}).text
-        else:
-            print('Invalid URL entered: %s' % url)
-            return
-        print('Scraping EverydayHealth for %s Reviews...' % drug_name)
 
+        try:
+            drug_name = front_page_soup.find('span', {'itemprop': 'name'}).text
+        except AttributeError:
+            print('Invalid URL entered: %s' % url)
+            return 0
+
+        print('Scraping EverydayHealth for %s Reviews...' % drug_name)
         num_pages = max_pages(url)
 
         for i in tqdm(range(num_pages)):
             page_url = url + '/' + str(i + 1)
             self.scrape_page(page_url)
 
-    def get_url(self, drug_name, return_multiple=False):
+    def get_url(self, drug_name):
         """
-        Given a drug name, finds the drug review page(s) on a given review forum
-        :param drug_name: name of drug being searched for
-        :param return_multiple: if multiple urls are found, whether or not to return all of them
-        :return: drug url on given review forum
+        Searches EverydayHealth for reviews for a certain drug
+        :param drug_name: (str) name of the drug to search for
+        :return review_url: (str or None) if reviews for a drug with a matching name are found,
+            this is the url for the first page of those reviews
+            if a match was not found, returns None
         """
-        if not drug_name or len(drug_name) < 4:
+        if len(drug_name) < 4:
             print('%s name too short; Please manually search for such reviews' % drug_name)
-            return []
-
-        review_urls = []
+            return None
         drug = re.sub('\s+', '-', drug_name.lower())
         search_url = 'https://www.everydayhealth.com/drugs/' + drug + '/reviews'
         page = requests.get(search_url)
         search_soup = BeautifulSoup(page.text, 'html.parser')
+
+        review_url = None
         if 'Reviews' in search_soup.find('title').text.split():
-            review_urls.append(search_url)
-        if return_multiple and len(review_urls) > 0:
-            print('Found %d Review Page(s) for %s' % (len(review_urls), drug_name))
-            return review_urls
-        elif len(review_urls) > 0:
-            return review_urls[0]
-        else:
-            print('Found no %s reviews' % drug_name)
-            return None
+            review_url = search_url
+
+        return review_url
 
 
 def max_pages(input_url):
-    """Finds number of review pages for this drug.
-    Args:
-        input_url: URL for the first page of reviews.
-    Returns:
-        (int) Highest page number
     """
-    while True:
-        page = requests.get(input_url)
-        soup = BeautifulSoup(page.text, 'html.parser')
+    Get the number of review pages for a given drug
+    :param input_url: (str) first page of reviews for a drug
+    :return pages: (int) number of review pages on WebMD for the drug
+    """
+    page = requests.get(input_url)
+    soup = BeautifulSoup(page.text, 'html.parser')
 
-        # Case if no reviews available
-
-        break
     if soup.find('div', {'class': 'review-details clearfix'}):
         total_reviews_head = soup.find('div', {'class': 'review-details clearfix'}).find('h5').find('span', {
             'itemprop': 'reviewCount'}).text
     else:
         return 0
-    total_reviews = int(total_reviews_head)
 
+    total_reviews = int(total_reviews_head)
     max_pages_foot = soup.find('div', {'class': 'review-pagination'}).find('section', {
         'class': 'review-pagination__section--info'}).text.split()
     pages = int(max_pages_foot[2])
