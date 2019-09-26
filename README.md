@@ -2,7 +2,7 @@
 
 
 Sentiment analysis for online drug reviews. 
-###Scraper/Review Data
+### Scraper/Review Data
 Medinify does several things: it has scraper functionality where it takes public drug review data and outputs a csv file with the comment along with the rating data and other metadata.
 
 ## Requirements
@@ -10,7 +10,7 @@ Medinify does several things: it has scraper functionality where it takes public
 * Python 3.6
 
 ## Getting Started
-###Using Git Version Control to grab Medinify
+### Using Git Version Control to grab Medinify
 Ensure that you have git installed.  If using Mac open the terminal using ⌘ + T.  Then type into the terminal:
 ```
 git --version
@@ -24,7 +24,7 @@ Then for either Mac or Linux type into the terminal (to install to current folde
 ```
 git clone https://github.com/NanoNLP/medinify [Intended Directory](e.g.: Programs/Programfolder)
 ```
-###Virtual environment setup
+### Virtual environment setup
 In order to manage dependencies/configuration virtual environments are used.  To set one up for this project use the terminal and go to the project installation directory.
 From there enter the following commands:
 
