@@ -16,6 +16,8 @@ import torch.utils.data
 import torch.optim as optim
 
 
+
+
 def fit(n_epochs=None, rating_type=None, batch_size=None, reviews_file=None,
         w2v_file=None, train_loader=None, network=None):
     """Trains a CNN network
