@@ -87,7 +87,7 @@ dataset.print_stats()
 
 Train and test a model for running sentiment analysis on drug reviews. Models can currently use Naive Bayes, Decision Tree, or a Tensorflow Neural Network.
 
-####Naive Bayes 
+#### Naive Bayes 
 Required arguments: Drug review file csv, output file
 
  A probabilistic supervised machine learning algorithm that takes into account the frequency of positive and negative words
