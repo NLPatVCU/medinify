@@ -91,10 +91,10 @@ Train and test a model for running sentiment analysis on drug reviews. Models ca
 Required arguments: Drug review file csv, output file
 
  A probabilistic supervised machine learning algorithm that takes into account the frequency of positive and negative words
-####Neural Network 
+### Neural Network 
 ### Random Forest 
 Ensemble machine learning algorithm which generates a series of decision trees and classifies based on the mean output of each tree
-###Support Vector Machine 
+### Support Vector Machine 
 Generates a hyperplane for separating data into two categories, positive or negative
 
 #### Review Classifier Examples
