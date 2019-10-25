@@ -162,6 +162,7 @@ class Dataset:
               (pos_ease_of_use, 100 * (pos_ease_of_use / len(self.dataset)),
                neg_ease_of_use, 100 * (neg_ease_of_use / len(self.dataset)),
                neut_ease_of_use, 100 * (neut_ease_of_use / len(self.dataset))))
+        print('\n***********************************************\n')
 
 
     """

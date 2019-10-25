@@ -74,10 +74,11 @@ class Scraper(ABC):
         """
         pass
 
-    def get_urls(self, drug_names_file, output_file):
+    def get_urls(self, drug_names_file, output_file=None):
         """
-        Given drug names, collects urls for those names on a particular drug forum
-        and writes them to a file
+        Given a text file containing drug names (one name per line), collects
+        the urls for each drug name, and either writes those urls to a file,
+        one url per line (if an output file is specified), or returns urls as a list[str]
         :param drug_names_file: (str) path to file containing drug names
         :param output_file: (str) path to output drug urls file
         """
@@ -91,12 +92,17 @@ class Scraper(ABC):
                     review_urls.append(drug_review_url)
                 else:
                     not_found_drugs.append(drug_name)
-        with open(output_file, 'w') as url_f:
-            for url in review_urls:
-                url_f.write(url + '\n')
-        print('Wrote review url file.')
-        print('No urls found for %d drugs: %s' % (
-            len(not_found_drugs), ', '.join(not_found_drugs)))
+        if output_file:
+            with open(output_file, 'w') as url_f:
+                for url in review_urls:
+                    url_f.write(url + '\n')
+            print('Wrote review url file.')
+            print('No urls found for %d drugs: %s' % (
+                len(not_found_drugs), ', '.join(not_found_drugs)))
+        else:
+            print('No urls found for %d drugs: %s' % (
+                len(not_found_drugs), ', '.join(not_found_drugs)))
+            return review_urls
 
 
 

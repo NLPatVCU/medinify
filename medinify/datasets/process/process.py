@@ -9,33 +9,17 @@ from collections import namedtuple
 
 
 class Processor:
-    """
-    For processing review ratings / comments
-
-    Attributes:
-        count_vectorizer: trained count vectorizer
-        tfidf_vectorizer: trained tfidf vectorizer
-        pos_vectorizer: count vectorizer trained over a part-of-speech based vocab
-        nlp: spacy english model for tokenizing and getting parts of speech
-        stops: set of stop words
-    """
-    count_vectorizer = None
-    tfidf_vectorizer = None
-    pos_vectorizer = None
+    # tfidf_vectorizer = None
+    # pos_vectorizer = None
 
     def __init__(self):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
+        self.count_vectorizer = CountVectorizer()
 
     def get_count_vectors(self, comments, ratings):
-        """
-        Count vectorizes comments
-        :param comments: list of comment strings
-        :param ratings: list of numeric ratings
-        :return: reviews: list of tuples with original comment, data, and target
-        """
         comments = list(comments)
-        ratings = np.asarray(ratings)
+        ratings = [ast.literal_eval(rating) for rating in ratings]
         target = process_rating(ratings)
         review = namedtuple('review', 'comment, data, target')
         reviews = np.empty(len(comments), dtype=tuple)
@@ -53,13 +37,8 @@ class Processor:
 
         return reviews
 
+    """
     def get_tfidf_vectors(self, comments, ratings):
-        """
-        TF-IDF vectorizes comments
-        :param comments: list of comment strings
-        :param ratings: list of numeric ratings
-        :return: reviews: list of tuples with original comment, data, and target
-        """
         comments = list(comments)
         ratings = np.asarray(ratings)
         target = process_rating(ratings)
@@ -78,14 +57,10 @@ class Processor:
             reviews[i] = datum
 
         return reviews
+    """
 
+    """
     def get_pos_vectors(self, comments, ratings):
-        """
-        Count vectorizes comments using only words of a specific part of speech
-        :param comments: list of comment strings
-        :param ratings: list of numeric ratings
-        :return: reviews: list of tuples with original comment, data, and target
-        """
         assert config.POS, 'No part of speech specified when constructing Dataset'
 
         comments = list(comments)
@@ -113,14 +88,9 @@ class Processor:
             reviews[i] = datum
 
         return reviews
+    """
 
     def get_average_embeddings(self, comments, ratings):
-        """
-        Count vectorizes comments using only words of a specific part of speech
-        :param comments: list of comment strings
-        :param ratings: list of numeric ratings
-        :return: reviews: list of tuples with original comment, data, and target
-        """
         assert config.WORD_2_VEC, 'No word embeddings file specified when constructing Dataset'
 
         comments = list(comments)
@@ -153,24 +123,12 @@ class Processor:
         return reviews
 
     def tokenize(self, comment):
-        """
-        Runs spacy tokenization
-        :param comment: comment being tokenized
-        :return: tokens
-        """
-        tokens = [token.text for token in self.nlp.tokenizer(comment.lower())
-                  if token.text not in self.stops and not token.is_punct
-                  and not token.is_space]
+        tokens = [token.orth_ for token in self.nlp.tokenizer(comment.lower())
+                  if token.orth_ not in self.stops and not token.is_punct | token.is_space]
         return tokens
 
 
 def process_rating(ratings):
-    """
-    Processes ratings into label vector
-    :param ratings: list of review ratings
-    :return: vectorized ratings, indicies indicating where in the original
-        list the processed ratings came from
-    """
     targets = np.empty(ratings.shape[0])
     for i, rating in enumerate(ratings):
         if type(rating) == str:
