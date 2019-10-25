@@ -1,25 +1,18 @@
 
 import pandas as pd
-import pickle
 import os
-import numpy as np
 import ast
-import re
 from gensim.models import KeyedVectors
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
 from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
 from medinify.datasets.process.process import Processor
-from medinify import config
-from tqdm import tqdm
 
 
 class Dataset:
 
-    def __init__(self, scraper='WebMD', collect_user_ids=False, collect_urls=False):
-        # , w2v_file=None, pos=None, pos_threshold=4.0, neg_threshold=2.0, num_classes=2,
-        # rating_type='effectiveness', data_representation='count'):
+    def __init__(self, scraper='WebMD', collect_user_ids=False, collect_urls=False, word_embeddings=None):
         assert scraper in ['WebMD', 'Drugs', 'DrugRatingz', 'EverydayHealth'], \
             'Scraper must be \'WebMD\', \'Drugs\', \'DrugRatingz\', or \'EverydayHealth\''
         if scraper == 'WebMD':
@@ -42,37 +35,16 @@ class Dataset:
             columns.append('user id')
 
         self.dataset = pd.DataFrame(columns=columns)
-
-        """
         self.processor = Processor()
-        """
-
-        """
-        if w2v_file:
-            wv = KeyedVectors.load_word2vec_format(w2v_file)
-            w2v = dict(zip(list(wv.vocab.keys()), wv.vectors))
-            config.WORD_2_VEC = w2v
-        if pos:
-            config.POS = pos
-        """
-
-        """
-        if not config.POS_THRESHOLD:
-            config.POS_THRESHOLD = pos_threshold
-        if not config.NUM_CLASSES:
-            config.NUM_CLASSES = num_classes
-        if not config.NEG_THRESHOLD:
-            config.NEG_THRESHOLD = neg_threshold
-        if not config.RATING_TYPE:
-            config.RATING_TYPE = rating_type
-        if not config.DATA_REPRESENTATION:
-            config.DATA_REPRESENTATION = data_representation
-        """
+        self.count_vectors = None
+        self.average_embeddings = None
+        self.word_embeddings_file = word_embeddings
 
     def collect(self, url):
         self.scraper.scrape(url)
         scraped_data = pd.DataFrame(self.scraper.reviews)
         self.dataset = self.dataset.append(scraped_data, ignore_index=True)
+        self._clean_comments()
 
     def collect_from_urls(self, urls_file=None, urls=None, start=0):
         assert bool(urls_file) ^ bool(urls)
@@ -105,18 +77,23 @@ class Dataset:
 
     def load_file(self, csv_file):
         self.dataset = pd.read_csv(csv_file)
+        self._clean_comments()
 
-    def remove_empty_comments(self):
+    def _remove_empty_comments(self):
         num_rows = len(self.dataset)
         self.dataset = self.dataset.loc[self.dataset['comment'].notnull()]
         num_removed = num_rows - len(self.dataset)
         print('Removed %d empty comment(s).' % num_removed)
 
-    def remove_duplicate_comments(self):
+    def _remove_duplicate_comments(self):
         num_rows = len(self.dataset)
         self.dataset.drop_duplicates(subset='comment', inplace=True)
         num_removed = num_rows - len(self.dataset)
         print('Removed %d duplicate review(s).' % num_removed)
+
+    def _clean_comments(self):
+        self._remove_duplicate_comments()
+        self._remove_empty_comments()
 
     def print_stats(self):
         if type(self.scraper) != WebMDScraper:
@@ -164,75 +141,14 @@ class Dataset:
                neut_ease_of_use, 100 * (neut_ease_of_use / len(self.dataset))))
         print('\n***********************************************\n')
 
+    def get_count_vectors(self):
+        self.count_vectors = self.processor.process_count_vectors(self.dataset['comment'])
+
+    def get_average_embeddings(self):
+        w2v = KeyedVectors.load_word2vec_format(self.word_embeddings_file)
+        self.average_embeddings = self.processor.get_average_embeddings(self.dataset['comment'], w2v)
 
     """
-    def get_count_vectors(self, classifying=False):
-        reviews = self.processor.get_count_vectors(self.data['comment'], self.data['rating'])
-        data, target, comments = [], [], []
-        for review in reviews:
-            if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
-                data.append(review.data)
-                target.append(review.target)
-                comments.append(review.comment)
-            elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
-                data.append(review.data)
-                target.append(review.target)
-                comments.append(review.comment)
-            elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
-                data.append(review.data)
-                target.append(review.target)
-                comments.append(review.comment)
-
-        if classifying:
-            return data, target, comments
-        else:
-            return data, target
-
-    def get_tfidf_vectors(self, classifying=False):
-        reviews = self.processor.get_tfidf_vectors(self.data['comment'], self.data['rating'])
-        data, target, comments = [], [], []
-        for review in reviews:
-            if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
-                data.append(review.data)
-                target.append(review.target)
-                comments.append(review.comment)
-            elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
-                data.append(review.data)
-                target.append(review.target)
-                comments.append(review.comment)
-            elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
-                data.append(review.data)
-                target.append(review.target)
-                comments.append(review.comment)
-
-        if classifying:
-            return data, target, comments
-        else:
-            return data, target
-
-    def get_average_embeddings(self, classifying=False):
-        reviews = self.processor.get_average_embeddings(self.data['comment'], self.data['rating'])
-        data, target, comments = [], [], []
-        for review in reviews:
-            if not np.sum(review.data) == 0:
-                if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
-                    data.append(review.data)
-                    target.append(review.target)
-                    comments.append(review.comment)
-                elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
-                    data.append(review.data)
-                    target.append(review.target)
-                    comments.append(review.comment)
-                elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
-                    data.append(review.data)
-                    target.append(review.target)
-                    comments.append(review.comment)
-
-        if classifying:
-            return data, target, comments
-        else:
-            return data, target
-
     def get_pos_vectors(self, classifying=False):
         reviews = self.processor.get_pos_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []

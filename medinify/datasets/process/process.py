@@ -2,62 +2,46 @@
 import numpy as np
 import ast
 import spacy
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 from nltk.corpus import stopwords
 from medinify import config
-from collections import namedtuple
 
 
 class Processor:
-    # tfidf_vectorizer = None
-    # pos_vectorizer = None
 
     def __init__(self):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
-        self.count_vectorizer = CountVectorizer()
+        self.count_vectorizer = CountVectorizer(tokenizer=self.tokenize)
 
-    def get_count_vectors(self, comments, ratings):
-        comments = list(comments)
-        ratings = [ast.literal_eval(rating) for rating in ratings]
-        target = process_rating(ratings)
-        review = namedtuple('review', 'comment, data, target')
-        reviews = np.empty(len(comments), dtype=tuple)
+    def process_count_vectors(self, comments):
+        try:
+            self.count_vectorizer.vocabulary_
+        except AttributeError:
+            self.count_vectorizer.fit(comments)
+        count_vectors = self.count_vectorizer.transform(comments)
+        return count_vectors
 
-        if not self.count_vectorizer:
-            count_vectorizer = CountVectorizer(tokenizer=self.tokenize)
-            data = np.asarray([x.todense() for x in count_vectorizer.fit_transform(comments)]).squeeze(1)
-            self.count_vectorizer = count_vectorizer
-        else:
-            data = np.asarray([x.todense() for x in self.count_vectorizer.transform(comments)]).squeeze(1)
+    def get_average_embeddings(self, comments, w2v):
+        embeddings = np.zeros((comments.shape[0], 100))
+        for i, comment in enumerate(comments):
+            tokens = self.tokenize(comment)
+            all_embeddings = []
+            for token in tokens:
+                try:
+                    all_embeddings.append(w2v[token])
+                except KeyError:
+                    continue
+            if len(all_embeddings) == 0:
+                continue
+            else:
+                embeddings[i] = np.average(all_embeddings, axis=0)
+        return embeddings
 
-        for i in range(reviews.shape[0]):
-            datum = review(comment=comments[i], target=target[i], data=data[i])
-            reviews[i] = datum
-
-        return reviews
-
-    """
-    def get_tfidf_vectors(self, comments, ratings):
-        comments = list(comments)
-        ratings = np.asarray(ratings)
-        target = process_rating(ratings)
-        review = namedtuple('review', 'comment, data, target')
-        reviews = np.empty(len(comments), dtype=tuple)
-
-        if not self.tfidf_vectorizer:
-            tfidf_vectorizer = TfidfVectorizer(tokenizer=self.tokenize)
-            data = np.asarray([x.todense() for x in tfidf_vectorizer.fit_transform(comments)]).squeeze(1)
-            self.tfidf_vectorizer = tfidf_vectorizer
-        else:
-            data = np.asarray([x.todense() for x in self.tfidf_vectorizer.transform(comments)]).squeeze(1)
-
-        for i in range(reviews.shape[0]):
-            datum = review(comment=comments[i], target=target[i], data=data[i])
-            reviews[i] = datum
-
-        return reviews
-    """
+    def tokenize(self, comment):
+        tokens = [token.orth_ for token in self.nlp.tokenizer(comment.lower())
+                  if token.orth_ not in self.stops and not token.is_punct | token.is_space]
+        return tokens
 
     """
     def get_pos_vectors(self, comments, ratings):
@@ -89,43 +73,6 @@ class Processor:
 
         return reviews
     """
-
-    def get_average_embeddings(self, comments, ratings):
-        assert config.WORD_2_VEC, 'No word embeddings file specified when constructing Dataset'
-
-        comments = list(comments)
-        ratings = np.asarray(ratings)
-        target = process_rating(ratings)
-        review = namedtuple('review', 'comment, data, target')
-        reviews = np.empty(len(comments), dtype=tuple)
-
-        average_embeddings = []
-        for comment in comments:
-            tokens = self.tokenize(comment)
-            token_embeddings = []
-            for token in tokens:
-                try:
-                    token_embeddings.append(config.WORD_2_VEC[token])
-                except KeyError:
-                    continue
-            if len(token_embeddings) == 0:
-                average_embeddings.append(np.zeros(100))
-            else:
-                average = np.average(token_embeddings, axis=0)
-                average_embeddings.append(average)
-
-        data = np.asarray(average_embeddings)
-
-        for i in range(reviews.shape[0]):
-            datum = review(comment=comments[i], target=target[i], data=data[i])
-            reviews[i] = datum
-
-        return reviews
-
-    def tokenize(self, comment):
-        tokens = [token.orth_ for token in self.nlp.tokenizer(comment.lower())
-                  if token.orth_ not in self.stops and not token.is_punct | token.is_space]
-        return tokens
 
 
 def process_rating(ratings):
