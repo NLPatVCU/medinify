@@ -6,6 +6,20 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name="medinify",
     version="0.0.1",
+    install_requires=[
+        'requests==2.22.0',
+        'bs4==0.0.1',
+        'tqdm==4.31.1',
+        'pandas==0.25.0',
+        'gensim==3.6.0',
+        'spacy==2.2.0',
+        'en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.2.0/en_core_web_sm-2.2.0.tar.gz',
+        'sklearn==0.0',
+        'nltk==3.4',
+        'torch==1.1.0',
+        'torchtext==0.3.1',
+        'pytest==4.3.0'
+    ],
     author="Example Author",
     author_email="author@example.com",
     description="For classifying medical text.",
