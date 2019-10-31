@@ -1,10 +1,8 @@
 
 import numpy as np
-import ast
 import spacy
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.corpus import stopwords
-from medinify import config
 
 
 class Processor:
@@ -75,6 +73,7 @@ class Processor:
     """
 
 
+"""
 def process_rating(ratings):
     targets = np.empty(ratings.shape[0])
     for i, rating in enumerate(ratings):
@@ -101,5 +100,6 @@ def process_rating(ratings):
         targets[i] = target
 
     return targets
+"""
 
 

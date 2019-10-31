@@ -2,6 +2,7 @@
 import pandas as pd
 import os
 import ast
+import numpy as np
 from gensim.models import KeyedVectors
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
@@ -12,7 +13,9 @@ from medinify.datasets.process.process import Processor
 
 class Dataset:
 
-    def __init__(self, scraper='WebMD', collect_user_ids=False, collect_urls=False, word_embeddings=None):
+    def __init__(self, scraper='WebMD', collect_user_ids=False, collect_urls=False,
+                 word_embeddings=None, rating_type='effectiveness', num_classes=2,
+                 feature_representation='bow'):
         assert scraper in ['WebMD', 'Drugs', 'DrugRatingz', 'EverydayHealth'], \
             'Scraper must be \'WebMD\', \'Drugs\', \'DrugRatingz\', or \'EverydayHealth\''
         if scraper == 'WebMD':
@@ -33,18 +36,24 @@ class Dataset:
             columns.append('url')
         if collect_user_ids:
             columns.append('user id')
+        self.rating_type = rating_type
+        self.num_classes = num_classes
+        self.feature_representation = feature_representation
 
         self.dataset = pd.DataFrame(columns=columns)
         self.processor = Processor()
         self.count_vectors = None
         self.average_embeddings = None
         self.word_embeddings_file = word_embeddings
+        if self.word_embeddings_file:
+            self.w2v = KeyedVectors.load_word2vec_format(self.word_embeddings_file)
 
     def collect(self, url):
         self.scraper.scrape(url)
         scraped_data = pd.DataFrame(self.scraper.reviews)
         self.dataset = self.dataset.append(scraped_data, ignore_index=True)
         self._clean_comments()
+        self.get_ratings()
 
     def collect_from_urls(self, urls_file=None, urls=None, start=0):
         assert bool(urls_file) ^ bool(urls)
@@ -78,6 +87,7 @@ class Dataset:
     def load_file(self, csv_file):
         self.dataset = pd.read_csv(csv_file)
         self._clean_comments()
+        self.get_ratings()
 
     def _remove_empty_comments(self):
         num_rows = len(self.dataset)
@@ -142,13 +152,36 @@ class Dataset:
         print('\n***********************************************\n')
 
     def get_count_vectors(self):
-        self.count_vectors = self.processor.process_count_vectors(self.dataset['comment'])
+        count_vectors = self.processor.process_count_vectors(self.dataset['comment'])
+        return count_vectors
 
     def get_average_embeddings(self):
-        w2v = KeyedVectors.load_word2vec_format(self.word_embeddings_file)
-        self.average_embeddings = self.processor.get_average_embeddings(self.dataset['comment'], w2v)
+        average_embeddings = self.processor.get_average_embeddings(self.dataset['comment'], self.w2v)
+        return average_embeddings
+
+    def get_ratings(self):
+        labels = np.zeros(self.dataset.shape[0])
+        for i, rating in enumerate(self.dataset['rating']):
+            if type(rating) != dict:
+                num = ast.literal_eval(rating)[self.rating_type]
+            else:
+                num = rating[self.rating_type]
+            if self.num_classes == 2:
+                if num == 3.0:
+                    labels[i] = np.NaN
+                elif num in [4.0, 5.0]:
+                    labels[i] = 1
+            elif self.num_classes == 3:
+                if num == 3.0:
+                    labels[i] = 1
+                elif num in [4.0, 5.0]:
+                    labels[i] = 2
+        self.dataset['label'] = labels
+
 
     """
+    The correct implementation of this code exists in a different branch
+    This version is broken
     def get_pos_vectors(self, classifying=False):
         reviews = self.processor.get_pos_vectors(self.data['comment'], self.data['rating'])
         data, target, comments = [], [], []

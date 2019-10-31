@@ -1,96 +1,67 @@
 
 import numpy as np
 import pickle
-import os
-from medinify.datasets.dataset import Dataset
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
-from medinify import config
+from medinify.datasets.process import Processor
+
+
+class Model:
+
+    def __init__(self):
+        self.model = None
+        self.processor = Processor()
 
 
 class Classifier:
-    """
-    The classifier class implements three SkLearn-Based sentiment classifiers
-    MultinomialNaiveBayes, Random Forest, and SVC
-    For training, evaluation, and validation (k-fold)
 
-    Attributes:
-        classifier_type: what type of classifier to train ('nb', 'rf', or 'svm')
-        count_vectorizer: turns strings into count vectors
-        tfidf_vectorizer: turns strings into tfidf vectors
-        pos_count_vectorizer: turns string into count vectors for a certain part of speech
-        dataset: the classifier's Dataset (defines for data is loaded and processed)
-        pos: part of speech if using pos count vectors
-    """
-
-    classifier_type = None
-    count_vectorizer = None
-    tfidf_vectorizer = None
-    pos_count_vectorizer = None
-
-    def __init__(self, classifier_type=None, w2v_file=None, pos=None,
-                 pos_threshold=4.0, neg_threshold=2.0, num_classes=2,
-                 rating_type='effectiveness', data_representation='count'):
+    def __init__(self, classifier_type='nb'):
         assert classifier_type in ['nb', 'rf', 'svm'], 'Classifier Type must be \'nb\', \'rf\', or \'svm\''
         self.classifier_type = classifier_type
-        self.dataset = Dataset(w2v_file=w2v_file, pos=pos,
-                               pos_threshold=pos_threshold, neg_threshold=neg_threshold,
-                               num_classes=num_classes, rating_type=rating_type,
-                               data_representation=data_representation)
 
-    def fit(self, output_file, reviews_file=None, data=None, target=None):
-        """
-        Trains a model on review data
-        :param output_file: path to output trained model
-        :param reviews_file: path to csv containing training data
-        :param data: data ndarray
-        :param target: target ndarray
-        """
-        if bool(reviews_file):
-            data, target = self.load_data(reviews_file)
-
-        model = None
+    def _get_untrained_model(self):
+        model = Model()
         if self.classifier_type == 'nb':
-            model = MultinomialNB()
+            model.model = MultinomialNB()
         elif self.classifier_type == 'rf':
-            model = RandomForestClassifier(n_estimators=100, criterion='gini',
-                                           max_depth=None, bootstrap=False, max_features='auto')
+            model.model = RandomForestClassifier(n_estimators=100, criterion='gini',
+                                                 max_depth=None, bootstrap=False, max_features='auto')
         elif self.classifier_type == 'svm':
-            model = SVC(kernel='rbf', C=10, gamma=0.01)
+            model.model = SVC(kernel='rbf', C=10, gamma=0.01)
+        return model
 
+    def _get_representations(self, dataset, model):
+        features = None
+        if dataset.num_classes == 2:
+            dataset.dataset = dataset.dataset.loc[dataset.dataset['label'].notnull()]
+        if dataset.feature_representation == 'bow':
+            features = model.processor.process_count_vectors(dataset.dataset['comment'])
+        elif dataset.feature_representation == 'embeddings':
+            features = dataset.get_average_embeddings()
+        return features
+
+    def fit(self, dataset, output_file=None):
+        model = self._get_untrained_model()
         print('Fitting model...')
-        model.fit(data, target)
-        self.save_model(model, output_file)
+        if dataset.num_classes == 2:
+            dataset.dataset = dataset.dataset.loc[dataset.dataset['label'].notnull()]
+        features = self._get_representations(dataset, model)
+        model.model.fit(features, dataset.dataset['label'])
         print('Model fit.')
+        if output_file:
+            self.save_model(model, output_file)
+        return model
 
-    def evaluate(self, trained_model_file, eval_reviews_csv=None, data=None, target=None, verbose=True):
-        """
-        Evaluates the accuracy, precision, recall, and F-1 score
-        of a trained model over a review dataset
-        :param trained_model_file: path to file with trained model
-        :param eval_reviews_csv: path to csv of review data being evaluated
-        :param data: ndarray of data
-        :param target: ndarray of target
-        :param verbose: whether or not to print metrics
-        :return eval_metrics: calculated evaluation metrics (accuracy, precision, recall, f_measure)
-        """
-        trained_model = self.load_model(trained_model_file)
-
-        if eval_reviews_csv:
-            data, target = self.load_data(eval_reviews_csv)
-
-        predictions = trained_model.predict(np.asarray(data))
-        accuracy = accuracy_score(target, predictions) * 100
-        precisions = {'Class {}'.format(i + 1): score * 100 for i, score in
-                      enumerate(precision_score(target, predictions, average=None))}
-        recalls = {'Class {}'.format(i + 1): score * 100 for i, score in
-                   enumerate(recall_score(target, predictions, average=None))}
-        f_scores = {'Class {}'.format(i + 1): score * 100 for i, score in
-                    enumerate(f1_score(target, predictions, average=None))}
-        matrix = confusion_matrix(target, predictions)
+    def evaluate(self, evaluation_dataset, trained_model=None, trained_model_file=None, verbose=True):
+        assert (trained_model or trained_model_file), 'A trained model object or file but be specified'
+        if trained_model_file:
+            trained_model = self.load_model(trained_model_file)
+        features = self._get_representations(evaluation_dataset, trained_model)
+        labels = evaluation_dataset.dataset['label']
+        accuracy, precisions, recalls, f_scores, matrix = self._evaluate(features, labels, model=trained_model)
 
         if verbose:
             print('\nEvaluation Metrics:\n')
@@ -103,52 +74,73 @@ class Classifier:
 
         return accuracy, precisions, recalls, f_scores, matrix
 
-    def validate(self, review_csv, temp_file_name, k_folds=10):
-        """
-        Runs k-fold cross validation
-        :param k_folds: number of folds
-        :param review_csv: csv with data to splits, train, and validate on
-        :param temp_file_name: where to save temporary trained model files
-        """
-        data, target = self.load_data(review_csv)
+    def _evaluate(self, features, labels, model):
+        predictions = model.model.predict(features)
+        accuracy = accuracy_score(labels, predictions) * 100
+        precisions = {'Class {}'.format(i + 1): score * 100 for i, score in
+                      enumerate(precision_score(labels, predictions, average=None))}
+        recalls = {'Class {}'.format(i + 1): score * 100 for i, score in
+                   enumerate(recall_score(labels, predictions, average=None))}
+        f_scores = {'Class {}'.format(i + 1): score * 100 for i, score in
+                    enumerate(f1_score(labels, predictions, average=None))}
+        matrix = confusion_matrix(labels, predictions)
+        return accuracy, precisions, recalls, f_scores, matrix
+
+    def validate(self, dataset, k_folds=10):
         skf = StratifiedKFold(n_splits=k_folds)
+        model = self._get_untrained_model()
+        if dataset.num_classes == 2:
+            dataset.dataset = dataset.dataset.loc[dataset.dataset['label'].notnull()]
 
         accuracies = []
         precisions, recalls, f_measures = {}, {}, {}
-        if config.NUM_CLASSES == 2:
+        if dataset.num_classes == 2:
             precisions = {'Class 1': [], 'Class 2': []}
             recalls = {'Class 1': [], 'Class 2': []}
             f_measures = {'Class 1': [], 'Class 2': []}
-        elif config.NUM_CLASSES == 3:
+        elif dataset.num_classes == 3:
             precisions = {'Class 1': [], 'Class 2': [], 'Class 3': []}
             recalls = {'Class 1': [], 'Class 2': [], 'Class 3': []}
             f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': []}
-        elif config.NUM_CLASSES == 5:
-            precisions = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
-            recalls = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
-            f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': [], 'Class 4': [], 'Class 5': []}
         overall_matrix = None
 
         num_fold = 1
-        for train, test in skf.split(data, target):
-            train_data = np.asarray([data[x] for x in train])
-            train_target = np.asarray([target[x] for x in train])
-            test_data = np.asarray([data[x] for x in test])
-            test_target = np.asarray([target[x] for x in test])
+        for train_indices, test_indices in skf.split(dataset.dataset['comment'], dataset.dataset['label']):
+            train_data = dataset.dataset.iloc[train_indices]
+            test_data = dataset.dataset.iloc[test_indices]
 
-            print('Fold {}:'.format(num_fold))
-            self.fit(temp_file_name, data=train_data, target=train_target)
-            accuracy, fold_precisions, fold_recalls, fold_f_measures, fold_matrix = self.evaluate(
-                temp_file_name, data=test_data, target=test_target, verbose=False)
+            fold_accuracy, fold_precisions, fold_recalls, fold_f_scores, fold_matrix = None, None, None, None, None
 
-            os.remove(temp_file_name)
+            print('Fold #%d' % num_fold)
+            if dataset.feature_representation == 'bow':
+                train_features = model.processor.process_count_vectors(train_data['comment'])
+                train_labels = train_data['label']
+                model.model.fit(train_features, train_labels)
 
-            accuracies.append(accuracy)
-            for i in range(config.NUM_CLASSES):
+                test_features = model.processor.process_count_vectors(test_data['comment'])
+                test_labels = test_data['label']
+
+                fold_accuracy, fold_precisions, fold_recalls, fold_f_scores, fold_matrix = self._evaluate(
+                    test_features, test_labels, model)
+
+            elif dataset.feature_representation == 'embeddings':
+                w2v = dataset.w2v
+                train_features = model.processor.get_average_embeddings(train_data['comment'], w2v)
+                train_labels = train_data['label']
+                model.model.fit(train_features, train_labels)
+
+                test_features = model.processor.get_average_embeddings(test_data['comment'], w2v)
+                test_labels = test_data['label']
+
+                fold_accuracy, fold_precisions, fold_recalls, fold_f_scores, fold_matrix = self._evaluate(
+                    test_features, test_labels, model)
+
+            accuracies.append(fold_accuracy)
+            for i in range(dataset.num_classes):
                 key_ = 'Class ' + str(i + 1)
                 precisions[key_].append(fold_precisions[key_])
                 recalls[key_].append(fold_recalls[key_])
-                f_measures[key_].append(fold_f_measures[key_])
+                f_measures[key_].append(fold_f_scores[key_])
                 if type(overall_matrix) == np.ndarray:
                     overall_matrix += fold_matrix
                 else:
@@ -156,82 +148,33 @@ class Classifier:
 
             num_fold += 1
 
-        print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix)
+        print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix, dataset.num_classes)
 
-    def classify(self, trained_model_file, reviews_csv, output_file):
-        """
-        Classifies the sentiment of a reviews csv
-        :param trained_model_file: path to file with trained model
-        :param reviews_csv: path to reviews being classified
-        :param output_file: path to output classifications
-        """
-        model = self.load_model(trained_model_file)
-        data, target, comments = self.load_data(reviews_csv, classifying=True)
-        predictions = model.predict(data)
-
-        class_2_sent = {}
-
-        if config.NUM_CLASSES == 2:
-            class_2_sent = {0: 'Negative', 1: 'Positive'}
-        elif config.NUM_CLASSES == 3:
-            class_2_sent = {0: 'Negative', 1: 'Neutral', 2: 'Positive'}
-        elif config.NUM_CLASSES == 5:
-            class_2_sent = {0: 'One Star', 1: 'Two Star', 2: 'Three Star', 3: 'Four Star', 4: 'Five Star'}
+    def classify(self, dataset, output_file, trained_model=None, trained_model_file=None):
+        assert (trained_model or trained_model_file), 'A trained model object or file but be specified'
+        if trained_model_file:
+            trained_model = self.load_model(trained_model_file)
+        features = self._get_representations(dataset, trained_model)
+        labels = dataset.dataset['label'].to_numpy()
+        comments = dataset.dataset['comment']
+        predictions = trained_model.model.predict(features)
 
         with open(output_file, 'w') as f:
-            for i, prediction in enumerate(predictions):
-                    f.write('Comment: {}\n'.format(comments[i]))
-                    f.write('Predicted Class: {}\tActual Class: {}\n\n'.format(
-                        class_2_sent[prediction], class_2_sent[target[i]]))
+            for i in range(labels.shape[0]):
+                f.write('Comment: %s\n' % comments.iloc[i])
+                f.write('Predicted Class: %d\tActual Class: %d\n\n' % (predictions[i], labels[i]))
 
     def save_model(self, trained_model, output_file):
-        """
-        Saves a trained model and its processor
-        :param trained_model: trained model
-        :param output_file: path to output saved model file
-        """
         with open(output_file, 'wb') as f:
             pickle.dump(trained_model, f, protocol=pickle.HIGHEST_PROTOCOL)
-            pickle.dump(self.dataset, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_model(self, model_file):
-        """
-        Loads model and processor from pickled format
-        :param model_file: path to pickled model file
-        :return: loaded model
-        """
         with open(model_file, 'rb') as f:
             model = pickle.load(f)
-            self.dataset = pickle.load(f)
         return model
 
-    def load_data(self, review_csv, classifying=False):
-        """
-        Loads and processes data from csv
-        :param review_csv: path to csv with review data
-        :param classifying: if running classification
-        :return: data, target
-        """
-        self.dataset.load_file(review_csv)
 
-        unprocessed = None
-        data, target = None, None
-        if config.DATA_REPRESENTATION == 'count':
-            data, target, unprocessed = self.dataset.get_count_vectors(classifying=True)
-        elif config.DATA_REPRESENTATION == 'tfidf':
-            data, target, unprocessed = self.dataset.get_tfidf_vectors(classifying=True)
-        elif config.DATA_REPRESENTATION == 'embeddings':
-            data, target, unprocessed = self.dataset.get_average_embeddings(classifying=True)
-        elif config.DATA_REPRESENTATION == 'pos':
-            data, target, unprocessed = self.dataset.get_pos_vectors(classifying=True)
-
-        if classifying:
-            return data, target, unprocessed
-        else:
-            return data, target
-
-
-def print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix):
+def print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix, num_classes):
     """
     Prints cross validation metrics
     :param accuracies: list of accuracy scores
@@ -243,7 +186,7 @@ def print_validation_metrics(accuracies, precisions, recalls, f_measures, overal
     print('\n**********************************************************************\n')
     print('Validation Metrics:')
     print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(accuracies), np.std(accuracies)))
-    for i in range(config.NUM_CLASSES):
+    for i in range(num_classes):
         key_ = 'Class ' + str(i + 1)
         print('\tClass {} Average Precision: {:.4f}% +/- {:.4f}%'.format(
             i + 1, np.mean(precisions[key_]), np.std(precisions[key_])))
