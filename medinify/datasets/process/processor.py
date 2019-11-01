@@ -3,15 +3,29 @@ import numpy as np
 import spacy
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.corpus import stopwords
+from abc import ABC, abstractmethod
 
 
-class Processor:
+class Processor(ABC):
 
     def __init__(self):
         self.nlp = spacy.load('en_core_web_sm')
         self.stops = stopwords.words('english')
-        self.count_vectorizer = CountVectorizer(tokenizer=self.tokenize)
 
+    @abstractmethod
+    def get_features(self, dataset):
+        pass
+
+    @abstractmethod
+    def get_labels(self, dataset):
+        pass
+
+    def tokenize(self, comment):
+        tokens = [token.orth_ for token in self.nlp.tokenizer(comment.lower())
+                  if token.orth_ not in self.stops and not token.is_punct | token.is_space]
+        return tokens
+
+    """
     def process_count_vectors(self, comments):
         try:
             self.count_vectorizer.vocabulary_
@@ -40,6 +54,7 @@ class Processor:
         tokens = [token.orth_ for token in self.nlp.tokenizer(comment.lower())
                   if token.orth_ not in self.stops and not token.is_punct | token.is_space]
         return tokens
+    """
 
     """
     def get_pos_vectors(self, comments, ratings):

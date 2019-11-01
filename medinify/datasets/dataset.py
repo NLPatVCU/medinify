@@ -2,20 +2,17 @@
 import pandas as pd
 import os
 import ast
-import numpy as np
-from gensim.models import KeyedVectors
 from medinify.scrapers.webmd_scraper import WebMDScraper
 from medinify.scrapers.drugs_scraper import DrugsScraper
 from medinify.scrapers.drugratingz_scraper import DrugRatingzScraper
 from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
-from medinify.datasets.process.process import Processor
 
 
 class Dataset:
 
     def __init__(self, scraper='WebMD', collect_user_ids=False, collect_urls=False,
-                 word_embeddings=None, rating_type='effectiveness', num_classes=2,
-                 feature_representation='bow'):
+                 num_classes=2, text_column='comment', feature_column='effectiveness',
+                 word_embeddings=None, feature_representation='bow'):
         assert scraper in ['WebMD', 'Drugs', 'DrugRatingz', 'EverydayHealth'], \
             'Scraper must be \'WebMD\', \'Drugs\', \'DrugRatingz\', or \'EverydayHealth\''
         if scraper == 'WebMD':
@@ -36,24 +33,19 @@ class Dataset:
             columns.append('url')
         if collect_user_ids:
             columns.append('user id')
-        self.rating_type = rating_type
+        self.data_table = pd.DataFrame(columns=columns)
         self.num_classes = num_classes
+        self.feature_column = feature_column
+        self.text_column = text_column
+        self.word_embeddings = word_embeddings
         self.feature_representation = feature_representation
-
-        self.dataset = pd.DataFrame(columns=columns)
-        self.processor = Processor()
-        self.count_vectors = None
-        self.average_embeddings = None
-        self.word_embeddings_file = word_embeddings
-        if self.word_embeddings_file:
-            self.w2v = KeyedVectors.load_word2vec_format(self.word_embeddings_file)
 
     def collect(self, url):
         self.scraper.scrape(url)
         scraped_data = pd.DataFrame(self.scraper.reviews)
-        self.dataset = self.dataset.append(scraped_data, ignore_index=True)
+        self.data_table = self.data_table.append(scraped_data, ignore_index=True)
         self._clean_comments()
-        self.get_ratings()
+        self.data_table = self.transform_old_dataset(data=self.data_table)
 
     def collect_from_urls(self, urls_file=None, urls=None, start=0):
         assert bool(urls_file) ^ bool(urls)
@@ -62,19 +54,20 @@ class Dataset:
                 urls = [x[:-1] for x in f.readlines()]
         if start != 0:
             if os.path.exists('./medinify/datasets/temp_file.csv'):
-                self.dataset = pd.read_csv('./medinify/datasets/temp_file.csv')
+                self.data_table = pd.read_csv('./medinify/datasets/temp_file.csv')
             else:
                 print('No saved data found for urls 0 - %d' % start)
         print('\nScraping urls...')
         for url in urls[start:]:
             self.collect(url)
-            self.dataset.to_csv('./medinify/datasets/temp_file.csv', index=False)
+            self.data_table.to_csv('./medinify/datasets/temp_file.csv', index=False)
             start += 1
 
             print('\nTemporary review data file saved.')
             print('Safe to quit. Start from %d.' % start)
         print('Finished collection.')
         os.remove('./medinify/datasets/temp_file.csv')
+        self.data_table = self.transform_old_dataset(data=self.data_table)
 
     def collect_from_drug_names(self, drug_names_file, start=0):
         print('\nCollecting urls...')
@@ -82,23 +75,27 @@ class Dataset:
         self.collect_from_urls(urls=urls, start=start)
 
     def write_file(self, output_file):
-        self.dataset.to_csv(output_file, index=False)
+        if 'ratings' in list(self.data_table.columns.values):
+            self.data_table = self.transform_old_dataset(data=self.data_table)
+        self._clean_comments()
+        self.data_table.to_csv(output_file, index=False)
 
     def load_file(self, csv_file):
-        self.dataset = pd.read_csv(csv_file)
+        self.data_table = pd.read_csv(csv_file)
         self._clean_comments()
-        self.get_ratings()
+        if 'rating' in list(self.data_table.columns.values):
+            self.data_table = self.transform_old_dataset(data=self.data_table)
 
     def _remove_empty_comments(self):
-        num_rows = len(self.dataset)
-        self.dataset = self.dataset.loc[self.dataset['comment'].notnull()]
-        num_removed = num_rows - len(self.dataset)
+        num_rows = len(self.data_table)
+        self.data_table = self.data_table.loc[self.data_table[self.text_column].notnull()]
+        num_removed = num_rows - len(self.data_table)
         print('Removed %d empty comment(s).' % num_removed)
 
     def _remove_duplicate_comments(self):
-        num_rows = len(self.dataset)
-        self.dataset.drop_duplicates(subset='comment', inplace=True)
-        num_removed = num_rows - len(self.dataset)
+        num_rows = len(self.data_table)
+        self.data_table.drop_duplicates(subset='comment', inplace=True)
+        num_removed = num_rows - len(self.data_table)
         print('Removed %d duplicate review(s).' % num_removed)
 
     def _clean_comments(self):
@@ -110,101 +107,63 @@ class Dataset:
             raise NotImplementedError('print_stats function is not implemented for non-WebMD dataset.')
         print('\n***********************************************\n')
         print('Dataset Stats:\n')
-        print('Total reviews: %d' % len(self.dataset))
-        pos_effectiveness, pos_satisfaction, pos_ease_of_use = 0, 0, 0
-        neg_effectiveness, neg_satisfaction, neg_ease_of_use = 0, 0, 0
-        neut_effectiveness, neut_satisfaction, neut_ease_of_use = 0, 0, 0
-        for rating in self.dataset['rating']:
-            ratings = ast.literal_eval(rating)
-            if ratings['effectiveness'] in [1.0, 2.0]:
-                neg_effectiveness += 1
-            elif ratings['effectiveness'] in [4.0, 5.0]:
-                pos_effectiveness += 1
-            else:
-                neut_effectiveness += 1
-            if ratings['ease of use'] in [1.0, 2.0]:
-                neg_ease_of_use += 1
-            elif ratings['ease of use'] in [4.0, 5.0]:
-                pos_ease_of_use += 1
-            else:
-                neut_ease_of_use += 1
-            if ratings['satisfaction'] in [1.0, 2.0]:
-                neg_satisfaction += 1
-            elif ratings['satisfaction'] in [4.0, 5.0]:
-                pos_satisfaction += 1
-            else:
-                neut_satisfaction += 1
+        print('Total reviews: %d' % len(self.data_table))
+        if 'ratings' in list(self.data_table.columns.values):
+            self.data_table = self.transform_old_dataset(data=self.data_table)
+
+        pos_effectiveness = self.data_table.loc[self.data_table['effectiveness'] == 4.0].shape[0] + \
+                            self.data_table.loc[self.data_table['effectiveness'] == 5.0].shape[0]
+        neut_effectiveness = self.data_table.loc[self.data_table['effectiveness'] == 3.0].shape[0]
+        neg_effectiveness = self.data_table.loc[self.data_table['effectiveness'] == 1.0].shape[0] + \
+                            self.data_table.loc[self.data_table['effectiveness'] == 2.0].shape[0]
+
+        pos_satisfaction = self.data_table.loc[self.data_table['satisfaction'] == 4.0].shape[0] + \
+                           self.data_table.loc[self.data_table['satisfaction'] == 5.0].shape[0]
+        neut_satisfaction = self.data_table.loc[self.data_table['satisfaction'] == 3.0].shape[0]
+        neg_satisfaction = self.data_table.loc[self.data_table['satisfaction'] == 1.0].shape[0] + \
+                           self.data_table.loc[self.data_table['satisfaction'] == 2.0].shape[0]
+
+        pos_ease_of_use = self.data_table.loc[self.data_table['ease of use'] == 4.0].shape[0] + \
+                          self.data_table.loc[self.data_table['ease of use'] == 5.0].shape[0]
+        neut_ease_of_use = self.data_table.loc[self.data_table['ease of use'] == 3.0].shape[0]
+        neg_ease_of_use = self.data_table.loc[self.data_table['ease of use'] == 1.0].shape[0] + \
+                          self.data_table.loc[self.data_table['ease of use'] == 2.0].shape[0]
+
         print('\nEffectiveness Ratings:')
         print('\tPositive: %d (%.2f%%)\n\tNegative: %d (%.2f%%)\n\tNeutral: %d (%.2f%%)' %
-              (pos_effectiveness, 100 * (pos_effectiveness / len(self.dataset)),
-               neg_effectiveness, 100 * (neg_effectiveness / len(self.dataset)),
-               neut_effectiveness, 100 * (neut_effectiveness / len(self.dataset))))
+              (pos_effectiveness, 100 * (pos_effectiveness / len(self.data_table)),
+               neg_effectiveness, 100 * (neg_effectiveness / len(self.data_table)),
+               neut_effectiveness, 100 * (neut_effectiveness / len(self.data_table))))
         print('\nSatisfaction Ratings:')
         print('\tPositive: %d (%.2f%%)\n\tNegative: %d (%.2f%%)\n\tNeutral: %d (%.2f%%)' %
-              (pos_satisfaction, 100 * (pos_satisfaction / len(self.dataset)),
-               neg_satisfaction, 100 * (neg_satisfaction / len(self.dataset)),
-               neut_satisfaction, 100 * (neut_satisfaction / len(self.dataset))))
+              (pos_satisfaction, 100 * (pos_satisfaction / len(self.data_table)),
+               neg_satisfaction, 100 * (neg_satisfaction / len(self.data_table)),
+               neut_satisfaction, 100 * (neut_satisfaction / len(self.data_table))))
         print('\nEase of Use Ratings:')
         print('\tPositive: %d (%.2f%%)\n\tNegative: %d (%.2f%%)\n\tNeutral: %d (%.2f%%)' %
-              (pos_ease_of_use, 100 * (pos_ease_of_use / len(self.dataset)),
-               neg_ease_of_use, 100 * (neg_ease_of_use / len(self.dataset)),
-               neut_ease_of_use, 100 * (neut_ease_of_use / len(self.dataset))))
+              (pos_ease_of_use, 100 * (pos_ease_of_use / len(self.data_table)),
+               neg_ease_of_use, 100 * (neg_ease_of_use / len(self.data_table)),
+               neut_ease_of_use, 100 * (neut_ease_of_use / len(self.data_table))))
         print('\n***********************************************\n')
 
-    def get_count_vectors(self):
-        count_vectors = self.processor.process_count_vectors(self.dataset['comment'])
-        return count_vectors
-
-    def get_average_embeddings(self):
-        average_embeddings = self.processor.get_average_embeddings(self.dataset['comment'], self.w2v)
-        return average_embeddings
-
-    def get_ratings(self):
-        labels = np.zeros(self.dataset.shape[0])
-        for i, rating in enumerate(self.dataset['rating']):
-            if type(rating) != dict:
-                num = ast.literal_eval(rating)[self.rating_type]
-            else:
-                num = rating[self.rating_type]
-            if self.num_classes == 2:
-                if num == 3.0:
-                    labels[i] = np.NaN
-                elif num in [4.0, 5.0]:
-                    labels[i] = 1
-            elif self.num_classes == 3:
-                if num == 3.0:
-                    labels[i] = 1
-                elif num in [4.0, 5.0]:
-                    labels[i] = 2
-        self.dataset['label'] = labels
-
-
-    """
-    The correct implementation of this code exists in a different branch
-    This version is broken
-    def get_pos_vectors(self, classifying=False):
-        reviews = self.processor.get_pos_vectors(self.data['comment'], self.data['rating'])
-        data, target, comments = [], [], []
-        for review in reviews:
-            if not np.sum(review.data) == 0:
-                if config.NUM_CLASSES == 2 and review.target in [0.0, 1.0]:
-                    data.append(review.data)
-                    target.append(review.target)
-                    comments.append(review.comment)
-                elif config.NUM_CLASSES == 3 and review.target in [0.0, 1.0, 2.0]:
-                    data.append(review.data)
-                    target.append(review.target)
-                    comments.append(review.comment)
-                elif config.NUM_CLASSES == 5 and review.target in [0.0, 1.0, 2.0, 3.0, 4.0]:
-                    data.append(review.data)
-                    target.append(review.target)
-                    comments.append(review.comment)
-
-        if classifying:
-            return data, target, comments
+    @staticmethod
+    def transform_old_dataset(csv_file=None, data=None, output_file=None):
+        if csv_file:
+            data = pd.read_csv(csv_file)
+        if type(data.iloc[0]['rating']) == str:
+            new_columns = list(ast.literal_eval(data.iloc[0]['rating']).keys())
         else:
-            return data, target
-    """
+            new_columns = list(data.iloc[0]['rating'].keys())
+        for column in new_columns:
+            if type(data.iloc[0]['rating']) == str:
+                data[column] = data.apply(lambda row: ast.literal_eval(row['rating'])[column], axis=1)
+            else:
+                data[column] = data.apply(lambda row: row['rating'][column], axis=1)
+        data.drop(['rating'], axis=1, inplace=True)
+        if output_file:
+            data.to_csv(output_file, index=False)
+        return data
+
 
 
 

@@ -1,5 +1,6 @@
 
-from .classifier import Classifier
-# from .cnn_review_classifier import CNNLearner
+from .cnn_review_classifier import CNNClassifier
 from .cnn_review_classifier import SentimentNetwork
-from .cnn_review_classifier import fit, evaluate, validate, save
+from .classifier import Classifier
+from .cnn_review_classifier import evaluate, validate, save
+from .classifier import print_validation_metrics
