@@ -1,4 +1,4 @@
-from medinify.datasets.process import *
+from medinify.process import *
 from torchtext.data import Field, LabelField, Example, BucketIterator
 import torch
 from torchtext.vocab import Vectors

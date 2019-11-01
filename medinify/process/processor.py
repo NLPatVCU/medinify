@@ -1,7 +1,5 @@
 
-import numpy as np
 import spacy
-from sklearn.feature_extraction.text import CountVectorizer
 from nltk.corpus import stopwords
 from abc import ABC, abstractmethod
 

@@ -1,4 +1,4 @@
-from medinify.datasets.process import *
+from medinify.process import *
 import numpy as np
 from gensim.models import KeyedVectors
 import warnings

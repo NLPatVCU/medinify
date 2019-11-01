@@ -1,4 +1,4 @@
-from medinify.datasets.process import Processor
+from medinify.process import Processor
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 
