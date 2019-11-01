@@ -18,7 +18,9 @@ setuptools.setup(
         'nltk==3.4',
         'torch==1.1.0',
         'torchtext==0.3.1',
-        'pytest==4.3.0'
+        'pytest==4.3.0',
+        'coverage==4.5.4',
+        'pytest-cov==2.8.1'
     ],
     author="Example Author",
     author_email="author@example.com",
