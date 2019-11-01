@@ -4,6 +4,11 @@
 import pytest
 from medinify.scrapers import DrugRatingzScraper
 
+def tautology_test():
+
+    useless = True
+    assert useless == True
+
 
 def test_default_initialization():
     scraper = DrugRatingzScraper()

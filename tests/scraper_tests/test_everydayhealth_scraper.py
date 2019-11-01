@@ -5,6 +5,9 @@ import pytest
 from medinify.scrapers import EverydayHealthScraper
 
 
+def test_sanity():
+    assert 2+2 == 4
+
 def test_default_initialization():
     scraper = EverydayHealthScraper()
     assert len(scraper.reviews) == 0
