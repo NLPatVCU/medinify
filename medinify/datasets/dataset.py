@@ -11,7 +11,7 @@ from medinify.scrapers.everydayhealth_scraper import EverydayHealthScraper
 class Dataset:
 
     def __init__(self, scraper='WebMD', collect_user_ids=False, collect_urls=False,
-                 num_classes=2, text_column='comment', feature_column='effectiveness',
+                 num_classes=2, text_column='comment', label_column='effectiveness',
                  word_embeddings=None, feature_representation='bow'):
         assert scraper in ['WebMD', 'Drugs', 'DrugRatingz', 'EverydayHealth'], \
             'Scraper must be \'WebMD\', \'Drugs\', \'DrugRatingz\', or \'EverydayHealth\''
@@ -35,8 +35,8 @@ class Dataset:
             columns.append('user id')
         self.data_table = pd.DataFrame(columns=columns)
         self.num_classes = num_classes
-        self.feature_column = feature_column
         self.text_column = text_column
+        self.label_column = label_column
         self.word_embeddings = word_embeddings
         self.feature_representation = feature_representation
 
@@ -45,7 +45,7 @@ class Dataset:
         scraped_data = pd.DataFrame(self.scraper.reviews)
         self.data_table = self.data_table.append(scraped_data, ignore_index=True)
         self._clean_comments()
-        self.data_table = self.transform_old_dataset(data=self.data_table)
+        self.transform_old_dataset()
 
     def collect_from_urls(self, urls_file=None, urls=None, start=0):
         assert bool(urls_file) ^ bool(urls)
@@ -67,7 +67,7 @@ class Dataset:
             print('Safe to quit. Start from %d.' % start)
         print('Finished collection.')
         os.remove('./medinify/datasets/temp_file.csv')
-        self.data_table = self.transform_old_dataset(data=self.data_table)
+        self.transform_old_dataset()
 
     def collect_from_drug_names(self, drug_names_file, start=0):
         print('\nCollecting urls...')
@@ -76,19 +76,19 @@ class Dataset:
 
     def write_file(self, output_file):
         if 'ratings' in list(self.data_table.columns.values):
-            self.data_table = self.transform_old_dataset(data=self.data_table)
-        self._clean_comments()
-        self.data_table.to_csv(output_file, index=False)
+            self.transform_old_dataset()
+        self.data_table.to_csv('./data/' + output_file, index=False)
 
     def load_file(self, csv_file):
-        self.data_table = pd.read_csv(csv_file)
+        self.data_table = pd.read_csv('./data/' + csv_file)
         self._clean_comments()
         if 'rating' in list(self.data_table.columns.values):
-            self.data_table = self.transform_old_dataset(data=self.data_table)
+            self.transform_old_dataset()
 
     def _remove_empty_comments(self):
         num_rows = len(self.data_table)
         self.data_table = self.data_table.loc[self.data_table[self.text_column].notnull()]
+        self.data_table = self.data_table.loc[self.data_table[self.text_column] != '']
         num_removed = num_rows - len(self.data_table)
         print('Removed %d empty comment(s).' % num_removed)
 
@@ -103,66 +103,35 @@ class Dataset:
         self._remove_empty_comments()
 
     def print_stats(self):
-        if type(self.scraper) != WebMDScraper:
-            raise NotImplementedError('print_stats function is not implemented for non-WebMD dataset.')
-        print('\n***********************************************\n')
+        labels = self.data_table[self.label_column]
+        print('\n******************************************************************************************\n')
         print('Dataset Stats:\n')
-        print('Total reviews: %d' % len(self.data_table))
-        if 'ratings' in list(self.data_table.columns.values):
-            self.data_table = self.transform_old_dataset(data=self.data_table)
+        print('Total reviews: %d' % len(labels))
+        unique_labels = set(labels)
+        print('Number of Unique Labels: %d\t(%s)\n' % (
+            len(unique_labels), ', '.join([str(x) for x in unique_labels])))
 
-        pos_effectiveness = self.data_table.loc[self.data_table['effectiveness'] == 4.0].shape[0] + \
-                            self.data_table.loc[self.data_table['effectiveness'] == 5.0].shape[0]
-        neut_effectiveness = self.data_table.loc[self.data_table['effectiveness'] == 3.0].shape[0]
-        neg_effectiveness = self.data_table.loc[self.data_table['effectiveness'] == 1.0].shape[0] + \
-                            self.data_table.loc[self.data_table['effectiveness'] == 2.0].shape[0]
+        print('Label Stats:')
+        for label in unique_labels:
+            num_label = labels.loc[labels == label].shape[0]
+            percent = 100 * (num_label / len(labels))
+            print('\tLabel: %s\t\tNumber of Instance: %d\t\tPercent of Instances: %.2f%%' % (
+                str(label), num_label, percent))
+        print('\n******************************************************************************************\n')
 
-        pos_satisfaction = self.data_table.loc[self.data_table['satisfaction'] == 4.0].shape[0] + \
-                           self.data_table.loc[self.data_table['satisfaction'] == 5.0].shape[0]
-        neut_satisfaction = self.data_table.loc[self.data_table['satisfaction'] == 3.0].shape[0]
-        neg_satisfaction = self.data_table.loc[self.data_table['satisfaction'] == 1.0].shape[0] + \
-                           self.data_table.loc[self.data_table['satisfaction'] == 2.0].shape[0]
-
-        pos_ease_of_use = self.data_table.loc[self.data_table['ease of use'] == 4.0].shape[0] + \
-                          self.data_table.loc[self.data_table['ease of use'] == 5.0].shape[0]
-        neut_ease_of_use = self.data_table.loc[self.data_table['ease of use'] == 3.0].shape[0]
-        neg_ease_of_use = self.data_table.loc[self.data_table['ease of use'] == 1.0].shape[0] + \
-                          self.data_table.loc[self.data_table['ease of use'] == 2.0].shape[0]
-
-        print('\nEffectiveness Ratings:')
-        print('\tPositive: %d (%.2f%%)\n\tNegative: %d (%.2f%%)\n\tNeutral: %d (%.2f%%)' %
-              (pos_effectiveness, 100 * (pos_effectiveness / len(self.data_table)),
-               neg_effectiveness, 100 * (neg_effectiveness / len(self.data_table)),
-               neut_effectiveness, 100 * (neut_effectiveness / len(self.data_table))))
-        print('\nSatisfaction Ratings:')
-        print('\tPositive: %d (%.2f%%)\n\tNegative: %d (%.2f%%)\n\tNeutral: %d (%.2f%%)' %
-              (pos_satisfaction, 100 * (pos_satisfaction / len(self.data_table)),
-               neg_satisfaction, 100 * (neg_satisfaction / len(self.data_table)),
-               neut_satisfaction, 100 * (neut_satisfaction / len(self.data_table))))
-        print('\nEase of Use Ratings:')
-        print('\tPositive: %d (%.2f%%)\n\tNegative: %d (%.2f%%)\n\tNeutral: %d (%.2f%%)' %
-              (pos_ease_of_use, 100 * (pos_ease_of_use / len(self.data_table)),
-               neg_ease_of_use, 100 * (neg_ease_of_use / len(self.data_table)),
-               neut_ease_of_use, 100 * (neut_ease_of_use / len(self.data_table))))
-        print('\n***********************************************\n')
-
-    @staticmethod
-    def transform_old_dataset(csv_file=None, data=None, output_file=None):
-        if csv_file:
-            data = pd.read_csv(csv_file)
-        if type(data.iloc[0]['rating']) == str:
-            new_columns = list(ast.literal_eval(data.iloc[0]['rating']).keys())
+    def transform_old_dataset(self):
+        if type(self.data_table.iloc[0]['rating']) == str:
+            new_columns = list(ast.literal_eval(self.data_table.iloc[0]['rating']).keys())
         else:
-            new_columns = list(data.iloc[0]['rating'].keys())
+            new_columns = list(self.data_table.iloc[0]['rating'].keys())
         for column in new_columns:
-            if type(data.iloc[0]['rating']) == str:
-                data[column] = data.apply(lambda row: ast.literal_eval(row['rating'])[column], axis=1)
+            if type(self.data_table.iloc[0]['rating']) == str:
+                self.data_table[column] = self.data_table.apply(
+                    lambda row: ast.literal_eval(row['rating'])[column], axis=1)
             else:
-                data[column] = data.apply(lambda row: row['rating'][column], axis=1)
-        data.drop(['rating'], axis=1, inplace=True)
-        if output_file:
-            data.to_csv(output_file, index=False)
-        return data
+                self.data_table[column] = self.data_table.apply(
+                    lambda row: row['rating'][column], axis=1)
+        self.data_table.drop(['rating'], axis=1, inplace=True)
 
 
 
