@@ -1,5 +1,6 @@
 # Medinify
 
+
 Sentiment analysis for online drug reviews.
 
 ## Requirements
@@ -65,6 +66,7 @@ classifier.classify(reviews_csv='neutral.txt', output_file='classified.txt', tra
 ```
 
 ## Contributions
+Learning is hard
 
 ### Checklist
 
