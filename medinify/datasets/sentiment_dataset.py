@@ -9,10 +9,10 @@ import numpy as np
 
 class SentimentDataset(Dataset):
 
-    def __init__(self, csv_file=None, text_column='comment', label_column='effectiveness', scraper='WebMD',
+    def __init__(self, csv_file=None, text_column='comment', label_column='effectiveness', scraper='webmd',
                  collect_user_ids=False, collect_urls=False, num_classes=2, **kwargs):
-        super().__init__(csv_file=csv_file, text_column=text_column, label_column=label_column, kwargs=kwargs)
         self.num_classes = num_classes
+        super().__init__(csv_file=csv_file, text_column=text_column, label_column=label_column, kwargs=kwargs)
         for scrap in scrapers.Scraper.__subclasses__():
             if scrap.nickname == scraper:
                 self.scraper = scrap(collect_urls=collect_urls, collect_user_ids=collect_user_ids)
@@ -25,13 +25,16 @@ class SentimentDataset(Dataset):
                 columns.append('user id')
 
             self.data_table = pd.DataFrame(columns=columns)
+        else:
+            self.generate_labels()
 
     def collect(self, url):
         self.scraper.scrape(url)
         scraped_data = pd.DataFrame(self.scraper.reviews)
         self.data_table = self.data_table.append(scraped_data, ignore_index=True)
-        self._clean_data()
         self.transform_old_dataset()
+        self._clean_data()
+        self.generate_labels()
 
     def collect_from_urls(self, urls_file=None, urls=None, start=0):
         assert bool(urls_file) ^ bool(urls)
@@ -69,14 +72,7 @@ class SentimentDataset(Dataset):
         super().load_file(csv_file)
         if 'rating' in list(self.data_table.columns.values):
             self.transform_old_dataset()
-
-    def generate_labels(self):
-        if self.num_classes == 2:
-            self.data_table = self.data_table.loc[
-                self.data_table[self.label_column] != 3.0]
-        self.data_table['label'] = self.data_table[self.label_column].apply(
-            lambda x: self._rating_to_label(x))
-        self.label_column = 'label'
+        self.generate_labels()
 
     def transform_old_dataset(self):
         if type(self.data_table.iloc[0]['rating']) == str:
@@ -92,13 +88,27 @@ class SentimentDataset(Dataset):
                     lambda row: row['rating'][column], axis=1)
         self.data_table.drop(['rating'], axis=1, inplace=True)
 
+    def generate_labels(self):
+        if 'label' not in list(self.data_table.columns.values):
+            labels = self.data_table[self.label_column].apply(lambda x: self._rating_to_label(x))
+            self.data_table['label'] = labels
+            self.label_column = 'label'
+            if self.num_classes == 2:
+                self.data_table = self.data_table.loc[self.data_table['label'].notnull()]
+
     def _rating_to_label(self, rating):
         if self.num_classes == 2:
-            if rating in [1.0, 2.0]: return 0
-            elif rating in [4.0, 5.0]: return 1
-            else: return np.NaN
+            if rating in [1.0, 2.0]:
+                return 0
+            elif rating in [4.0, 5.0]:
+                return 1
+            else:
+                return np.NaN
         elif self.num_classes == 3:
-            if rating in [1.0, 2.0]: return 0
-            elif rating in [4.0, 5.0]: return 2
-            else: return 1
+            if rating in [1.0, 2.0]:
+                return 0
+            elif rating in [4.0, 5.0]:
+                return 2
+            else:
+                return 1
 

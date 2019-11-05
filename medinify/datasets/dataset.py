@@ -18,12 +18,20 @@ class Dataset:
         abspath = find_csv(csv_file)
         if not abspath:
             raise FileNotFoundError('File not found in data/ directory.')
-        data_table = pd.read_csv('./data/' + csv_file)
+        data_table = pd.read_csv(abspath)
         self.data_table = data_table
         self._clean_data()
 
     def write_file(self, output_file):
-        self.data_table.to_csv('./data/' + output_file, index=False)
+        written = False
+        for file in os.walk(os.getcwd()):
+            if os.path.isdir(file[0]) and file[0][-18:] == 'medinify/data/csvs':
+                directory_path = file[0]
+                write_path = directory_path + '/' + output_file
+                self.data_table.to_csv(write_path, index=False)
+                written = True
+        if not written:
+            raise NotADirectoryError('data/csvs directory not found.')
 
     def _remove_empty_elements(self):
         num_rows = len(self.data_table)
@@ -65,7 +73,7 @@ class Dataset:
 
 def find_csv(path):
     for file in os.walk(os.getcwd()):
-        if os.path.isdir(file[0]) and file[0][-13:] == 'medinify/data':
+        if os.path.isdir(file[0]) and file[0][-18:] == 'medinify/data/csvs':
             directory_path = file[0]
             absolute_path = directory_path + '/' + path
             if path in os.listdir(directory_path) and os.path.isfile(absolute_path):
