@@ -18,7 +18,7 @@ class EmbeddingsProcessor(Processor):
 
     def get_features(self, dataset):
         comments = dataset.data_table[dataset.text_column]
-        embeddings = np.zeros((dataset.data_table[dataset.text_column].shape[0], 100))
+        embeddings = np.zeros((dataset.data_table[dataset.text_column].shape[0], self.w2v.vector_size))
         for i, comment in enumerate(comments):
             tokens = self.tokenize(comment)
             all_embeddings = []

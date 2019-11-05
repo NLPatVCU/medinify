@@ -13,11 +13,16 @@ from medinify.sentiment import SentimentNetwork
 import torch
 
 
+CNNLearner.default_representation = 'matrix'
+MultinomialNB.default_representation = 'bow'
+RandomForestClassifier.default_representation = 'bow'
+SVC.default_representation = 'embedding'
+
+
 class Model:
 
-    def __init__(self, learner='nb', representation='bow'):
+    def __init__(self, learner='nb', representation=None):
         self.type = learner
-        self.representation = representation
         if learner == 'nb':
             self.learner = MultinomialNB()
         elif learner == 'rf':
@@ -32,7 +37,9 @@ class Model:
 
         nicknames = [x.nickname for x in process.Processor.__subclasses__()]
         for proc in process.Processor.__subclasses__():
-            if proc.nickname == representation:
+            if representation and proc.nickname == representation:
+                self.processor = proc()
+            elif proc.nickname == self.learner.default_representation:
                 self.processor = proc()
         try:
             self.processor
@@ -64,7 +71,7 @@ class Model:
 
 class Classifier:
 
-    def __init__(self, learner='nb', representation='bow'):
+    def __init__(self, learner='nb', representation=None):
         assert learner in ['nb', 'rf', 'svm', 'cnn'], \
             'Classifier Type must be \'nb\', \'rf\', \'cnn\', or \'svm\''
         self.learner_type = learner
