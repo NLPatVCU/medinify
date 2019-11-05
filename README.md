@@ -6,6 +6,8 @@ Sentiment analysis for online drug reviews.
 
 * Python 3.6
 
+![Test Image 1](readmeassets/nlplab.png)
+
 ## Getting Started
 
 To install medinify and requirements in a virtual environment, run:
