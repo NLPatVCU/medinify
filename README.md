@@ -2,11 +2,11 @@
 
 Sentiment analysis for online drug reviews.
 
+![Test Image 1](readmeassets/nlplab.png)
+
 ## Requirements
 
 * Python 3.6
-
-![Test Image 1](readmeassets/nlplab.png)
 
 ## Getting Started
 
