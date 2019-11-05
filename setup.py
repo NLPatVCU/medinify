@@ -17,7 +17,7 @@ setuptools.setup(
         'sklearn==0.0',
         'nltk==3.4',
         'torch==1.1.0',
-        'torchtext==0.3.1',
+        'torchtext==0.4.0',
         'pytest==4.3.0',
         'coverage==4.5.4',
         'pytest-cov==2.8.1'

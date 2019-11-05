@@ -27,6 +27,9 @@ class DrugsScraper(Scraper):
         collect_use_ids: (Boolean) Whether or not to collect user ids
         reviews:         (list[dict]) Scraped review data
     """
+
+    nickname = 'drug'
+
     def __init__(self, collect_user_ids=False, collect_urls=False):
         """
         Constructor for Drugs scraper, used to collecting review data from Drugs.com

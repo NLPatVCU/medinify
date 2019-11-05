@@ -25,6 +25,9 @@ class EverydayHealthScraper(Scraper):
         collect_urls:    (Boolean) Whether or not to collect each review's associated url
         reviews:         (list[dict]) Scraped review data
     """
+
+    nickname = 'everydayhealth'
+
     def scrape_page(self, url):
         """
         Collects data from one page of EverydayHealth drug reviews into the 'reviews' attribute,
