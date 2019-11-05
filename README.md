@@ -5,6 +5,8 @@ Sentiment analysis for online drug reviews.
 ### Scraper/Review Data
 Medinify does several things: it has scraper functionality where it takes public drug review data and outputs a csv file with the comment along with the rating data and other metadata.
 
+![Test Image 1](readmeassets/nlplab.png)
+
 ## Requirements
 
 * Python 3.6
