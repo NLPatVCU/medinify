@@ -116,7 +116,7 @@ class Dataset:
 
 def find_csv(path):
     """
-    Seaches data/csvs directory for data file being loaded
+    Searches data/csvs directory for data file being loaded
     :param path: (str) name of csv file being looked for
     :return absolute_path: (str) (in path found) or None (if not found)
     """
