@@ -7,7 +7,6 @@ import argparse
 from medinify.sentiment import Classifier
 from medinify.datasets import Dataset
 from medinify import config
-from medinify.sentiment.cnn_review_classifier import fit, evaluate, validate, save
 
 
 def configure(args):
@@ -63,7 +62,7 @@ def _validate(args):
 
 def _classify(args):
     """
-    Writes sentiment classifications file
+    Writes classifications file
     :param args: command line arguments
     """
     clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
@@ -128,7 +127,7 @@ def main():
     parser_valid.set_defaults(func=_validate)
 
     # Classify arguments
-    parser_classify = subparsers.add_parser('classify', help='Classifies the sentiment of reviews.')
+    parser_classify = subparsers.add_parser('classify', help='Classifies text.')
     parser_classify.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_classify.add_argument('-m', '--model', help='Path to saved model file', required=True)
     parser_classify.add_argument('-o', '--output', help='Path to save model file', required=True)

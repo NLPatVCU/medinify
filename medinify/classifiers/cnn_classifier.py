@@ -29,7 +29,7 @@ class CNNLearner:
             yield tuple([next(itr) for i in range(count)])
 
     def fit(self, features, labels, n_epochs=10):
-        network = SentimentNetwork()
+        network = ClassificationNetwork()
 
         optimizer = optim.Adam(network.parameters(), lr=0.001)
         criterion = nn.BCEWithLogitsLoss()
@@ -77,9 +77,9 @@ class CNNLearner:
         return predictions
 
 
-class SentimentNetwork(Module):
+class ClassificationNetwork(Module):
     """
-    A PyTorch Convolutional Neural Network for the sentiment analysis of drug reviews
+    A PyTorch Convolutional Neural Network for the text classification
     """
 
     def __init__(self, embeddings=None):
@@ -87,7 +87,7 @@ class SentimentNetwork(Module):
         Creates pytorch convnet for training
         :param embeddings: word embeddings
         """
-        super(SentimentNetwork, self).__init__()
+        super(ClassificationNetwork, self).__init__()
 
         """
         self.embed_words = nn.Embedding(len(embeddings), 100)
