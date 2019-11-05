@@ -6,143 +6,154 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
-from medinify.datasets.process import *
+from medinify import process
 from medinify.datasets import Dataset
-from medinify.sentiment import CNNClassifier
+from medinify.sentiment import CNNLearner
+from medinify.sentiment import SentimentNetwork
+import torch
 
 
 class Model:
 
-    def __init__(self, model_type='nb', feature_representation='bow'):
-        assert model_type in ['nb', 'rf', 'svm', 'cnn'], 'Classifier Type must be \'nb\', \'rf\', \'cnn\', or \'svm\''
-        self.model = None
-        if model_type == 'nb':
-            self.model = MultinomialNB()
-        elif model_type == 'rf':
-            self.model = RandomForestClassifier(n_estimators=100, criterion='gini',
-                                                max_depth=None, bootstrap=False, max_features='auto')
-        elif model_type == 'svm':
-            self.model = SVC(kernel='rbf', C=10, gamma=0.01)
-        elif model_type == 'cnn':
-            self.model = CNNClassifier()
-            self.network = None
-        if feature_representation == 'bow' and model_type != 'cnn':
-            self.processor = BowProcessor()
-        elif feature_representation == 'embeddings' and model_type != 'cnn':
-            self.processor = EmbeddingsProcessor()
-        elif model_type == 'cnn':
-            self.processor = DataloderProcessor()
+    def __init__(self, learner='nb', representation='bow'):
+        self.type = learner
+        self.representation = representation
+        if learner == 'nb':
+            self.learner = MultinomialNB()
+        elif learner == 'rf':
+            self.learner = RandomForestClassifier(
+                n_estimators=100, criterion='gini', max_depth=None, bootstrap=False, max_features='auto')
+        elif learner == 'svm':
+            self.learner = SVC(kernel='rbf', C=10, gamma=0.01)
+        elif learner == 'cnn':
+            self.learner = CNNLearner()
+        else:
+            raise AssertionError('model_type must by \'nb\', \'svm\', \'rf\', or \'cnn\'')
+
+        nicknames = [x.nickname for x in process.Processor.__subclasses__()]
+        for proc in process.Processor.__subclasses__():
+            if proc.nickname == representation:
+                self.processor = proc()
+        try:
+            self.processor
+        except AttributeError:
+            raise AttributeError(
+                'It looks like you\'re trying to create a Model with an invalid text representation (%s). '
+                'Procsessing has been implemented for for the following representation types: %s' %
+                (representation, ', '.join(nicknames)))
+
+    def save_model(self, path):
+        with open(path, 'wb') as f:
+            if self.type == 'cnn':
+                pickle.dump(self.learner.network.state_dict(), f)
+            else:
+                pickle.dump(self.learner, f)
+            pickle.dump(self.processor, f)
+
+    def load_model(self, path):
+        with open(path, 'rb') as f:
+            if self.type == 'cnn':
+                state_dict = pickle.load(f)
+                network = SentimentNetwork(embeddings=state_dict['embed_words.weight'])
+                network.load_state_dict(state_dict)
+                self.learner.network = network
+            else:
+                self.learner = pickle.load(f)
+            self.processor = pickle.load(f)
 
 
 class Classifier:
 
-    def __init__(self, classifier_type='nb'):
-        assert classifier_type in ['nb', 'rf', 'svm', 'cnn'], 'Classifier Type must be \'nb\', \'rf\', \'cnn\', or \'svm\''
-        self.classifier_type = classifier_type
+    def __init__(self, learner='nb', representation='bow'):
+        assert learner in ['nb', 'rf', 'svm', 'cnn'], \
+            'Classifier Type must be \'nb\', \'rf\', \'cnn\', or \'svm\''
+        self.learner_type = learner
+        self.representation = representation
 
     def fit(self, dataset, output_file=None):
-        model = Model(self.classifier_type, dataset.feature_representation)
+        model = Model(self.learner_type, self.representation)
         print('Fitting model...')
         features = model.processor.get_features(dataset)
         labels = model.processor.get_labels(dataset)
-
-        if self.classifier_type != 'cnn':
-            model.model.fit(features, labels)
-        else:
-            model.network = model.model.fit(features, labels)
+        model.learner.fit(features, labels)
         print('Model fit.')
         if output_file:
-            self.save_model(trained_model=model, output_file=output_file)
+            self.save(model, output_file)
         return model
 
     def evaluate(self, evaluation_dataset, trained_model=None, trained_model_file=None, verbose=True):
         assert (trained_model or trained_model_file), 'A trained model object or file but be specified'
         if trained_model_file:
-            trained_model = self.load_model(model_file=trained_model_file)
+            trained_model = self.load(trained_model_file)
         features = trained_model.processor.get_features(evaluation_dataset)
         labels = trained_model.processor.get_labels(evaluation_dataset)
-        if self.classifier_type != 'cnn':
-            predictions = trained_model.model.predict(features)
-            accuracy = accuracy_score(labels, predictions) * 100
-            precisions = {'Class {}'.format(i + 1): score * 100 for i, score in
-                          enumerate(precision_score(labels, predictions, average=None))}
-            recalls = {'Class {}'.format(i + 1): score * 100 for i, score in
-                       enumerate(recall_score(labels, predictions, average=None))}
-            f_scores = {'Class {}'.format(i + 1): score * 100 for i, score in
-                        enumerate(f1_score(labels, predictions, average=None))}
-            matrix = confusion_matrix(labels, predictions)
+        unique_labels = list(set(labels))
 
-            if verbose:
-                print('\nEvaluation Metrics:\n')
-                print('Accuracy: {:.4f}%'.format(accuracy))
-                print('\n'.join(['{} Precision: {:.4f}%'.format(x[0], x[1]) for x in list(precisions.items())]))
-                print('\n'.join(['{} Recall: {:.4f}%'.format(x[0], x[1]) for x in list(recalls.items())]))
-                print('\n'.join(['{} F Measure: {:.4f}%'.format(x[0], x[1]) for x in list(f_scores.items())]))
-                print('Confusion Matrix:')
-                print(matrix)
+        predictions = trained_model.learner.predict(features)
+        accuracy = accuracy_score(labels, predictions)
+        precisions = precision_score(labels, predictions, average=None, labels=unique_labels)
+        precision_dict = dict(zip(unique_labels, precisions))
+        recalls = recall_score(labels, predictions, average=None, labels=unique_labels)
+        recalls_dict = dict(zip(unique_labels, recalls))
+        f_scores = f1_score(labels, predictions, average=None, labels=unique_labels)
+        f_scores_dict = dict(zip(unique_labels, f_scores))
+        matrix = confusion_matrix(labels, predictions, labels=unique_labels)
 
-        else:
-            accuracy, precisions, recalls, f_scores, matrix = trained_model.model.evaluate(
-                features, trained_model.network)
+        if verbose:
+            print_evaluation_metrics(
+                accuracy, precision_dict, recalls_dict, f_scores_dict, matrix, unique_labels)
 
-        return accuracy, precisions, recalls, f_scores, matrix
+        return accuracy, precision_dict, recalls_dict, f_scores_dict, matrix
 
     def validate(self, dataset, k_folds=10):
         skf = StratifiedKFold(n_splits=k_folds)
-
         accuracies = []
-        precisions, recalls, f_measures = {}, {}, {}
-        if dataset.num_classes == 2:
-            precisions = {'Class 1': [], 'Class 2': []}
-            recalls = {'Class 1': [], 'Class 2': []}
-            f_measures = {'Class 1': [], 'Class 2': []}
-        elif dataset.num_classes == 3:
-            precisions = {'Class 1': [], 'Class 2': [], 'Class 3': []}
-            recalls = {'Class 1': [], 'Class 2': [], 'Class 3': []}
-            f_measures = {'Class 1': [], 'Class 2': [], 'Class 3': []}
-        overall_matrix = None
+        precisions = []
+        recalls = []
+        f_scores = []
+        total_matrix = None
+
+        args = dataset.args
+        train_dataset = Dataset(text_column=dataset.text_column, label_column=dataset.label_column)
+        train_dataset.args = args
+        test_dataset = Dataset(text_column=dataset.text_column, label_column=dataset.label_column)
+        test_dataset.args = args
 
         num_fold = 1
-        for train_indices, test_indices in skf.split(dataset.data_table[dataset.text_column], dataset.data_table[dataset.feature_column]):
-            train_dataset = Dataset(num_classes=dataset.num_classes, text_column=dataset.text_column,
-                                    feature_column=dataset.feature_column, word_embeddings=dataset.word_embeddings,
-                                    feature_representation=dataset.feature_representation)
-            train_dataset.data_table = dataset.data_table.iloc[train_indices]
-            test_dataset = Dataset(num_classes=dataset.num_classes, text_column=dataset.text_column,
-                                   feature_column=dataset.feature_column, word_embeddings=dataset.word_embeddings,
-                                   feature_representation=dataset.feature_representation)
-            test_dataset.data_table = dataset.data_table.iloc[test_indices]
-
-            print('Fold #%d' % num_fold)
-            if self.classifier_type == 'cnn':
-                from torchtext.vocab import Vectors
-                model = Model(model_type='cnn')
-                vectors = Vectors(dataset.word_embeddings)
-                model.processor.text_field.build_vocab(train_dataset.data_table['comment'],
-                                                       test_dataset.data_table['comment'], vectors=vectors)
+        for train_indices, test_indices in skf.split(dataset.data_table[dataset.text_column], dataset.data_table[dataset.label_column]):
+            print('\nFold %s:' % num_fold)
+            train_data = dataset.data_table.iloc[train_indices]
+            train_dataset.data_table = train_data
+            test_data = dataset.data_table.iloc[test_indices]
+            test_dataset.data_table = test_data
             model = self.fit(train_dataset)
             fold_accuracy, fold_precisions, fold_recalls, fold_f_scores, fold_matrix = self.evaluate(
                 test_dataset, trained_model=model, verbose=False)
-
             accuracies.append(fold_accuracy)
-            for i in range(dataset.num_classes):
-                key_ = 'Class ' + str(i + 1)
-                precisions[key_].append(fold_precisions)
-                recalls[key_].append(fold_recalls)
-                f_measures[key_].append(fold_f_scores)
-                if type(overall_matrix) == np.ndarray:
-                    overall_matrix += fold_matrix
-                else:
-                    overall_matrix = fold_matrix
-
+            precisions.append(fold_precisions)
+            recalls.append(fold_recalls)
+            f_scores.append(fold_f_scores)
+            if type(total_matrix) == np.ndarray:
+                total_matrix += fold_matrix
+            else:
+                total_matrix = fold_matrix
             num_fold += 1
 
-        print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix, dataset.num_classes)
+        unique_labels = list(precisions[0].keys())
+        print_validation_metrics(accuracies, precisions, recalls, f_scores, total_matrix, unique_labels)
 
     def classify(self, dataset, output_file, trained_model=None, trained_model_file=None):
-        assert (trained_model or trained_model_file), 'A trained model object or file but be specified'
+        assert (trained_model or trained_model_file), 'A trained model or file but be specified'
         if trained_model_file:
-            trained_model = self.load_model(trained_model_file)
+            trained_model = self.load(trained_model_file)
+        features = trained_model.processor.get_features(dataset)
+        labels = trained_model.processor.get_labels(dataset)
+        print(dataset.data_table)
+        exit()
+        unique_labels = list(set(labels))
+        if self.representation == 'matrix':
+            labels, features = trained_model.processor.unpack_samples(features)
+        predictions = trained_model.learner.predict(features)
         features = trained_model.processor.get_features(dataset)
         labels = trained_model.processor.get_labels(dataset).to_numpy()
         comments = dataset.data_table[dataset.text_column]
@@ -154,39 +165,46 @@ class Classifier:
                 f.write('Predicted Class: %d\tActual Class: %d\n\n' % (predictions[i], labels[i]))
 
     @staticmethod
-    def save_model(trained_model, output_file):
-        with open(output_file, 'wb') as f:
-            pickle.dump(trained_model, f, protocol=pickle.HIGHEST_PROTOCOL)
+    def save(model, path):
+        model.save_model(path)
 
-    @staticmethod
-    def load_model(model_file):
-        with open(model_file, 'rb') as f:
-            model = pickle.load(f)
+    def load(self, path):
+        model = Model(learner=self.learner_type, representation=self.representation)
+        model.load_model(path)
         return model
 
 
-def print_validation_metrics(accuracies, precisions, recalls, f_measures, overall_matrix, num_classes):
-    """
-    Prints cross validation metrics
-    :param accuracies: list of accuracy scores
-    :param precisions: list of precision scores per class
-    :param recalls: list of recall scores per class
-    :param f_measures: list of f-measure scores per class
-    :param overall_matrix: total confusion matrix
-    """
+def print_evaluation_metrics(accuracy, precision_dict, recalls_dict, f_scores_dict, matrix, unique_labels):
+    print('\n***************************************************\n')
+    print('Evaluation Metrics:\n')
+    print('\tOverall Accuracy:\t%.2f%%\n' % (accuracy * 100))
+    for label in unique_labels:
+        print('\t%s label precision:\t%.2f%%' % (str(label), precision_dict[label] * 100))
+        print('\t%s label recall:\t\t%.2f%%' % (str(label), recalls_dict[label] * 100))
+        print('\t%s label f-score:\t%.2f%%\n' % (str(label), f_scores_dict[label] * 100))
+
+    print('\tConfusion Matrix:\n')
+    for row in matrix:
+        print('\t{}'.format('\t'.join([str(x) for x in row])))
+    print('\n***************************************************\n')
+
+
+def print_validation_metrics(accuracies, precisions, recalls, f_scores, total_matrix, unique_labels):
     print('\n**********************************************************************\n')
     print('Validation Metrics:')
-    print('\n\tAverage Accuracy: {:.4f}% +/- {:.4f}%\n'.format(np.mean(accuracies), np.std(accuracies)))
-    for i in range(num_classes):
-        key_ = 'Class ' + str(i + 1)
-        print('\tClass {} Average Precision: {:.4f}% +/- {:.4f}%'.format(
-            i + 1, np.mean(precisions[key_]), np.std(precisions[key_])))
-        print('\tClass {} Average Recall: {:.4f}% +/- {:.4f}%'.format(
-            i + 1, np.mean(recalls[key_]), np.std(recalls[key_])))
-        print('\tClass {} Average F-Measure: {:.4f}% +/- {:.4f}%\n'.format(
-            i + 1, np.mean(f_measures[key_]), np.std(f_measures[key_])))
-    print('\tOverall Confusion Matrix:\n')
-    for row in overall_matrix:
+    print('\n\tAverage Accuracy:\t%.4f%% +/- %.4f%%\n' % (np.mean(accuracies) * 100, np.std(accuracies) * 100))
+    for label in unique_labels:
+        label_precisions = [x[label] for x in precisions]
+        label_recalls = [x[label] for x in recalls]
+        label_f_scores = [x[label] for x in f_scores]
+        print('\n\t%s Label Average Precision:\t%.4f%% +/- %.4f%%' % (
+            str(label), np.mean(label_precisions) * 100, np.std(label_precisions) * 100))
+        print('\t%s Label Average Recall:\t\t%.4f%% +/- %.4f%%' % (
+            str(label), np.mean(label_recalls) * 100, np.std(label_recalls) * 100))
+        print('\t%s Label Average F-Score:\t%.4f%% +/- %.4f%%' % (
+            str(label), np.mean(label_f_scores) * 100, np.std(label_f_scores) * 100))
+    print('\n\tConfusion Matrix:\n')
+    for row in total_matrix:
         print('\t{}'.format('\t'.join([str(x) for x in row])))
     print('\n**********************************************************************\n')
 
