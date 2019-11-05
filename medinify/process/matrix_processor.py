@@ -7,7 +7,7 @@ from gensim.models import KeyedVectors
 import numpy as np
 
 
-class DataloaderProcessor(Processor):
+class MatrixProcessor(Processor):
 
     nickname = 'matrix'
 
@@ -21,50 +21,34 @@ class DataloaderProcessor(Processor):
 
     def get_features(self, dataset):
         dataset = remove_neutral(dataset)
+        dataset.data_table['length'] = dataset.data_table[dataset.text_column].str.len()
+        dataset.data_table.sort_values(by='length', inplace=True)
+        dataset.data_table = dataset.data_table.reset_index()
+        del dataset.data_table['length']
+        del dataset.data_table['index']
+
         if not self.w2v:
             self.w2v = KeyedVectors.load_word2vec_format(dataset.args['word_embeddings'])
-        comments = dataset.data_table[dataset.text_column]
-        tokens = dataset.data_table.apply(lambda row: self.tokenize(row[dataset.text_column]), axis=1)
-        print(tokens)
-        exit()
-        matrix = np.zeros((dataset.data_table[dataset.text_column].shape[0], 100))
-        comments = dataset.data_table[dataset.text_column]
-        for i, comment in enumerate(comments):
-            tokens = self.tokenize(comment)
-            all_embeddings = []
-            for token in tokens:
-                try:
-                    all_embeddings.append(self.w2v[token])
-                except KeyError:
-                    continue
-            if len(all_embeddings) == 0:
-                continue
-            else:
-                embeddings[i] = np.average(all_embeddings, axis=0)
-        """
-        dataset = remove_neutral(dataset)
-        self.get_labels(dataset)
-        try:
-            self.text_field.vocab
-        except AttributeError:
-            vectors = Vectors(dataset.args['word_embeddings'])
-            self.text_field.build_vocab(dataset.data_table[dataset.text_column], vectors=vectors)
-            self.label_field.build_vocab(dataset.data_table[dataset.label_column])
+        dataset.data_table['token'] = dataset.data_table.apply(lambda row: self.tokenize(row[dataset.text_column]), axis=1)
 
-        fields = {'text': ('text', self.text_field), 'label': ('label', self.label_field)}
-        text = dataset.data_table[dataset.text_column].to_numpy()
-        labels = dataset.data_table['label'].to_numpy()
-        examples = [Example.fromdict(
-            data={'text': text[x], 'label': labels[x]}, fields=fields) for x in range(labels.shape[0])]
-        dataset.data_table['matrices'] = examples
-        return examples
-        # torch_dataset = TorchtextDataset(examples, {'text': self.text_field, 'label': self.label_field})
-        """
+        matrices = dataset.data_table.apply(lambda x: self.tokens_to_matrix(x['token']), axis=1)
+        dataset.data_table['matrices'] = matrices
+        return matrices
 
     def get_labels(self, dataset):
         dataset = remove_neutral(dataset)
         labels = BowProcessor().get_labels(dataset)
         return labels
+
+    def tokens_to_matrix(self, tokens):
+        assert self.w2v, 'No word embeddings specified'
+        matrix = np.zeros((len(tokens), 100))
+        for i, token in enumerate(tokens):
+            try:
+                matrix[i] = self.w2v[token]
+            except KeyError:
+                continue
+        return matrix
 
     """
     @staticmethod

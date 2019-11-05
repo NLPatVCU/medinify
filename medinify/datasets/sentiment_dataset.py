@@ -10,9 +10,9 @@ import numpy as np
 class SentimentDataset(Dataset):
 
     def __init__(self, csv_file=None, text_column='comment', label_column='effectiveness', scraper='webmd',
-                 collect_user_ids=False, collect_urls=False, num_classes=2, **kwargs):
+                 collect_user_ids=False, collect_urls=False, num_classes=2):
         self.num_classes = num_classes
-        super().__init__(csv_file=csv_file, text_column=text_column, label_column=label_column, kwargs=kwargs)
+        super().__init__(csv_file=csv_file, text_column=text_column, label_column=label_column)
         for scrap in scrapers.Scraper.__subclasses__():
             if scrap.nickname == scraper:
                 self.scraper = scrap(collect_urls=collect_urls, collect_user_ids=collect_user_ids)

@@ -5,10 +5,9 @@ import os
 
 class Dataset:
 
-    def __init__(self, csv_file=None, text_column='text', label_column='label',  **kwargs):
+    def __init__(self, csv_file=None, text_column='text', label_column='label'):
         self.text_column = text_column
         self.label_column = label_column
-        self.args = kwargs
         if csv_file:
             self.load_file(csv_file)
         else:
