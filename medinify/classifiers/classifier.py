@@ -11,8 +11,22 @@ import os
 
 
 class Model:
+    """
+    Model class contains a learner (some classifier, like Naive Bayes, Random Forest,
+    etc.) and a processor for transforming text data into numeric data
 
+    These have to be put together into the same object because all data used to
+    for fitting, evaluating, and classifying with the learner has to be processed in
+    the same way
+    """
     def __init__(self, learner='nb', representation=None):
+        """
+        Constructor for Model
+        :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
+            'svm' - Support Vector Machine, 'cnn' - Convolutional Neural Network)
+        :param representation: How text data will be processed ('bow' -
+            bag of words, 'embedding' - average embedding, 'matrix' - embedding matrix)
+        """
         self.type = learner
         if learner == 'nb':
             self.learner = NaiveBayesLearner()
@@ -41,6 +55,10 @@ class Model:
                 (representation, ', '.join(nicknames)))
 
     def save_model(self, path):
+        """
+        Saves trained model to a file
+        :param path: (str) file name to save at (all models will be saved to models/ directory)
+        """
         with open(path, 'wb') as f:
             pickle.dump(self.processor, f)
             if self.type == 'cnn':
@@ -49,6 +67,10 @@ class Model:
                 pickle.dump(self.learner, f)
 
     def load_model(self, path):
+        """
+        Load trained model from file
+        :param path: (str) model file name (will search through models/ directory for this file)
+        """
         with open(path, 'rb') as f:
             self.processor = pickle.load(f)
             if self.type == 'cnn':
@@ -61,14 +83,29 @@ class Model:
 
 
 class Classifier:
-
+    """
+    Classifier is used to train, evaluate, and validate classification models
+    and use trained models for classification
+    """
     def __init__(self, learner='nb', representation=None):
+        """
+        Constructs Classifier
+        :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
+            'svm' - Support Vector Machine, 'cnn' - Convolutional Neural Network)
+        :param representation: How text data will be processed ('bow' -
+            bag of words, 'embedding' - average embedding, 'matrix' - embedding matrix)
+        """
         assert learner in ['nb', 'rf', 'svm', 'cnn'], \
             'Classifier Type must be \'nb\', \'rf\', \'cnn\', or \'svm\''
         self.learner_type = learner
         self.representation = representation
 
     def fit(self, dataset, output_file=None):
+        """
+        Fits a model for features and labels
+        :param dataset: (Dataset) dataset containing text and labels to fit model to
+        :param output_file: (str) where to save trained model
+        """
         model = Model(self.learner_type, self.representation)
         print('Fitting model...')
         features = model.processor.get_features(dataset)
@@ -80,6 +117,14 @@ class Classifier:
         return model
 
     def evaluate(self, evaluation_dataset, trained_model=None, trained_model_file=None, verbose=True):
+        """
+        Evaluates the effectiveness of trained model for classifying a Dataset
+        :param evaluation_dataset: (Dataset) data being evaluated over
+        :param trained_model: (Model) trained Model
+        :param trained_model_file: (str) path to saved model file
+        :param verbose: (boolean) whether or not to print results
+        :return: accuracy, precision_dict, recalls_dict, f_scores_dict, matrix
+        """
         assert (trained_model or trained_model_file), 'A trained model object or file but be specified'
         if trained_model_file:
             trained_model = self.load(trained_model_file)
@@ -87,7 +132,7 @@ class Classifier:
         labels = trained_model.processor.get_labels(evaluation_dataset)
         unique_labels = list(set(labels))
 
-        predictions = trained_model.learner.predict(features=features, model=trained_model)
+        predictions = trained_model.learner.predict(features, trained_model)
         accuracy = accuracy_score(labels, predictions)
         precisions = precision_score(labels, predictions, average=None, labels=unique_labels)
         precision_dict = dict(zip(unique_labels, precisions))
@@ -104,6 +149,11 @@ class Classifier:
         return accuracy, precision_dict, recalls_dict, f_scores_dict, matrix
 
     def validate(self, dataset, k_folds=10):
+        """
+        Runs K-Fold cross validation on a particular dataset
+        :param dataset: (Dataset) data to run K-Fold cross validation on
+        :param k_folds: (int) number of k-folds
+        """
         skf = StratifiedKFold(n_splits=k_folds)
         accuracies = []
         precisions = []
@@ -138,6 +188,13 @@ class Classifier:
         print_validation_metrics(accuracies, precisions, recalls, f_scores, total_matrix, unique_labels)
 
     def classify(self, dataset, output_file, trained_model=None, trained_model_file=None):
+        """
+        Uses trained Model to classify a dataset
+        :param dataset: (Dataset) data to classify
+        :param output_file: (str) path to write classifications
+        :param trained_model: (Model) trained Model
+        :param trained_model_file: (str) path to saved model file
+        """
         assert (trained_model or trained_model_file), 'A trained model or file but be specified'
         if trained_model_file:
             trained_model = self.load(trained_model_file)
@@ -153,6 +210,11 @@ class Classifier:
 
     @staticmethod
     def save(model, path):
+        """
+        Save trained model
+        :param model: (Model) model to save
+        :param path: (str) path to save model
+        """
         written = False
         for file in os.walk(os.getcwd()):
             if os.path.isdir(file[0]) and file[0][-15:] == 'medinify/models':
@@ -164,6 +226,11 @@ class Classifier:
             raise NotADirectoryError('models/ directory not found.')
 
     def load(self, path):
+        """
+        Load trained model file
+        :param path: (str) path to trained model file
+        :return model: (Model) loaded model
+        """
         model = Model(learner=self.learner_type, representation=self.representation)
         abspath = find_model(path)
         if not abspath:
@@ -173,6 +240,11 @@ class Classifier:
 
 
 def find_model(path):
+    """
+    Searches models/ directory for specified model file
+    :param path: name of saved model file
+    :return: abspath - absolute path to file or None if not found
+    """
     for file in os.walk(os.getcwd()):
         if os.path.isdir(file[0]) and file[0][-15:] == 'medinify/models':
             directory_path = file[0]
@@ -184,6 +256,9 @@ def find_model(path):
 
 
 def print_evaluation_metrics(accuracy, precision_dict, recalls_dict, f_scores_dict, matrix, unique_labels):
+    """
+    Prints evaluation metrics
+    """
     print('\n***************************************************\n')
     print('Evaluation Metrics:\n')
     print('\tOverall Accuracy:\t%.2f%%\n' % (accuracy * 100))
@@ -199,6 +274,9 @@ def print_evaluation_metrics(accuracy, precision_dict, recalls_dict, f_scores_di
 
 
 def print_validation_metrics(accuracies, precisions, recalls, f_scores, total_matrix, unique_labels):
+    """
+    Prints validation metrics
+    """
     print('\n**********************************************************************\n')
     print('Validation Metrics:')
     print('\n\tAverage Accuracy:\t%.4f%% +/- %.4f%%\n' % (np.mean(accuracies) * 100, np.std(accuracies) * 100))
