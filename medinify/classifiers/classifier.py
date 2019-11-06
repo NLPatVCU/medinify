@@ -142,22 +142,14 @@ class Classifier:
         if trained_model_file:
             trained_model = self.load(trained_model_file)
         features = trained_model.processor.get_features(dataset)
-        labels = trained_model.processor.get_labels(dataset)
-        """
-        unique_labels = list(set(labels))
-        if self.representation == 'matrix':
-            labels, features = trained_model.processor.unpack_samples(features)
-        predictions = trained_model.learner.predict(features)
-        features = trained_model.processor.get_features(dataset)
         labels = trained_model.processor.get_labels(dataset).to_numpy()
         comments = dataset.data_table[dataset.text_column]
-        predictions = trained_model.model.predict(features)
+        predictions = trained_model.learner.predict(features, trained_model)
 
         with open(output_file, 'w') as f:
             for i in range(labels.shape[0]):
                 f.write('Comment: %s\n' % comments.iloc[i])
                 f.write('Predicted Class: %d\tActual Class: %d\n\n' % (predictions[i], labels[i]))
-        """
 
     @staticmethod
     def save(model, path):
