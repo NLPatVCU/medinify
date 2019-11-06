@@ -1,109 +1,109 @@
+"""
+Medinify scrapers facilitate the collection of drug review data from online forums
+Currently, Medinify can specifically scrape certain data from the following websites:
 
+    --> WebMD.com
+        -> Comments (Review text)
+        -> 5-Point Scale Star Ratings ('Effectiveness', 'Ease of Use', and 'Satisfaction')
+        -> Post Dates
+        -> Use IDs
+    --> Drugs.com
+        -> Comments (Review text)
+        -> Star Rating (0.0-10.0 Point Scale)
+        -> Post Dates
+        -> Use IDs
+    --> DrugRatingz.com
+        -> Comments (Review text)
+        -> 5-Point Scale Star Ratings ('Effectiveness', 'Convenience', 'No Side Effects', and 'Value')
+        -> Post Dates
+    --> EverydayHealth.com
+        -> Comments (Review text)
+        -> 5-Point Scale Star Rating
+        -> Post Dates
+
+    (Additionally, review URLs and associated drug names can be stored alongside each review's scraped data)
+"""
 from abc import ABC, abstractmethod
-import pandas as pd
-import os
 
 
 class Scraper(ABC):
+    """
+    The Scraper abstract class describes the required functionality of any drug forum scraper
+    and implements some functionality that is identical across all scrapers
 
-    data_collected = []
-    dataset = None
-
-    def __init__(self, collect_ratings=True, collect_dates=True, collect_drugs=True,
-                 collect_user_ids=False, collect_urls=False):
+    Attributes:
+        collect_urls:   (Boolean) Whether or not to collect each review's associated url
+        reviews:        (list[dict]) Scraped review data
+    """
+    def __init__(self, collect_urls=False):
         """
-        The Scraper parent class defines the functions which any drug review scraper must implements
-        :param collect_ratings: whether or not to collect ratings data
-        :param collect_dates: whether or not to collect date posted data
-        :param collect_drugs: whether or not to collect drug name data
-        :param collect_user_ids: whether or not to collect user id data
-        :param collect_urls: whether or not to collect drug url data
+        Standard constructor for all drug forum scrapers
+        :param collect_urls: (Boolean) whether or not to collects the urls associated with each review
         """
-        self.data_collected = []
-        self.data_collected.append('comment')
-        if collect_ratings:
-            self.data_collected.append('rating')
-        if collect_dates:
-            self.data_collected.append('date')
-        if collect_drugs:
-            self.data_collected.append('drug')
-        if collect_user_ids:
-            self.data_collected.append('user id')
-        if collect_urls:
-            self.data_collected.append('url')
-
-        self.dataset = pd.DataFrame(columns=self.data_collected)
+        self.collect_urls = collect_urls
+        self.reviews = []
 
     @abstractmethod
     def scrape_page(self, url):
         """
-        Scrapes a single page of drug reviews
-        :param url: drug reviews page url
-        :return:
+        Function for collecting the reviews data from one page of a drug review forum
+        Scraped data is stored in scraper's review attribute
+        :param url: (str) url for the particular website being scraped
         """
         pass
 
     @abstractmethod
     def scrape(self, url):
         """
-        Scrapes all reviews of a given drug
-        :param url: drug reviews url
+        Scrapes all the review data for a particular drug on a particular drug review forum
+        Scraped data is stored in scraper's review attribute
+        (If scraper already has scraped review data, it is discarded before continued scraping)
+        :param url: (str) url for the first page of reviews for this drug
         """
-        pass
+        if len(self.reviews) > 0:
+            print('Clearing scraper\'s pre-existent dataset of {} '
+                  'collected reviews...'.format(len(self.reviews)))
+            self.reviews = []
 
     @abstractmethod
     def get_url(self, drug_name):
         """
-        Given a drug name, finds the drug review page(s) on a given review forum
-        :param drug_name: name of drug being searched for
-        :return: drug url on given review forum
+        Searches drug forum for reviews for a certain drug
+        :param drug_name: (str) drug name
+        :return: drug url (str) if found, None if not found
         """
         pass
 
-    def get_urls(self, drug_names_file, output_file):
+    def get_urls(self, drug_names_file, output_file=None):
         """
-        Given a text file of drug names, searches for and writes file with review urls
-        :param drug_names_file: path to text file containing review urls
-        :param output_file: path to file to output urls
+        Given a text file containing drug names (one name per line), collects
+        the urls for each drug name, and either writes those urls to a file,
+        one url per line (if an output file is specified), or returns urls as a list[str]
+        :param drug_names_file: (str) path to file containing drug names
+        :param output_file: (str) path to output drug urls file
         """
         review_urls = []
-        unfound_drugs = []
+        not_found_drugs = []
         with open(drug_names_file, 'r') as f:
             for line in f.readlines():
                 drug_name = line.strip()
-                drug_review_urls = self.get_url(drug_name)
-                if len(drug_review_urls) == 0:
-                    unfound_drugs.append(drug_name)
+                drug_review_url = self.get_url(drug_name)
+                if drug_review_url:
+                    review_urls.append(drug_review_url)
                 else:
-                    review_urls.extend(drug_review_urls)
-        with open(output_file, 'w') as url_f:
-            for url in review_urls:
-                url_f.write(url + '\n')
-        print('Wrote review url file.')
-        print('No urls found for {} drugs: {}'.format(len(unfound_drugs), unfound_drugs))
+                    not_found_drugs.append(drug_name)
+        if output_file:
+            with open(output_file, 'w') as url_f:
+                for url in review_urls:
+                    url_f.write(url + '\n')
+            print('Wrote review url file.')
+            print('No urls found for %d drugs: %s' % (
+                len(not_found_drugs), ', '.join(not_found_drugs)))
+        else:
+            print('No urls found for %d drugs: %s' % (
+                len(not_found_drugs), ', '.join(not_found_drugs)))
+            return review_urls
 
-    def scrape_urls(self, urls_file, output_file, start=0):
-        """
-        Given a file containing a list of drug urls, scrapes those urls
-        :param urls_file: path to text file containing drug urls
-        :param output_file: file to output review data
-        :param start: which url to start from
-        """
-        with open(urls_file, 'r') as f:
-            urls = []
-            for url in f.readlines():
-                urls.append(url.strip())
-        if os.path.exists(output_file):
-            df = pd.read_csv(output_file)
-            df.columns = self.data_collected
-            self.dataset = df
-        num_url = start
-        for url in urls[start:]:
-            print('Scraping url {} of {}'.format(num_url + 1, len(urls)))
-            self.scrape(url)
-            self.dataset.to_csv(output_file, index=False)
-            print('\nSafe to quit. Start from {}.'.format(num_url + 1))
-            num_url += 1
 
 
 

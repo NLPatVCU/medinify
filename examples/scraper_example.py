@@ -1,17 +1,10 @@
 """
-Examples for how to use the Medinify package
+Example of how to use Medinify's scraping functionality
 """
 
 from medinify.scrapers import WebMDScraper, DrugRatingzScraper, DrugsScraper, EverydayHealthScraper
 
-
-def main():
-    """ Main function.
-    """
-    input_url = 'https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral'
-    webmd_scraper = WebMDScraper()
-    webmd_scraper.scrape(input_url)
-
-
-if __name__ == "__main__":
-    main()
+scraper = WebMDScraper()  # or DrugsScraper(), DrugRatingsScraper(), or EverydayHealthScraper()
+url = scraper.get_url('Galzin')  # or any other drug name
+scraper.scrape(url)
+print('Scraped %d reviews.' % len(scraper.reviews))
