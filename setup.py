@@ -7,6 +7,8 @@ setuptools.setup(
     name="medinify",
     version="0.0.1",
     install_requires=[
+        'python-dateutil==2.8',
+        'botocore==1.13.10',
         'requests==2.22.0',
         'bs4==0.0.1',
         'tqdm==4.31.1',
@@ -21,7 +23,6 @@ setuptools.setup(
         'pytest==4.3.0',
         'coverage==4.5.4',
         'pytest-cov==2.8.1',
-        'botocore==1.13.10'
     ],
     author="Example Author",
     author_email="author@example.com",
