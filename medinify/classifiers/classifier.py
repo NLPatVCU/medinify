@@ -86,7 +86,7 @@ class Classifier:
         labels = trained_model.processor.get_labels(evaluation_dataset)
         unique_labels = list(set(labels))
 
-        predictions = trained_model.learner.predict(features)
+        predictions = trained_model.learner.predict(features=features, model=trained_model)
         accuracy = accuracy_score(labels, predictions)
         precisions = precision_score(labels, predictions, average=None, labels=unique_labels)
         precision_dict = dict(zip(unique_labels, precisions))
@@ -110,11 +110,8 @@ class Classifier:
         f_scores = []
         total_matrix = None
 
-        args = dataset.args
         train_dataset = Dataset(text_column=dataset.text_column, label_column=dataset.label_column)
-        train_dataset.args = args
         test_dataset = Dataset(text_column=dataset.text_column, label_column=dataset.label_column)
-        test_dataset.args = args
 
         num_fold = 1
         for train_indices, test_indices in skf.split(dataset.data_table[dataset.text_column], dataset.data_table[dataset.label_column]):
@@ -145,8 +142,7 @@ class Classifier:
             trained_model = self.load(trained_model_file)
         features = trained_model.processor.get_features(dataset)
         labels = trained_model.processor.get_labels(dataset)
-        print(dataset.data_table)
-        exit()
+        """
         unique_labels = list(set(labels))
         if self.representation == 'matrix':
             labels, features = trained_model.processor.unpack_samples(features)
@@ -160,6 +156,7 @@ class Classifier:
             for i in range(labels.shape[0]):
                 f.write('Comment: %s\n' % comments.iloc[i])
                 f.write('Predicted Class: %d\tActual Class: %d\n\n' % (predictions[i], labels[i]))
+        """
 
     @staticmethod
     def save(model, path):
@@ -177,7 +174,7 @@ def print_evaluation_metrics(accuracy, precision_dict, recalls_dict, f_scores_di
     print('\tOverall Accuracy:\t%.2f%%\n' % (accuracy * 100))
     for label in unique_labels:
         print('\t%s label precision:\t%.2f%%' % (str(label), precision_dict[label] * 100))
-        print('\t%s label recall:\t\t%.2f%%' % (str(label), recalls_dict[label] * 100))
+        print('\t%s label recall:\t%.2f%%' % (str(label), recalls_dict[label] * 100))
         print('\t%s label f-score:\t%.2f%%\n' % (str(label), f_scores_dict[label] * 100))
 
     print('\tConfusion Matrix:\n')
@@ -196,7 +193,7 @@ def print_validation_metrics(accuracies, precisions, recalls, f_scores, total_ma
         label_f_scores = [x[label] for x in f_scores]
         print('\n\t%s Label Average Precision:\t%.4f%% +/- %.4f%%' % (
             str(label), np.mean(label_precisions) * 100, np.std(label_precisions) * 100))
-        print('\t%s Label Average Recall:\t\t%.4f%% +/- %.4f%%' % (
+        print('\t%s Label Average Recall:\t%.4f%% +/- %.4f%%' % (
             str(label), np.mean(label_recalls) * 100, np.std(label_recalls) * 100))
         print('\t%s Label Average F-Score:\t%.4f%% +/- %.4f%%' % (
             str(label), np.mean(label_f_scores) * 100, np.std(label_f_scores) * 100))

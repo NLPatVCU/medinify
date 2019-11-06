@@ -10,6 +10,9 @@ class NaiveBayesLearner(MultinomialNB):
     def fit(self, X, y, model):
         super().fit(X, y)
 
+    def predict(self, X, model):
+        super().predict(X)
+
 
 class RandomForestLearner(RandomForestClassifier):
     default_representation = 'bow'
@@ -17,11 +20,17 @@ class RandomForestLearner(RandomForestClassifier):
     def fit(self, X, y, model):
         super().fit(X, y)
 
+    def predict(self, X, model):
+        super().predict(X)
+
 
 class SVCLearner(SVC):
     default_representation = 'embedding'
 
     def fit(self, X, y, model):
         super().fit(X, y)
+
+    def predict(self, X, model):
+        super().predict(X)
 
 
