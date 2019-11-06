@@ -20,7 +20,8 @@ setuptools.setup(
         'torchtext==0.4.0',
         'pytest==4.3.0',
         'coverage==4.5.4',
-        'pytest-cov==2.8.1'
+        'pytest-cov==2.8.1',
+        'botocore==1.13.10'
     ],
     author="Example Author",
     author_email="author@example.com",
