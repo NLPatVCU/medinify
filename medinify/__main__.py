@@ -1,8 +1,11 @@
 
+# TODO Update this code, it has been made dysfunctional by recent updates
+
 """
 Medinify Command Line Interface Setup
 """
 
+"""
 import argparse
 from medinify.sentiment import Classifier
 from medinify.datasets import Dataset
@@ -10,10 +13,6 @@ from medinify import config
 
 
 def configure(args):
-    """
-    Configures constant variables
-    :param args: command line arguments
-    """
     config.POS_THRESHOLD = args.pos_threshold
     config.NEG_THRESHOLD = args.neg_threshold
     config.NUM_CLASSES = args.num_classes
@@ -24,10 +23,6 @@ def configure(args):
 
 
 def _train(args):
-    """
-    Trains a model and saves it to a file
-    :param args: command line arguments
-    """
     if args.classifier != 'cnn':
         clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
         clf.fit(output_file=args.output, reviews_file=args.reviews)
@@ -37,10 +32,6 @@ def _train(args):
 
 
 def _evaluate(args):
-    """
-    Evaluates a trained model
-    :param args: command line arguments
-    """
     if args.classifier != 'cnn':
         clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
         clf.evaluate(args.model, eval_reviews_csv=args.reviews)
@@ -49,10 +40,6 @@ def _evaluate(args):
 
 
 def _validate(args):
-    """
-    Runs cross validation
-    :param args: command line arguments
-    """
     if args.classifier != 'cnn':
         clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
         clf.validate(args.reviews, temp_file_name=args.temp_file, k_folds=args.folds)
@@ -61,10 +48,6 @@ def _validate(args):
 
 
 def _classify(args):
-    """
-    Writes classifications file
-    :param args: command line arguments
-    """
     clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
     clf.classify(trained_model_file=args.model,
                  reviews_csv=args.reviews,
@@ -72,10 +55,6 @@ def _classify(args):
 
 
 def _collect(args):
-    """
-    Scrapes reviews data
-    :param args: command line arguments
-    """
     dataset = Dataset(args.scraper, use_user_ids=args.collect_user, use_urls=args.collect_url)
 
     if args.names_file:
@@ -85,9 +64,6 @@ def _collect(args):
 
 
 def main():
-    """
-    Main function where initial argument parsing happens.
-    """
     # Argparse setup
     parser = argparse.ArgumentParser(prog='medinify', description='Drug Review Sentiment Analysis Tools.')
     parser.add_argument('-pt', '--pos-threshold', help='Ratings Positive Threshold.', default=4.0, type=float)
@@ -159,5 +135,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+"""
 
 
