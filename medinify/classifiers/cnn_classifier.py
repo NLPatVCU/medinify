@@ -16,21 +16,50 @@ import torch.optim as optim
 from sklearn.model_selection import StratifiedKFold
 from torchtext.data import Field, LabelField, BucketIterator, Example
 from torchtext.data import Dataset as TorchtextDataset
+from itertools import zip_longest
+
+
+class Grouper:
+    def __init__(self, data1, data2, n):
+        assert data1.shape[0] == data1.shape[0]
+        self.data1 = data1
+        self.data2 = data2
+        self.n = n
+        self.first_index, self.last_index = -1, -1
+        if len(data1) > 0:
+            self.first_index = 0
+        if len(data1) > n - 1:
+            self.last_index = n
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.last_index == -1:
+            chunk1 = self.data1[self.first_index:]
+            chunk2 = self.data2[self.first_index:]
+        else:
+            chunk1 = self.data1[self.first_index:self.last_index]
+            chunk2 = self.data2[self.first_index:self.last_index]
+        if self.first_index == -1:
+            raise StopIteration
+        self.first_index = self.last_index
+        if self.last_index + self.n < len(self.data1):
+            self.last_index += self.n
+        else:
+            self.last_index = -1
+        return chunk1, chunk2
 
 
 class CNNLearner:
 
+    default_representation = 'matrix'
+
     def __init__(self):
         self.network = None
 
-    def group(self, iterator, count):
-        itr = iter(iterator)
-        while True:
-            yield tuple([next(itr) for i in range(count)])
-
-    def fit(self, features, labels, n_epochs=10):
-        network = ClassificationNetwork()
-
+    def fit(self, features, labels, model, n_epochs=10):
+        network = ClassificationNetwork(model.processor)
         optimizer = optim.Adam(network.parameters(), lr=0.001)
         criterion = nn.BCEWithLogitsLoss()
         network.train()
@@ -39,7 +68,9 @@ class CNNLearner:
             print('\nStarting Epoch ' + str(epoch))
             epoch_losses = []
 
-            for matrices in self.group(iter(features), 25):
+            for feature_batch, label_batch in Grouper(features, labels, n=25):
+                # TODO: Add Padding Indices
+                """
                 max_tokens = 0
                 for matrix in matrices:
                     if matrix.shape[0] > max_tokens:
@@ -57,11 +88,14 @@ class CNNLearner:
                 loss.backward()
                 optimizer.step()
                 epoch_losses.append(loss)
+                """
 
+        """
             average_loss = sum(epoch_losses) / len(epoch_losses)
             print('Epoch {} average loss: {:.4f}'.format(epoch, average_loss))
 
         self.network = network
+        """
 
     def predict(self, features):
         predictions = []
@@ -82,17 +116,12 @@ class ClassificationNetwork(Module):
     A PyTorch Convolutional Neural Network for the text classification
     """
 
-    def __init__(self, embeddings=None):
-        """
-        Creates pytorch convnet for training
-        :param embeddings: word embeddings
-        """
+    def __init__(self, processor):
         super(ClassificationNetwork, self).__init__()
 
-        """
-        self.embed_words = nn.Embedding(len(embeddings), 100)
-        self.embed_words.weight = nn.Parameter(embeddings)
-        """
+        self.embed_words = nn.Embedding(len(processor.index_to_word), processor.w2v.vector_size)
+        lookup_table = torch.tensor(processor.get_lookup_table(), dtype=torch.float64)
+        self.embed_words.weight = nn.Parameter(lookup_table)
 
         self.conv1 = nn.Conv1d(in_channels=100, out_channels=100, kernel_size=2).double()
         self.conv2 = nn.Conv1d(in_channels=100, out_channels=100, kernel_size=3).double()
@@ -102,11 +131,12 @@ class ClassificationNetwork(Module):
         self.fc1 = nn.Linear(300, 50).float()
         self.out = nn.Linear(50, 1).float()
 
-    def forward(self, t):
+    def forward(self, indices):
         """
         Performs forward pass for data batch on CNN
         """
-        embeddings = torch.tensor(t, dtype=torch.float64)
+        indices = torch.tensor(indices, dtype=torch.long)
+        embeddings = self.embed_words(indices)
         embeddings = embeddings.permute(1, 0).unsqueeze(0)
 
         convolved1 = self.conv1(embeddings)
@@ -127,6 +157,7 @@ class ClassificationNetwork(Module):
         linear = self.fc1(cat)
         linear = F.relu(linear)
         return self.out(linear).squeeze(1).to(torch.float64)
+
 
 
 

@@ -1,22 +1,12 @@
 
 import numpy as np
 import pickle
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold
+from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
+from medinify.classifiers import NaiveBayesLearner, RandomForestLearner, SVCLearner
 from medinify import process
 from medinify.datasets import Dataset
-from medinify.sentiment import CNNLearner
-from medinify.sentiment import SentimentNetwork
-import torch
-
-
-CNNLearner.default_representation = 'matrix'
-MultinomialNB.default_representation = 'bow'
-RandomForestClassifier.default_representation = 'bow'
-SVC.default_representation = 'embedding'
+from medinify.classifiers import CNNLearner, ClassificationNetwork
 
 
 class Model:
@@ -24,12 +14,12 @@ class Model:
     def __init__(self, learner='nb', representation=None):
         self.type = learner
         if learner == 'nb':
-            self.learner = MultinomialNB()
+            self.learner = NaiveBayesLearner()
         elif learner == 'rf':
-            self.learner = RandomForestClassifier(
+            self.learner = RandomForestLearner(
                 n_estimators=100, criterion='gini', max_depth=None, bootstrap=False, max_features='auto')
         elif learner == 'svm':
-            self.learner = SVC(kernel='rbf', C=10, gamma=0.01)
+            self.learner = SVCLearner(kernel='rbf', C=10, gamma=0.01)
         elif learner == 'cnn':
             self.learner = CNNLearner()
         else:
@@ -51,22 +41,22 @@ class Model:
 
     def save_model(self, path):
         with open(path, 'wb') as f:
+            pickle.dump(self.processor, f)
             if self.type == 'cnn':
                 pickle.dump(self.learner.network.state_dict(), f)
             else:
                 pickle.dump(self.learner, f)
-            pickle.dump(self.processor, f)
 
     def load_model(self, path):
         with open(path, 'rb') as f:
+            self.processor = pickle.load(f)
             if self.type == 'cnn':
                 state_dict = pickle.load(f)
-                network = SentimentNetwork(embeddings=state_dict['embed_words.weight'])
+                network = ClassificationNetwork(processor=self.processor)
                 network.load_state_dict(state_dict)
                 self.learner.network = network
             else:
                 self.learner = pickle.load(f)
-            self.processor = pickle.load(f)
 
 
 class Classifier:
@@ -82,7 +72,7 @@ class Classifier:
         print('Fitting model...')
         features = model.processor.get_features(dataset)
         labels = model.processor.get_labels(dataset)
-        model.learner.fit(features, labels)
+        model.learner.fit(features, labels, model)
         print('Model fit.')
         if output_file:
             self.save(model, output_file)
