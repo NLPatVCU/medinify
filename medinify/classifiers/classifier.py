@@ -7,6 +7,7 @@ from medinify.classifiers import NaiveBayesLearner, RandomForestLearner, SVCLear
 from medinify import process
 from medinify.datasets import Dataset
 from medinify.classifiers import CNNLearner, ClassificationNetwork
+import os
 
 
 class Model:
@@ -160,12 +161,34 @@ class Classifier:
 
     @staticmethod
     def save(model, path):
-        model.save_model(path)
+        written = False
+        for file in os.walk(os.getcwd()):
+            if os.path.isdir(file[0]) and file[0][-15:] == 'medinify/models':
+                directory_path = file[0]
+                write_path = directory_path + '/' + path
+                model.save_model(write_path)
+                written = True
+        if not written:
+            raise NotADirectoryError('models/ directory not found.')
 
     def load(self, path):
         model = Model(learner=self.learner_type, representation=self.representation)
-        model.load_model(path)
+        abspath = find_model(path)
+        if not abspath:
+            raise NotADirectoryError('models/ directory not found.')
+        model.load_model(abspath)
         return model
+
+
+def find_model(path):
+    for file in os.walk(os.getcwd()):
+        if os.path.isdir(file[0]) and file[0][-15:] == 'medinify/models':
+            directory_path = file[0]
+            absolute_path = directory_path + '/' + path
+            if path in os.listdir(directory_path) and os.path.isfile(absolute_path):
+                return absolute_path
+            else:
+                return None
 
 
 def print_evaluation_metrics(accuracy, precision_dict, recalls_dict, f_scores_dict, matrix, unique_labels):
