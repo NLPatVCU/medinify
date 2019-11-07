@@ -6,6 +6,9 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 from torch import optim
+from medinify.process import find_embeddings
+from gensim.models import KeyedVectors
+from tqdm import tqdm
 
 
 class CNNLearner:
@@ -22,24 +25,24 @@ class CNNLearner:
         """
         self.network = None
 
-    def fit(self, features, labels, model, n_epochs=10):
+    def fit(self, features, labels, n_epochs=10):
         """
         Fits a ClassificationNetwork for features and labels
         :param features: (np.array) indices for embedding lookup table
         :param labels: (np.array) numeric representation of labels
-        :param model: (Model) contains processor, embeddings come from there
         :param n_epochs: number of epochs to train for
         """
-        network = ClassificationNetwork(model.processor)
+        lookup_table = get_lookup_table()
+        network = ClassificationNetwork(lookup_table)
         optimizer = optim.Adam(network.parameters(), lr=0.001)
         criterion = nn.BCEWithLogitsLoss()
         network.train()
 
         for i, epoch in enumerate(range(1, n_epochs + 1)):
-            print('\nStarting Epoch ' + str(epoch))
+            print('\nEpoch %d' % (i + 1))
             epoch_losses = []
 
-            for feature_batch, label_batch in Grouper(features, labels, n=25):
+            for feature_batch, label_batch in tqdm(Grouper(features, labels, n=25)):
                 indices_matrix = self._get_indices_matrix(feature_batch)
                 batch_predictions = network(indices_matrix)
                 batch_labels = torch.tensor(label_batch.to_numpy(), dtype=torch.float64)
@@ -51,7 +54,7 @@ class CNNLearner:
                 epoch_losses.append(loss)
 
             average_loss = sum(epoch_losses) / len(epoch_losses)
-            print('Epoch {} average loss: {:.4f}'.format(epoch, average_loss))
+            print('Epoch {} average loss: {:.4f}\n'.format(epoch, average_loss))
 
         print()
         self.network = network
@@ -88,19 +91,31 @@ class CNNLearner:
         return indices_matrix
 
 
+def get_lookup_table():
+    """
+    :return lookup_table: (np.array) word embedding lookup table
+    """
+    embeddings_file = find_embeddings()
+    w2v = KeyedVectors.load_word2vec_format(embeddings_file)
+    index_to_word = w2v.index2word
+    lookup_table = np.zeros((len(index_to_word) + 1, w2v.vector_size))
+    for i, word in enumerate(index_to_word):
+        lookup_table[i + 1] = w2v[word]
+    return lookup_table
+
+
 class ClassificationNetwork(Module):
     """
     PyTorch classification convolutional neural network
     """
-    def __init__(self, processor):
+    def __init__(self, lookup_table):
         """
         Constructs layers of the CNN
-        :param processor: (MatrixProcessor) contains embeddings lookup to put into embeddings layer
         """
         super(ClassificationNetwork, self).__init__()
 
-        self.embed_words = nn.Embedding(len(processor.index_to_word), processor.w2v.vector_size)
-        lookup_table = torch.tensor(processor.get_lookup_table(), dtype=torch.float64)
+        self.embed_words = nn.Embedding(lookup_table.shape[0], lookup_table.shape[1])
+        lookup_table = torch.tensor(lookup_table, dtype=torch.float64)
         self.embed_words.weight = nn.Parameter(lookup_table)
 
         self.conv1 = nn.Sequential(
