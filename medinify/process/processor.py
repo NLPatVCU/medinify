@@ -6,7 +6,6 @@ While certain algorithms do performs better with and/or require input representa
 in a particular format, Processors are designed to be independent of classifier type
 """
 import spacy
-from nltk.corpus import stopwords
 from abc import ABC, abstractmethod
 
 
@@ -24,7 +23,8 @@ class Processor(ABC):
         :attribute stops: stop words to remove
         """
         self.nlp = spacy.load('en_core_web_sm')
-        self.stops = stopwords.words('english')
+        with open('./data/english') as sw:
+            self.stops = set(sw.read().splitlines())
 
     @abstractmethod
     def get_features(self, dataset):

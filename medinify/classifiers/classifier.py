@@ -3,11 +3,18 @@ import numpy as np
 import pickle
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
-from medinify.classifiers import NaiveBayesLearner, RandomForestLearner, SVCLearner
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 from medinify import process
 from medinify.datasets import Dataset
-from medinify.classifiers import CNNLearner, ClassificationNetwork
+from medinify.classifiers import CNNLearner, ClassificationNetwork, get_lookup_table
 import os
+
+MultinomialNB.default_processor = 'bow'
+SVC.default_processor = 'embedding'
+RandomForestClassifier.default_processor = 'bow'
+CNNLearner.default_processor = 'matrix'
 
 
 class Model:
@@ -29,30 +36,26 @@ class Model:
         """
         self.type = learner
         if learner == 'nb':
-            self.learner = NaiveBayesLearner()
+            self.learner = MultinomialNB()
         elif learner == 'rf':
-            self.learner = RandomForestLearner(
+            self.learner = RandomForestClassifier(
                 n_estimators=100, criterion='gini', max_depth=None, bootstrap=False, max_features='auto')
         elif learner == 'svm':
-            self.learner = SVCLearner(kernel='rbf', C=10, gamma=0.01)
+            self.learner = SVC(kernel='rbf', C=10, gamma=0.01)
         elif learner == 'cnn':
             self.learner = CNNLearner()
         else:
             raise AssertionError('model_type must by \'nb\', \'svm\', \'rf\', or \'cnn\'')
 
-        nicknames = [x.nickname for x in process.Processor.__subclasses__()]
         for proc in process.Processor.__subclasses__():
             if representation and proc.nickname == representation:
                 self.processor = proc()
-            elif proc.nickname == self.learner.default_representation:
+            elif proc.nickname == self.learner.default_processor:
                 self.processor = proc()
         try:
             self.processor
         except AttributeError:
-            raise AttributeError(
-                'It looks like you\'re trying to create a Model with an invalid text representation (%s). '
-                'Procsessing has been implemented for for the following representation types: %s' %
-                (representation, ', '.join(nicknames)))
+            print('Invalid feature representation')
 
     def save_model(self, path):
         """
@@ -75,7 +78,8 @@ class Model:
             self.processor = pickle.load(f)
             if self.type == 'cnn':
                 state_dict = pickle.load(f)
-                network = ClassificationNetwork(processor=self.processor)
+                lookup_table = get_lookup_table()
+                network = ClassificationNetwork(lookup_table)
                 network.load_state_dict(state_dict)
                 self.learner.network = network
             else:
@@ -110,7 +114,7 @@ class Classifier:
         print('Fitting model...')
         features = model.processor.get_features(dataset)
         labels = model.processor.get_labels(dataset)
-        model.learner.fit(features, labels, model)
+        model.learner.fit(features, labels)
         print('Model fit.')
         if output_file:
             self.save(model, output_file)
@@ -132,7 +136,10 @@ class Classifier:
         labels = trained_model.processor.get_labels(evaluation_dataset)
         unique_labels = list(set(labels))
 
-        predictions = trained_model.learner.predict(features, trained_model)
+        if not self.learner_type == 'cnn':
+            predictions = trained_model.learner.predict(features)
+        else:
+            predictions = trained_model.learner.predict(features, trained_model)
         accuracy = accuracy_score(labels, predictions)
         precisions = precision_score(labels, predictions, average=None, labels=unique_labels)
         precision_dict = dict(zip(unique_labels, precisions))
