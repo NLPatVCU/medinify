@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.utils.data
 from torch import optim
 from medinify.process import find_embeddings
+from medinify.process import get_lookup_table
+from medinify.classifiers import DataIterator
 from gensim.models import KeyedVectors
 from tqdm import tqdm
 
@@ -32,7 +34,9 @@ class CNNLearner:
         :param labels: (np.array) numeric representation of labels
         :param n_epochs: number of epochs to train for
         """
-        lookup_table = get_lookup_table()
+        embeddings_file = find_embeddings()
+        w2v = KeyedVectors.load_word2vec_format(embeddings_file)
+        lookup_table = get_lookup_table(w2v)
         network = ClassificationNetwork(lookup_table)
         optimizer = optim.Adam(network.parameters(), lr=0.001)
         criterion = nn.BCEWithLogitsLoss()
@@ -42,7 +46,7 @@ class CNNLearner:
             print('\nEpoch %d' % (i + 1))
             epoch_losses = []
 
-            for feature_batch, label_batch in tqdm(Grouper(features, labels, n=25)):
+            for feature_batch, label_batch in tqdm(DataIterator(features, labels, n=25)):
                 indices_matrix = self._get_indices_matrix(feature_batch)
                 batch_predictions = network(indices_matrix)
                 batch_labels = torch.tensor(label_batch.to_numpy(), dtype=torch.float64)
@@ -89,19 +93,6 @@ class CNNLearner:
             feature_batch = np.pad(indices, (0, max_len - indices.shape[0]))
             indices_matrix[j] = feature_batch
         return indices_matrix
-
-
-def get_lookup_table():
-    """
-    :return lookup_table: (np.array) word embedding lookup table
-    """
-    embeddings_file = find_embeddings()
-    w2v = KeyedVectors.load_word2vec_format(embeddings_file)
-    index_to_word = w2v.index2word
-    lookup_table = np.zeros((len(index_to_word) + 1, w2v.vector_size))
-    for i, word in enumerate(index_to_word):
-        lookup_table[i + 1] = w2v[word]
-    return lookup_table
 
 
 class ClassificationNetwork(Module):
@@ -158,41 +149,6 @@ class ClassificationNetwork(Module):
         linear = F.relu(linear)
         return self.out(linear).squeeze(1).to(torch.float64)
 
-
-class Grouper:
-    """
-    Custom iterator to get n chunks of two arrays (features
-    and labels) at a time
-    """
-    def __init__(self, data1, data2, n):
-        assert data1.shape[0] == data1.shape[0]
-        self.data1 = data1
-        self.data2 = data2
-        self.n = n
-        self.first_index, self.last_index = -1, -1
-        if len(data1) > 0:
-            self.first_index = 0
-        if len(data1) > n - 1:
-            self.last_index = n
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.last_index == -1:
-            chunk1 = self.data1[self.first_index:]
-            chunk2 = self.data2[self.first_index:]
-        else:
-            chunk1 = self.data1[self.first_index:self.last_index]
-            chunk2 = self.data2[self.first_index:self.last_index]
-        if self.first_index == -1:
-            raise StopIteration
-        self.first_index = self.last_index
-        if self.last_index + self.n < len(self.data1):
-            self.last_index += self.n
-        else:
-            self.last_index = -1
-        return chunk1, chunk2
 
 
 

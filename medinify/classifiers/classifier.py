@@ -1,89 +1,13 @@
 
 import numpy as np
-import pickle
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from medinify import process
 from medinify.datasets import Dataset
-from medinify.classifiers import CNNLearner, ClassificationNetwork, get_lookup_table
+from medinify.classifiers.utils import find_model
+from medinify.classifiers.utils import print_validation_metrics
+from medinify.classifiers.utils import print_evaluation_metrics
+from medinify.classifiers import Model
 import os
-
-MultinomialNB.default_processor = 'bow'
-SVC.default_processor = 'embedding'
-RandomForestClassifier.default_processor = 'bow'
-CNNLearner.default_processor = 'matrix'
-
-
-class Model:
-    """
-    Model class contains a learner (some classifier, like Naive Bayes, Random Forest,
-    etc.) and a processor for transforming text data into numeric data
-
-    These have to be put together into the same object because all data used to
-    for fitting, evaluating, and classifying with the learner has to be processed in
-    the same way
-    """
-    def __init__(self, learner='nb', representation=None):
-        """
-        Constructor for Model
-        :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
-            'svm' - Support Vector Machine, 'cnn' - Convolutional Neural Network)
-        :param representation: How text data will be processed ('bow' -
-            bag of words, 'embedding' - average embedding, 'matrix' - embedding matrix)
-        """
-        self.type = learner
-        if learner == 'nb':
-            self.learner = MultinomialNB()
-        elif learner == 'rf':
-            self.learner = RandomForestClassifier(
-                n_estimators=100, criterion='gini', max_depth=None, bootstrap=False, max_features='auto')
-        elif learner == 'svm':
-            self.learner = SVC(kernel='rbf', C=10, gamma=0.01)
-        elif learner == 'cnn':
-            self.learner = CNNLearner()
-        else:
-            raise AssertionError('model_type must by \'nb\', \'svm\', \'rf\', or \'cnn\'')
-
-        for proc in process.Processor.__subclasses__():
-            if representation and proc.nickname == representation:
-                self.processor = proc()
-            elif proc.nickname == self.learner.default_processor:
-                self.processor = proc()
-        try:
-            self.processor
-        except AttributeError:
-            print('Invalid feature representation')
-
-    def save_model(self, path):
-        """
-        Saves trained model to a file
-        :param path: (str) file name to save at (all models will be saved to models/ directory)
-        """
-        with open(path, 'wb') as f:
-            pickle.dump(self.processor, f)
-            if self.type == 'cnn':
-                pickle.dump(self.learner.network.state_dict(), f)
-            else:
-                pickle.dump(self.learner, f)
-
-    def load_model(self, path):
-        """
-        Load trained model from file
-        :param path: (str) model file name (will search through models/ directory for this file)
-        """
-        with open(path, 'rb') as f:
-            self.processor = pickle.load(f)
-            if self.type == 'cnn':
-                state_dict = pickle.load(f)
-                lookup_table = get_lookup_table()
-                network = ClassificationNetwork(lookup_table)
-                network.load_state_dict(state_dict)
-                self.learner.network = network
-            else:
-                self.learner = pickle.load(f)
 
 
 class Classifier:
@@ -246,59 +170,4 @@ class Classifier:
         return model
 
 
-def find_model(path):
-    """
-    Searches models/ directory for specified model file
-    :param path: name of saved model file
-    :return: abspath - absolute path to file or None if not found
-    """
-    for file in os.walk(os.getcwd()):
-        if os.path.isdir(file[0]) and file[0][-15:] == 'medinify/models':
-            directory_path = file[0]
-            absolute_path = directory_path + '/' + path
-            if path in os.listdir(directory_path) and os.path.isfile(absolute_path):
-                return absolute_path
-            else:
-                return None
-
-
-def print_evaluation_metrics(accuracy, precision_dict, recalls_dict, f_scores_dict, matrix, unique_labels):
-    """
-    Prints evaluation metrics
-    """
-    print('\n***************************************************\n')
-    print('Evaluation Metrics:\n')
-    print('\tOverall Accuracy:\t%.2f%%\n' % (accuracy * 100))
-    for label in unique_labels:
-        print('\t%s label precision:\t%.2f%%' % (str(label), precision_dict[label] * 100))
-        print('\t%s label recall:\t%.2f%%' % (str(label), recalls_dict[label] * 100))
-        print('\t%s label f-score:\t%.2f%%\n' % (str(label), f_scores_dict[label] * 100))
-
-    print('\tConfusion Matrix:\n')
-    for row in matrix:
-        print('\t{}'.format('\t'.join([str(x) for x in row])))
-    print('\n***************************************************\n')
-
-
-def print_validation_metrics(accuracies, precisions, recalls, f_scores, total_matrix, unique_labels):
-    """
-    Prints validation metrics
-    """
-    print('\n**********************************************************************\n')
-    print('Validation Metrics:')
-    print('\n\tAverage Accuracy:\t%.4f%% +/- %.4f%%\n' % (np.mean(accuracies) * 100, np.std(accuracies) * 100))
-    for label in unique_labels:
-        label_precisions = [x[label] for x in precisions]
-        label_recalls = [x[label] for x in recalls]
-        label_f_scores = [x[label] for x in f_scores]
-        print('\n\t%s Label Average Precision:\t%.4f%% +/- %.4f%%' % (
-            str(label), np.mean(label_precisions) * 100, np.std(label_precisions) * 100))
-        print('\t%s Label Average Recall:\t%.4f%% +/- %.4f%%' % (
-            str(label), np.mean(label_recalls) * 100, np.std(label_recalls) * 100))
-        print('\t%s Label Average F-Score:\t%.4f%% +/- %.4f%%' % (
-            str(label), np.mean(label_f_scores) * 100, np.std(label_f_scores) * 100))
-    print('\n\tConfusion Matrix:\n')
-    for row in total_matrix:
-        print('\t{}'.format('\t'.join([str(x) for x in row])))
-    print('\n**********************************************************************\n')
 
