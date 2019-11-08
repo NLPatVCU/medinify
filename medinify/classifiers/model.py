@@ -3,7 +3,7 @@ import pickle
 from medinify.vectorizers.utils import get_lookup_table
 from medinify.vectorizers.utils import find_embeddings
 from gensim.models import KeyedVectors
-from medinify.classifiers import CNNLearner, ClassificationNetwork
+from medinify.classifiers import CNNLearner, ClassificationCNN
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
@@ -79,7 +79,7 @@ class Model:
                 embeddings_file = find_embeddings()
                 w2v = KeyedVectors.load_word2vec_format(embeddings_file)
                 lookup_table = get_lookup_table(w2v)
-                network = ClassificationNetwork(lookup_table)
+                network = ClassificationCNN(lookup_table)
                 network.load_state_dict(state_dict)
                 self.learner.network = network
             else:
