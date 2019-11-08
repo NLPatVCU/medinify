@@ -114,23 +114,6 @@ def test_scrape_invalid_url_no_title():
     assert not returned
 
 
-def test_scrape_default_parameter():
-    """
-    Tests that, when calling the scrape function with a scraper with default parameters,
-    the correct types of data are stored in the 'reviews' attribute and that the
-    correct number of reviews are collected (all of the reviews on the infinite page)
-    """
-    scraper = DrugRatingzScraper()
-    scraper.scrape('https://www.drugratingz.com/reviews/472/Drug-Lutera.html')
-    assert len(scraper.reviews) > 10
-    data_collected = list(scraper.reviews[0].keys())
-    assert len(data_collected) == 4
-    assert 'comment' in data_collected
-    assert 'rating' in data_collected
-    assert 'date' in data_collected
-    assert 'drug' in data_collected
-
-
 def test_scrape_with_parameters():
     """
     Tests that, when calling the scrape function with a scraper of non-default parameters, the
