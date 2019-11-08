@@ -1,6 +1,6 @@
 
-from medinify.process import Processor
-from medinify.process.utils import find_embeddings
+from medinify.vectorizers import Vectorizer
+from medinify.vectorizers.utils import find_embeddings
 import numpy as np
 from gensim.models import KeyedVectors
 import warnings
@@ -8,16 +8,16 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-class EmbeddingsProcessor(Processor):
+class EmbeddingsVectorizer(Vectorizer):
     """
-    The EmbeddingsProcessor transforms text data into averaged
+    The EmbeddingsVectorizer transforms text data into averaged
     word embeddings representation to be fed into classifier
     """
     nickname = 'embedding'
 
     def __init__(self):
         """
-        Constructor for EmbeddingsProcessor
+        Constructor for EmbeddingsVectorizer
         :attribute w2v: (gensim.models.word2vec) pretrained word embeddings
         """
         super().__init__()
@@ -27,7 +27,7 @@ class EmbeddingsProcessor(Processor):
     def get_features(self, dataset):
         """
         Transforms text from dataset into averaged word embeddings
-        :param dataset: (Dataset) dataset containing data to be processed
+        :param dataset: (Dataset) dataset containing data to be Vectorized
         :return: (np.array) averaged embedding representations of texts
         """
         comments = dataset.data_table[dataset.text_column]

@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 from torch import optim
-from medinify.process import find_embeddings
-from medinify.process import get_lookup_table
+from medinify.vectorizers import find_embeddings
+from medinify.vectorizers import get_lookup_table
 from medinify.classifiers import DataIterator
 from gensim.models import KeyedVectors
 from tqdm import tqdm

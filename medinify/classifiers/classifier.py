@@ -20,7 +20,7 @@ class Classifier:
         Constructs Classifier
         :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
             'svm' - Support Vector Machine, 'cnn' - Convolutional Neural Network)
-        :param representation: How text data will be processed ('bow' -
+        :param representation: How text data will be vectorized ('bow' -
             bag of words, 'embedding' - average embedding, 'matrix' - embedding matrix)
         """
         assert learner in ['nb', 'rf', 'svm', 'cnn'], \
@@ -36,8 +36,8 @@ class Classifier:
         """
         model = Model(self.learner_type, self.representation)
         print('Fitting model...')
-        features = model.processor.get_features(dataset)
-        labels = model.processor.get_labels(dataset)
+        features = model.vectorizer.get_features(dataset)
+        labels = model.vectorizer.get_labels(dataset)
         model.learner.fit(features, labels)
         print('Model fit.')
         if output_file:
@@ -56,8 +56,8 @@ class Classifier:
         assert (trained_model or trained_model_file), 'A trained model object or file but be specified'
         if trained_model_file:
             trained_model = self.load(trained_model_file)
-        features = trained_model.processor.get_features(evaluation_dataset)
-        labels = trained_model.processor.get_labels(evaluation_dataset)
+        features = trained_model.vectorizer.get_features(evaluation_dataset)
+        labels = trained_model.vectorizer.get_labels(evaluation_dataset)
         unique_labels = list(set(labels))
 
         if not self.learner_type == 'cnn':
@@ -129,8 +129,8 @@ class Classifier:
         assert (trained_model or trained_model_file), 'A trained model or file but be specified'
         if trained_model_file:
             trained_model = self.load(trained_model_file)
-        features = trained_model.processor.get_features(dataset)
-        labels = trained_model.processor.get_labels(dataset).to_numpy()
+        features = trained_model.vectorizer.get_features(dataset)
+        labels = trained_model.vectorizer.get_labels(dataset).to_numpy()
         comments = dataset.data_table[dataset.text_column]
         predictions = trained_model.learner.predict(features, trained_model)
 

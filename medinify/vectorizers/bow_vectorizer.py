@@ -1,18 +1,18 @@
 
-from medinify.process import Processor
+from medinify.vectorizers import Vectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 
 
-class BowProcessor(Processor):
+class BowVectorizer(Vectorizer):
     """
-    The BowProcessor (Bag-of-Words Processor) transforms text data into
+    The BowVectorizer (Bag-of-Words Vectorizer) transforms text data into
     bag-of-word representation to be fed into classifier
     """
     nickname = 'bow'
 
     def __init__(self):
         """
-        Constructor for BowProcessor
+        Constructor for BowVectorizer
         :attribute vectorizer: (CountVectorizer) transforms text into bag-of-words
         """
         super().__init__()
@@ -21,7 +21,7 @@ class BowProcessor(Processor):
     def get_features(self, dataset):
         """
         Transforms text from dataset into bag-of-words
-        :param dataset: (Dataset) dataset containing data to be processed
+        :param dataset: (Dataset) dataset containing data to be Vectorized
         :return: (scipy.sparse.csr_matrix) bag-of-words representations of texts
         """
         try:

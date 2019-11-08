@@ -1,19 +1,19 @@
 
-from medinify.process import Processor
+from medinify.vectorizers import Vectorizer
 from sklearn.feature_extraction.text import CountVectorizer
-from medinify.process.utils import get_pos_list
+from medinify.vectorizers.utils import get_pos_list
 
 
-class PosProcessor(Processor):
+class PosVectorizer(Vectorizer):
     """
-    The PosProcessor (Part-of-Speech Processor) transforms text data into bag-of-word
+    The PosVectorizer (Part-of-Speech Vectorizer) transforms text data into bag-of-word
     representations and specified parts of speech removed to be fed into classifier
     """
     nickname = 'pos'
 
     def __init__(self, pos_list=None):
         """
-        Constructor for PosProcessor
+        Constructor for PosVectorizer
         :attribute vectorizer: (CountVectorizer) transforms text into bag-of-words
         :attribute pos_list: (list[str]) list of parts for speech to remove
         """
@@ -30,7 +30,7 @@ class PosProcessor(Processor):
     def get_features(self, dataset):
         """
         Transforms text from dataset into bag-of-words with parts of speech removed
-        :param dataset: (Dataset) dataset containing data to be processed
+        :param dataset: (Dataset) dataset containing data to be Vectorized
         :return: (scipy.sparse.csr_matrix) bag-of-words representations of texts
         """
         try:

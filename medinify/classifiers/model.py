@@ -1,27 +1,27 @@
 
 import pickle
-from medinify.process.utils import get_lookup_table
-from medinify.process.utils import find_embeddings
+from medinify.vectorizers.utils import get_lookup_table
+from medinify.vectorizers.utils import find_embeddings
 from gensim.models import KeyedVectors
 from medinify.classifiers import CNNLearner, ClassificationNetwork
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-from medinify import process
+from medinify import vectorizers
 
-MultinomialNB.default_processor = 'bow'
-SVC.default_processor = 'embedding'
-RandomForestClassifier.default_processor = 'bow'
-CNNLearner.default_processor = 'matrix'
+MultinomialNB.default_vectorizer = 'bow'
+SVC.default_vectorizer = 'embedding'
+RandomForestClassifier.default_vectorizer = 'bow'
+CNNLearner.default_vectorizer = 'matrix'
 
 
 class Model:
     """
     Model class contains a learner (some classifier, like Naive Bayes, Random Forest,
-    etc.) and a processor for transforming text data into numeric data
+    etc.) and a vectorizer for transforming text data into numeric data
 
     These have to be put together into the same object because all data used to
-    for fitting, evaluating, and classifying with the learner has to be processed in
+    for fitting, evaluating, and classifying with the learner has to be vectorized in
     the same way
     """
     def __init__(self, learner='nb', representation=None):
@@ -29,7 +29,7 @@ class Model:
         Constructor for Model
         :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
             'svm' - Support Vector Machine, 'cnn' - Convolutional Neural Network)
-        :param representation: How text data will be processed ('bow' -
+        :param representation: How text data will be vectorized ('bow' -
             bag of words, 'embedding' - average embedding, 'matrix' - embedding matrix)
         """
         self.type = learner
@@ -45,13 +45,13 @@ class Model:
         else:
             raise AssertionError('model_type must by \'nb\', \'svm\', \'rf\', or \'cnn\'')
 
-        for proc in process.Processor.__subclasses__():
-            if representation and proc.nickname == representation:
-                self.processor = proc()
-            elif proc.nickname == self.learner.default_processor:
-                self.processor = proc()
+        for vec in vectorizers.Vectorizer.__subclasses__():
+            if representation and vec.nickname == representation:
+                self.vectorizer = vec()
+            elif vec.nickname == self.learner.default_vectorizer:
+                self.vectorizer = vec()
         try:
-            self.processor
+            self.vectorizer
         except AttributeError:
             print('Invalid feature representation')
 
@@ -61,7 +61,7 @@ class Model:
         :param path: (str) file name to save at (all models will be saved to models/ directory)
         """
         with open(path, 'wb') as f:
-            pickle.dump(self.processor, f)
+            pickle.dump(self.vectorizer, f)
             if self.type == 'cnn':
                 pickle.dump(self.learner.network.state_dict(), f)
             else:
@@ -73,7 +73,7 @@ class Model:
         :param path: (str) model file name (will search through models/ directory for this file)
         """
         with open(path, 'rb') as f:
-            self.processor = pickle.load(f)
+            self.vectorizer = pickle.load(f)
             if self.type == 'cnn':
                 state_dict = pickle.load(f)
                 embeddings_file = find_embeddings()
