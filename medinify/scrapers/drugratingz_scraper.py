@@ -24,6 +24,9 @@ class DrugRatingzScraper(Scraper):
         collect_urls:    (Boolean) Whether or not to collect each review's associated url
         reviews:         (list[dict]) Scraped review data
     """
+
+    nickname = 'drugratingz'
+
     def scrape_page(self, url):
         assert url[:36] == 'https://www.drugratingz.com/reviews/', 'Invalid url'
 

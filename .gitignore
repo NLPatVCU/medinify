@@ -10,6 +10,7 @@
 *.json
 *.bin
 *.pickle
+*.pkl
 !cnn_config.json
 !test-dataset.pickle
 !test-reviews.csv

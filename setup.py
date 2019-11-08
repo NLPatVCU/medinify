@@ -15,10 +15,9 @@ setuptools.setup(
         'spacy==2.2.0',
         'en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.2.0/en_core_web_sm-2.2.0.tar.gz',
         'sklearn==0.0',
-        'nltk==3.4',
         'torch==1.1.0',
-        'torchtext==0.3.1',
-        'pytest==4.3.0'
+        'torchtext==0.4.0',
+        'pytest==4.3.0',
     ],
     author="Example Author",
     author_email="author@example.com",

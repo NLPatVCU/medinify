@@ -1,9 +1,8 @@
 # Medinify
 
+![Test Image 1](readmeassets/nlplab.png)
 
-Sentiment analysis for online drug reviews. 
-### Scraper/Review Data
-Medinify does several things: it has scraper functionality where it takes public drug review data and outputs a csv file with the comment along with the rating data and other metadata.
+Medical text classification. 
 
 ## Requirements
 
@@ -11,115 +10,142 @@ Medinify does several things: it has scraper functionality where it takes public
 
 ## Getting Started
 ### Using Git Version Control to grab Medinify
-Ensure that you have git installed.  If using Mac open the terminal using ⌘ + T.  Then type into the terminal:
+[Ensure that you have git installed.](https://git-scm.com/downloads)
+
+In Mac or Linux terminal:
 ```
-git --version
-```
-This should open a prompt to install git if you don't have it.  
-For linux (usually ctrl + alt + t) to open terminal:
-```
-sudo apt install git
-```
-Then for either Mac or Linux type into the terminal (to install to current folder don't use the last argument):
-```
-git clone https://github.com/NanoNLP/medinify [Intended Directory](e.g.: Programs/Programfolder)
+git clone https://github.com/NLPatVCU/medinify.git
 ```
 ### Virtual environment setup
-In order to manage dependencies/configuration virtual environments are used.  To set one up for this project use the terminal and go to the project installation directory.
-From there enter the following commands:
+In order to manage dependencies/configuration [virtual environments](https://docs.python.org/3/tutorial/venv.html) should be used.  Ensure your current directory is the project installation directory. Then enter:
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
 pip install -e .
-python -m spacy download en_core_web_sm
 ```
-This creates a folder in the directory that contains a python installation for the specific python version and a specific version of the various dependencies for the project.  To check if it worked type:
+
+## Workflow
+
+Medinify is a general tool for medical text classification that also includes functionality for collecting drug review sentiment datasets from multiple online drug forums.
+
+All datasets used with Medinify must be in .csv format, and have a text column (containing the text being labelled) and a label column (containing the text labels). 
+
+If the data in the .csv file requires some extra processesing (i.e., if the labels are non-numeric, or if certain texts need to be removed) that functionality can be added by subclassing the Dataset class. SentimentDataset is an example of this, which is used for transforming star rating labels into sentiment labels.
+
+### Collecting
+
+If you want to use Medinify's scraping functionality to collect drug review sentiment datasets:
+
+Datasets can be collected from three sources: a url, a .txt file containing a list of urls, or a .txt file containing a list of drug names.
+The method for collection for each is shown below:
+
+```python
+from medinify.datasets import SentimentDataset
+dataset = SentimentDataset()  
+"""
+The default scraper is 'webmd', but the 'scraper' argument could also be set to 'everydayhealth', 'drugs', or 'drugratingz'
+There are also 'collect_user_id' and 'collect_urls' arguments, both default false
+"""
+
+# For collecting from url
+dataset.collect('<valid_url>')
+
+# For collecting from .txt url file
+dataset.collect_from_urls(urls_file='path/to/urls/file')
+
+# For collecting from .txt drug names file
+dataset.collect_from_drug_names(drug_names_file='path/to/drug/names/file')
+
+# To save .csv file
+dataset.write_file('output_file_name.csv')
 ```
-which python
-```
-It should say something like: 
-```text
-medinify/venv/bin/python
-```
-### Installation check via a classifier
-To see if it worked we can train a classifier on example drug reviews. Via the terminal go to the project folder and type:
-```
-python medinify train -r examples/heart_drugs.csv -o out
-```
-If no errors are generated and an output file was produced the project was successful installed.  By default it ran a naive bayesian classifier on the data set.  
 
+### Loading Data
 
-
-## Datasets
-
-### Review Datasets
-
-Scrape for reviews from WebMD, Drugs.com, DrugRatingz.com, and EverdayHealth.com, save them, load them, get statistics, and export to CSV or JSON.
-
-#### Review Dataset Examples
+In order to load .csv file into a dataset, the text column and label column must be specified
 
 ```python
 from medinify.datasets import Dataset
 
-# For saving a Citalopram reviews dataset
-dataset = Dataset()
-dataset.collect('https://www.webmd.com/drugs/drugreview-1701-citalopram-oral.aspx?drugid=1701&drugname=citalopram-oral')
-dataset.save_data('output.pkl')
+dataset = Dataset('path/to/csv', text_column='<text column name>', label_column='<label column name>')
 ```
+
+### Training, Evaluating, and Classifying
+
+Medinify provides functionality for training, evaluating, and classifying with Naive Bayes, 
+Random Forest, Support Vector Machine, and Convolutional Neural Network classificaton models.
 
 ```python
-from medinify.datasets import Dataset
+from medinify.datasets import SentimentDataset
+from medinify.classifiers import Classifier
 
-# Load a saved citalopram dataset, cleanse the data, write CSV, and print stats
-dataset = Dataset()
-dataset.load_data('output.pkl')
-dataset.generate_ratings()
-dataset.write_file('output.csv')
-dataset.print_stats()
+# create a Dataset object and load data from .csv file
+dataset = SentimentDataset('path/to/csv/file')
+
+# create classifier
+clf = Classifier()
+"""
+For classifiers, both 'learner' and 'representation' arguments can be specified
+(they are 'nb' (NaiveBayes) and 'bow' (Bag-of-Word) by default)
+All learners have a default representation that produces the best results. 
+Another representation ('embeddings', 'bow', or 'matrix') can be specified, but be careful
+because it may be incompatible with the learner
+"""
+
+# fit model
+model = clf.fit(dataset)
+
+# evaluate model
+eval_dataset = SentimentDataset('path/to/eval/dataset')
+clf.evaluate(eval_dataset, trained_model=model)
+
+# classify using model
+classification_dataset = SentimentDataset('path/to/dataset')
+clf.classify(classification_dataset, output_file='output_file.txt', trained_model=model)
 ```
 
-## Classifiers
-![medinify structure](readmeassets/projectdiagram.png)
-### Review Classifier
+### Saving and Loading Models
 
-Train and test a model for running sentiment analysis on drug reviews. Models can currently use Naive Bayes, Decision Tree, or a Tensorflow Neural Network.
-
-#### Naive Bayes 
-Required arguments: Drug review file csv, output file
-
- A probabilistic supervised machine learning algorithm that takes into account the frequency of positive and negative words
-### Neural Network 
-### Random Forest 
-Ensemble machine learning algorithm which generates a series of decision trees and classifies based on the mean output of each tree
-### Support Vector Machine 
-Generates a hyperplane for separating data into two categories, positive or negative
-
-#### Review Classifier Examples
+Trained models can be saved and loaded as pickle files
 
 ```python
-from medinify.sentiment import Classifier
+from medinify.datasets import SentimentDataset
+from medinify.classifiers import Classifier
 
-# Train a use a classifier if you already have a Citalopram dataset
-classifier = Classifier('nb')
-classifier.fit(output_file='model.pkl', reviews_file='citalopram-reviews.csv')
-classifier.validate('citalopram-reviews.csv', k_folds=5)
-classifier.classify(reviews_csv='neutral.txt', output_file='classified.txt', trained_model_file='model.pkl')
+dataset = SentimentDataset('path/to/csv/file')
+clf = Classifier()
+model = clf.fit(dataset)
+
+# save model
+clf.save(model, 'path/to/save/model')
+
+# load saved model
+model2 = clf.load('saved/model/path')
 ```
 
-## Contributions
+### Validation
 
-### Checklist
+Medinify has functionality for k-fold cross validation
+
+```python
+from medinify.datasets import SentimentDataset
+from medinify.classifiers import Classifier
+
+dataset = SentimentDataset('path/to/csv/file')
+clf = Classifier()
+clf.validate(dataset, k_folds=5)
+```
+
+## Contribution Checklist
 
 * Changes made/comitted/pushed in new branch
-* Changes not far behind master
+* Changes not far behind develop
 * Added comments and documentation to code
 * Made sure styling matches Google style guide: <http://google.github.io/styleguide/pyguide.html>
 * README updated if relevant changes made
 
-### Making changes locally
+## Making changes locally
 
 1. Copy the URL from the Medinify repository and use Git to clone the repo:
 
@@ -173,7 +199,7 @@ git push --set-upstream origin test
 git push
 ```
 
-### Making Pull Requests
+## Making Pull Requests
 
 After following the steps above, you can make a pull request directly on the Medinify GitHub. It should be a pull request to merge your new branch into develop.
 
@@ -181,7 +207,7 @@ Add a title, a description, and then press the “Create pull request” button.
 
 Navigate to the reviewers tab and request a reviewer to review the PR.
 
-### Authors
+## Authors
 
 Bridget McInnes, Jorge Vargas, Gabby Gurdin, Nathan West, Ishaan Thakur, Mark Groves
 
