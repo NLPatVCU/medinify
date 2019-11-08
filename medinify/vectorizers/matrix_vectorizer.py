@@ -1,12 +1,13 @@
 
-from medinify.process import *
+from medinify.vectorizers import Vectorizer
+from medinify.vectorizers.utils import find_embeddings
 from gensim.models import KeyedVectors
 import numpy as np
 
 
-class MatrixProcessor(Processor):
+class MatrixVectorizer(Vectorizer):
     """
-    The EmbeddingsProcessor transforms text data into arrays of indices
+    The EmbeddingsVectorizer transforms text data into arrays of indices
     and provides functionality for generating an embedding lookup table
     When indices arrays are fed through lookup table (using pytorch embedding layer),
     creates matrix for word embeddings
@@ -15,7 +16,7 @@ class MatrixProcessor(Processor):
 
     def __init__(self):
         """
-        Constructor for MatrixProcessor
+        Constructor for MatrixVectorizer
         :attribute w2v: (gensim.models.word2vec) pretrained word embeddings
         :attribute index_to_word: (list[str]) list of words in embeddings vocab,
             search using .index() to get from token to index
@@ -31,7 +32,7 @@ class MatrixProcessor(Processor):
         Sorts Dataset based on length of indices array, because this data
         will have to be padded later (when feeding through a network) and sorting
         will reduce the amount of padding required
-        :param dataset: (Dataset) dataset containing data to be processed
+        :param dataset: (Dataset) dataset containing data to be Vectorized
         :return: (np.array) arrays of indices in lookup table of embeddings for texts
         """
         tokens = dataset.data_table.apply(lambda row: self.tokenize(row[dataset.text_column]), axis=1)
@@ -69,14 +70,5 @@ class MatrixProcessor(Processor):
                 tokens[i] = self.index_to_word[index - 1]
         return tokens
 
-    def get_lookup_table(self):
-        """
-        :return lookup_table: (np.array) word embedding lookup table
-        """
-        index_to_word = self.w2v.index2word
-        lookup_table = np.zeros((len(index_to_word) + 1, self.w2v.vector_size))
-        for i, word in enumerate(index_to_word):
-            lookup_table[i + 1] = self.w2v[word]
-        return lookup_table
 
 

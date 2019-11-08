@@ -1,24 +1,24 @@
 """
-Processors transform Datasets (contain text and labels) into numerical representations
+Vectorizers transform Datasets (contain text and labels) into numerical representations
 that can be fed into classification algorithms
 
 While certain algorithms do performs better with and/or require input representations
-in a particular format, Processors are designed to be independent of classifier type
+in a particular format, Vectorizers are designed to be independent of classifier type
 """
 import spacy
 from abc import ABC, abstractmethod
 
 
-class Processor(ABC):
+class Vectorizer(ABC):
     """
-    The Processor abstract class is a template
-    for the functionality of all Processors
+    The Vectorizer abstract class is a template
+    for the functionality of all Vectorizers
     """
-    nickname = None  # how particular processor will be searched for via keyword arguments
+    nickname = None  # how particular Vectorizer will be searched for via keyword arguments
 
     def __init__(self):
         """
-        Standard constructor for all Processors
+        Standard constructor for all Vectorizers
         :attribute nlp:    spacy model, used for tokenizing
         :attribute stops: stop words to remove
         """
@@ -30,7 +30,7 @@ class Processor(ABC):
     def get_features(self, dataset):
         """
         Transforms text from dataset into numeric representation
-        :param dataset: (Dataset) dataset containing data to be processed
+        :param dataset: (Dataset) dataset containing data to be Vectorized
         :return: numeric representation of texts (type varies)
         """
         pass
@@ -39,7 +39,7 @@ class Processor(ABC):
     def get_labels(dataset):
         """
         Returns numeric labels
-        :param dataset: (Dataset) dataset containing data to be processed
+        :param dataset: (Dataset) dataset containing data to be Vectorized
         :return: (pd.Series) numeric representation of labels
         """
         return dataset.data_table['label']
