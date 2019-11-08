@@ -1,6 +1,7 @@
 
 from medinify.process import Processor
 from sklearn.feature_extraction.text import CountVectorizer
+from medinify.process.utils import get_pos_list
 
 
 class PosProcessor(Processor):
@@ -50,13 +51,3 @@ class PosProcessor(Processor):
                   and token.pos_ not in self.pos_list]
         return tokens
 
-
-def get_pos_list():
-    """
-    Gets POS list as user input
-    :return: list of parts of speech to remove
-    """
-    print('No part(s) for speech specified. Please enter part(s) for speech (separate with commas):')
-    pos = input()
-    pos_list = [x.strip().upper() for x in pos.split(',')]
-    return pos_list

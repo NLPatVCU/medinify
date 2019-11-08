@@ -1,5 +1,6 @@
 
-from medinify.process import *
+from medinify.process import Processor
+from medinify.process import find_embeddings
 from gensim.models import KeyedVectors
 import numpy as np
 
@@ -69,14 +70,5 @@ class MatrixProcessor(Processor):
                 tokens[i] = self.index_to_word[index - 1]
         return tokens
 
-    def get_lookup_table(self):
-        """
-        :return lookup_table: (np.array) word embedding lookup table
-        """
-        index_to_word = self.w2v.index2word
-        lookup_table = np.zeros((len(index_to_word) + 1, self.w2v.vector_size))
-        for i, word in enumerate(index_to_word):
-            lookup_table[i + 1] = self.w2v[word]
-        return lookup_table
 
 
