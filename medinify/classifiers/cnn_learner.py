@@ -6,6 +6,7 @@ import torch.utils.data
 from torch import optim
 from medinify.vectorizers import find_embeddings
 from medinify.vectorizers import get_lookup_table
+from medinify.classifiers import CNNClassifier
 from medinify.classifiers import DataIterator
 from gensim.models import KeyedVectors
 from tqdm import tqdm
@@ -70,7 +71,7 @@ class CNNLearner:
         """
         predictions = []
         with torch.no_grad():
-            for feature_batch, label_batch in Grouper(features, np.zeros(features.shape), n=25):
+            for feature_batch, label_batch in DataIterator(features, np.zeros(features.shape), n=25):
                 indices_matrix = self._get_indices_matrix(feature_batch)
                 output = model.learner.network(indices_matrix)
                 batch_predictions = [

@@ -79,7 +79,7 @@ class Model:
                 embeddings_file = find_embeddings()
                 w2v = KeyedVectors.load_word2vec_format(embeddings_file)
                 lookup_table = get_lookup_table(w2v)
-                network = ClassificationCNN(lookup_table)
+                network = CNNClassifier(lookup_table)
                 network.load_state_dict(state_dict)
                 self.learner.network = network
             else:
