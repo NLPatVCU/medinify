@@ -3,7 +3,7 @@ import pickle
 from medinify.vectorizers.utils import get_lookup_table
 from medinify.vectorizers.utils import find_embeddings
 from gensim.models import KeyedVectors
-from medinify.classifiers import CNNLearner, ClassificationCNN
+from medinify.classifiers import CNNLearner, CNNClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC

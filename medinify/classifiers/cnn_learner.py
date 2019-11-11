@@ -35,7 +35,7 @@ class CNNLearner:
         embeddings_file = find_embeddings()
         w2v = KeyedVectors.load_word2vec_format(embeddings_file)
         lookup_table = get_lookup_table(w2v)
-        network = ClassificationCNN(lookup_table)
+        network = CNNClassifier(lookup_table)
         optimizer = optim.Adam(network.parameters(), lr=0.001)
         criterion = nn.BCEWithLogitsLoss()
         network.train()
