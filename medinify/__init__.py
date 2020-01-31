@@ -1,1 +1,1 @@
-from .config import Config
+from medinify.config import Config

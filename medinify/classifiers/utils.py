@@ -49,7 +49,7 @@ def find_model(model):
     :param path: name of saved model file
     :return: abspath - absolute path to file or None if not found
     """
-    for directory in os.walk(Config.ROOT_DIR+'/model'):
+    for directory in os.walk(Config.ROOT_DIR):
         """
         OS walk with iterate through all of the subdirectories in the file path passed to it. In this case its the data
         folder. directory is a tuple with File[0] being the directory path, File[1] is the directory path's 

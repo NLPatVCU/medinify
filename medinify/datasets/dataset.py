@@ -27,6 +27,7 @@ class Dataset:
         :param text_column: (str) name of the csv column containing the text data
         :param label_column: (str) name of the csv column containing the label data
         """
+
         self.text_column = text_column
         self.label_column = label_column
         if csv_file:

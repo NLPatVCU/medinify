@@ -43,7 +43,7 @@ class Classifier:
         if output_file:
             self.save(model, output_file)
         else:
-            self.save(model,self.learner_type+'_'+model.vectorizer.nickname+'_.model')
+            self.save(model,self.learner_type+'_'+model.vectorizer.nickname+'_'+'.model')
         return model
 
     def evaluate(self, evaluation_dataset, trained_model=None, trained_model_file=None, verbose=True):

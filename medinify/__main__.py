@@ -4,7 +4,6 @@
 """
 Medinify Command Line Interface Setup
 """
-
 import argparse
 from medinify.classifiers import Classifier
 from medinify.datasets import SentimentDataset
@@ -18,9 +17,10 @@ def _train(args):
 
 
 def _evaluate(args):
+
     clf = Classifier(learner=args.classifier, representation=args.word_embeddings)
     data = SentimentDataset(args.reviews)
-    clf.evaluate(evaluation_dataset=data,trained_model_file =args.model )
+    clf.evaluate(evaluation_dataset=data, trained_model_file =args.model )
 
 
 def _validate(args):
