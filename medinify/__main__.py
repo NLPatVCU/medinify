@@ -5,38 +5,22 @@
 Medinify Command Line Interface Setup
 """
 
-"""
 import argparse
-from medinify.sentiment import Classifier
-from medinify.datasets import Dataset
-from medinify import config
-
-
-def configure(args):
-    config.POS_THRESHOLD = args.pos_threshold
-    config.NEG_THRESHOLD = args.neg_threshold
-    config.NUM_CLASSES = args.num_classes
-    config.DATA_REPRESENTATION = args.data_representation
-    config.RATING_TYPE = args.rating_type
-    config.BATCH_SIZE = args.batch_size
-    config.EPOCHS = args.epochs
+from medinify.classifiers import Classifier
+from medinify.datasets import SentimentDataset
 
 
 def _train(args):
-    if args.classifier != 'cnn':
-        clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
-        clf.fit(output_file=args.output, reviews_file=args.reviews)
-    else:
-        network = fit(reviews_file=args.reviews, w2v_file=args.word_embeddings)
-        save(network, args.output)
+        clf = Classifier(learner=args.classifier,representation =args.word_embeddings)
+        data = SentimentDataset(args.reviews)
+        clf.fit(data)
+
 
 
 def _evaluate(args):
-    if args.classifier != 'cnn':
-        clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
-        clf.evaluate(args.model, eval_reviews_csv=args.reviews)
-    else:
-        evaluate(reviews_file=args.reviews, w2v_file=args.word_embeddings, trained_model_file=args.model)
+    clf = Classifier(learner=args.classifier, representation=args.word_embeddings)
+    data = SentimentDataset(args.reviews)
+    clf.evaluate(evaluation_dataset=data,trained_model_file =args.model )
 
 
 def _validate(args):
@@ -55,7 +39,7 @@ def _classify(args):
 
 
 def _collect(args):
-    dataset = Dataset(args.scraper, use_user_ids=args.collect_user, use_urls=args.collect_url)
+    dataset = SentimentDataset(args.scraper, use_user_ids=args.collect_user, use_urls=args.collect_url)
 
     if args.names_file:
         dataset.collect_from_drug_names(args.names_file, args.output, start=args.start)
@@ -86,7 +70,8 @@ def main():
     # Train arguments
     parser_train = subparsers.add_parser('train', help='Train a new model.')
     parser_train.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
-    parser_train.add_argument('-o', '--output', help='Path to save model file', required=True)
+    parser_train.add_argument('-c' ,'--classifier', help='')
+    parser_train.add_argument('-w2v','--word2vec',help='')
     parser_train.set_defaults(func=_train)
 
     # Evaluate arguments
@@ -127,7 +112,6 @@ def main():
 
     # Parse initial args
     args = parser.parse_args()
-    configure(args)
 
     # Run proper function
     args.func(args)
@@ -135,6 +119,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-"""
+
 
 

@@ -1,37 +1,25 @@
 
 import os
 import numpy as np
+from medinify import Config
 
-
-def find_embeddings():
+def find_embeddings(w2v = None):
     """
     Searches of pretrained embeddings file in medinify/data/embeddings folder
     :return: abspath (str) absolute path to embeddings file or None if not found
     """
+    print('here')
+    if w2v is None:
+        w2v = 'w2v.model'
     abspath = None
-    for file in os.walk(os.getcwd()):
-        if os.path.isdir(file[0]) and file[0][-24:] == 'medinify/data/embeddings':
-            directory_path = file[0]
-            embeddings_files = os.listdir(directory_path)
-            if not embeddings_files:
-                raise FileNotFoundError(
-                    'No word embeddings found at data/embeddings.')
-            elif len(embeddings_files) > 1:
-                print('Multiple embedding files found.\n'
-                      'Please specify which file to use (enter file name):')
-                while True:
-                    for filename in embeddings_files:
-                        print('\t%s' % filename)
-                    chosen_file = input()
-                    if chosen_file in embeddings_files:
-                        embeddings_file = chosen_file
-                        break
-                    else:
-                        print('Invalid file entered. '
-                              'Please specify which file to use (enter file name):')
-            else:
-                embeddings_file = embeddings_files[0]
-            abspath = directory_path + '/' + embeddings_file
+    for file in os.walk(Config.ROOT_DIR + '/data'):
+        print(file)
+        print(w2v)
+        file[2]
+        if w2v in file[2]:
+            return file[0] + '/' + w2v
+
+    return None
     return abspath
 
 
