@@ -19,6 +19,7 @@
 !test_nb_model.pickle
 !test_rf_model.pickle
 !test_svm_model.pickle
+models/*
 
 *.h5
 !test_nn_weights.h5
