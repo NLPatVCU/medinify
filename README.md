@@ -105,6 +105,11 @@ clf.evaluate(eval_dataset, trained_model='example.model')
 classification_dataset = SentimentDataset('path/to/dataset')
 clf.classify(classification_dataset, output_file='output_file.txt', trained_model=model)
 ```
+#### Classifier Descriptions
+
+##### Random Forest
+
+
 
 ### Saving and Loading Models
 
