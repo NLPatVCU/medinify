@@ -8,13 +8,10 @@ def find_embeddings(w2v = None):
     Searches of pretrained embeddings file in medinify/data/embeddings folder
     :return: abspath (str) absolute path to embeddings file or None if not found
     """
-    print('here')
     if w2v is None:
         w2v = 'w2v.model'
     abspath = None
     for file in os.walk(Config.ROOT_DIR + '/data'):
-        print(file)
-        print(w2v)
         file[2]
         if w2v in file[2]:
             return file[0] + '/' + w2v

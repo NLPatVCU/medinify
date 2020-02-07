@@ -25,7 +25,6 @@ class Model:
     the same way
     """
     def __init__(self, learner=None, representation=None):
-        print(learner)
         """
         Constructor for Model
         :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
@@ -34,7 +33,6 @@ class Model:
             bag of words, 'embedding' - average embedding, 'matrix' - embedding matrix)
         """
         self.type = learner
-        print(self.type)
         if learner == 'nb':
             self.learner = MultinomialNB()
         elif learner == 'rf':

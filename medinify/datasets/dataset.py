@@ -30,6 +30,11 @@ class Dataset:
 
         self.text_column = text_column
         self.label_column = label_column
+        # Creates and stores name for data that the model is trained on by striping off file type: example.csv = example
+        if csv_file:
+            self.training_data_name = csv_file[:-4]
+        else:
+            self.training_data_name = ""
         if csv_file:
             self.load_file(csv_file)
         else:
@@ -43,7 +48,7 @@ class Dataset:
         """
         abspath = find_csv(csv_file)
         if not abspath:
-            raise FileNotFoundError('File not found in data/ directory.')
+            raise FileNotFoundError('File not found in data directory.')
         data_table = pd.read_csv(abspath)
         self.data_table = data_table
         self._clean_data()
@@ -71,7 +76,6 @@ class Dataset:
         num_rows = len(self.data_table)
         self.data_table = self.data_table.loc[self.data_table[self.text_column].notnull()]
         self.data_table = self.data_table.loc[self.data_table[self.text_column] != '']
-        self.data_table = self.data_table.loc[self.data_table[self.label_column].notnull()]
         num_removed = num_rows - len(self.data_table)
         if num_removed > 0:
             print('Removed %d empty elements(s).' % num_removed)

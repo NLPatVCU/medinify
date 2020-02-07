@@ -59,7 +59,6 @@ def find_model(model):
         # In english, if the model file name matches with on of the files the current file directory, it returns the
         # directory path plus the model file name.
         if model in directory[2]:
-            print(directory[0] + '/' + model)
             return directory[0] + '/' + model
     # If it doesn't find anything return None. (Maybe consider throwing an error here instead of returning None)
     # It would make debugging easier.

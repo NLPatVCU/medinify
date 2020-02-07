@@ -4,16 +4,16 @@
 """
 Medinify Command Line Interface Setup
 """
+
 import argparse
 from medinify.classifiers import Classifier
 from medinify.datasets import SentimentDataset
 
 
 def _train(args):
-        clf = Classifier(learner=args.classifier,representation =args.word_embeddings)
-        data = SentimentDataset(args.reviews)
-        clf.fit(data)
-
+    clf = Classifier(learner=args.classifier,representation =args.word_embeddings)
+    data = SentimentDataset(args.reviews)
+    clf.fit(data)
 
 
 def _evaluate(args):
@@ -24,17 +24,16 @@ def _evaluate(args):
 
 
 def _validate(args):
-    if args.classifier != 'cnn':
-        clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
-        clf.validate(args.reviews, temp_file_name=args.temp_file, k_folds=args.folds)
-    else:
-        validate(input_file=args.reviews, num_folds=args.folds, w2v_file=args.word_embeddings)
+    clf = Classifier(learner=args.classifier, representation=args.word_embeddings)
+    data = SentimentDataset(args.reviews)
+    clf.validate(data, k_folds=args.folds)
 
 
 def _classify(args):
-    clf = Classifier(classifier_type=args.classifier, w2v_file=args.word_embeddings, pos=args.pos)
+    data = SentimentDataset(args.reviews)
+    clf = Classifier(learner =args.classifier, representation =args.word_embeddings)
     clf.classify(trained_model_file=args.model,
-                 reviews_csv=args.reviews,
+                 dataset =data,
                  output_file=args.output)
 
 
@@ -83,12 +82,13 @@ def main():
     # Validate arguments
     parser_valid = subparsers.add_parser('validate', help='Cross validate a model.')
     parser_valid.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
+    parser_valid.add_argument('-c', '--classifier', help='Path to reviews file to train on.', required=True)
     parser_valid.add_argument('-f', '--folds', help='Number of folds.', required=True, type=int)
     parser_valid.add_argument('-tf', '--temp-file', help='Where to save temporary model files.')
     parser_valid.set_defaults(func=_validate)
 
     # Classify arguments
-    parser_classify = subparsers.add_parser('classify', help='Classifies text.')
+    parser_classify = subparsers.add_parser('classify', help='Classifies new text input using a trained model')
     parser_classify.add_argument('-r', '--reviews', help='Path to reviews file to train on.', required=True)
     parser_classify.add_argument('-m', '--model', help='Path to saved model file', required=True)
     parser_classify.add_argument('-o', '--output', help='Path to save model file', required=True)
