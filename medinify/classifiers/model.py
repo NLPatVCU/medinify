@@ -24,7 +24,7 @@ class Model:
     for fitting, evaluating, and classifying with the learner has to be vectorized in
     the same way
     """
-    def __init__(self, learner='nb', representation=None):
+    def __init__(self, learner=None, representation=None):
         """
         Constructor for Model
         :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,

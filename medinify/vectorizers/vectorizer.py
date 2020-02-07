@@ -7,8 +7,7 @@ in a particular format, Vectorizers are designed to be independent of classifier
 """
 import spacy
 from abc import ABC, abstractmethod
-
-
+from medinify import Config
 class Vectorizer(ABC):
     """
     The Vectorizer abstract class is a template
@@ -23,7 +22,7 @@ class Vectorizer(ABC):
         :attribute stops: stop words to remove
         """
         self.nlp = spacy.load('en_core_web_sm')
-        with open('./data/english') as sw:
+        with open(Config.ROOT_DIR+'/data/english') as sw:
             self.stops = set(sw.read().splitlines())
 
     @abstractmethod

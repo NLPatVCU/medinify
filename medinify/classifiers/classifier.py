@@ -7,7 +7,7 @@ from medinify.classifiers.utils import find_model
 from medinify.classifiers.utils import print_validation_metrics
 from medinify.classifiers.utils import print_evaluation_metrics
 from medinify.classifiers import Model
-import os
+from medinify import Config
 
 
 class Classifier:
@@ -15,7 +15,7 @@ class Classifier:
     Classifier is used to train, evaluate, and validate classification models
     and use trained models for classification
     """
-    def __init__(self, learner='nb', representation=None):
+    def __init__(self, learner=None, representation=None):
         """
         Constructs Classifier
         :param learner: (str) classifier type ('nb' - Naive Bayes, 'rf' - Random Forest,
@@ -42,6 +42,9 @@ class Classifier:
         print('Model fit.')
         if output_file:
             self.save(model, output_file)
+        else:
+            # Generates a file name based on the learner type, the representation, and the training data.
+            self.save(model, self.learner_type+'_'+model.vectorizer.nickname+'_'+dataset.training_data_name+'.model')
         return model
 
     def evaluate(self, evaluation_dataset, trained_model=None, trained_model_file=None, verbose=True):
@@ -118,7 +121,7 @@ class Classifier:
         unique_labels = list(precisions[0].keys())
         print_validation_metrics(accuracies, precisions, recalls, f_scores, total_matrix, unique_labels)
 
-    def classify(self, dataset, output_file, trained_model=None, trained_model_file=None):
+    def classify(self, dataset, output_file, trained_model_file=None):
         """
         Uses trained Model to classify a dataset
         :param dataset: (Dataset) data to classify
@@ -126,15 +129,15 @@ class Classifier:
         :param trained_model: (Model) trained Model
         :param trained_model_file: (str) path to saved model file
         """
-        assert (trained_model or trained_model_file), 'A trained model or file but be specified'
+        assert (trained_model_file), 'A trained model or file but be specified'
         if trained_model_file:
             trained_model = self.load(trained_model_file)
         features = trained_model.vectorizer.get_features(dataset)
         labels = trained_model.vectorizer.get_labels(dataset).to_numpy()
         comments = dataset.data_table[dataset.text_column]
-        predictions = trained_model.learner.predict(features, trained_model)
+        predictions = trained_model.learner.predict(features)
 
-        with open(output_file, 'w') as f:
+        with open(Config.ROOT_DIR+'/classifiedText/'+output_file, 'w') as f:
             for i in range(labels.shape[0]):
                 f.write('Comment: %s\n' % comments.iloc[i])
                 f.write('Predicted Class: %d\tActual Class: %d\n\n' % (predictions[i], labels[i]))
@@ -146,15 +149,7 @@ class Classifier:
         :param model: (Model) model to save
         :param path: (str) path to save model
         """
-        written = False
-        for file in os.walk(os.getcwd()):
-            if os.path.isdir(file[0]) and file[0][-15:] == 'medinify/models':
-                directory_path = file[0]
-                write_path = directory_path + '/' + path
-                model.save_model(write_path)
-                written = True
-        if not written:
-            raise NotADirectoryError('models/ directory not found.')
+        model.save_model(Config.ROOT_DIR+"/models/"+path)
 
     def load(self, path):
         """

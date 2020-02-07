@@ -81,7 +81,7 @@ from medinify.datasets import SentimentDataset
 from medinify.classifiers import Classifier
 
 # create a Dataset object and load data from .csv file
-dataset = SentimentDataset('path/to/csv/file')
+dataset = SentimentDataset('example.csv')
 
 # create classifier
 clf = Classifier()
@@ -97,13 +97,19 @@ because it may be incompatible with the learner
 model = clf.fit(dataset)
 
 # evaluate model
-eval_dataset = SentimentDataset('path/to/eval/dataset')
-clf.evaluate(eval_dataset, trained_model=model)
+eval_dataset = SentimentDataset('evaluate.csv')
+# pass in a trained model from the /model directory
+clf.evaluate(eval_dataset, trained_model='example.model')
 
 # classify using model
 classification_dataset = SentimentDataset('path/to/dataset')
 clf.classify(classification_dataset, output_file='output_file.txt', trained_model=model)
 ```
+#### Classifier Descriptions
+
+##### Random Forest
+
+
 
 ### Saving and Loading Models
 

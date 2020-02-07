@@ -20,8 +20,10 @@ class EmbeddingsVectorizer(Vectorizer):
         Constructor for EmbeddingsVectorizer
         :attribute w2v: (gensim.models.word2vec) pretrained word embeddings
         """
+        print('Vectorizer')
         super().__init__()
         embeddings_file = find_embeddings()
+        print(embeddings_file)
         self.w2v = KeyedVectors.load_word2vec_format(embeddings_file)
 
     def get_features(self, dataset):
