@@ -174,13 +174,13 @@ clf.validate(dataset, k_folds=5)
     git commit -m "Description of changes made"
     ```
 
-5. After committitng, make sure everything looks good with:
+5. After committing, make sure everything looks good with:
 
     ```bash
     git status
     ```
 
-    and you will recieve an output similar to this:
+    and you will receive an output similar to this:
 
     ```bash
     On branch <new-branch-name>
