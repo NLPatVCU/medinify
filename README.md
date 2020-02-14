@@ -105,22 +105,7 @@ clf.evaluate(eval_dataset, trained_model='example.model')
 classification_dataset = SentimentDataset('path/to/dataset')
 clf.classify(classification_dataset, output_file='output_file.txt', trained_model=model)
 ```
-#### Classifier Descriptions
 
-##### Random Forest
-
-### Classifier Descriptions
-
-#### Random Forests
-Random forests (or random decision forests) is an ensemble learning method for classification, regression, or other tasks. Each forest is a group of decision trees that work together. Each tree produces a class prediction and the class with the most votes becomes the entire model's prediction. 
-	
-For random forests to perform well, there would ideally be some actual signal in the features so that models built using them will do more than randomly guess and the predictions made by the trees need to have low correlation with each other. 
-
-The chances of making correct prediction increase with the number of uncorrelated decision trees. 
-
-To ensure that the behavior of each tree is not too correlated with the behavior of the other trees, the forest uses the bagging and feature randomness methods.
-
-Bagging occurs when each individual tree randomly chooses samples from the dataset with replacement, leading to different trees. Feature randomness occurs when each tree in a forest is only allowed to choose from a random subset of features, which forces more variation among the trees and lower correlation and more diversification across them. 
 
 
 ### Saving and Loading Models
@@ -156,7 +141,20 @@ clf.validate(dataset, k_folds=5)
 ```
 ## Classifers
 
-Support Vector Machine
+#### Random Forests
+Random forests (or random decision forests) is an ensemble learning method for classification, regression, or other tasks. Each forest is a group of decision trees that work together. Each tree produces a class prediction and the class with the most votes becomes the entire model's prediction. 
+	
+For random forests to perform well, there would ideally be some actual signal in the features so that models built using them will do more than randomly guess and the predictions made by the trees need to have low correlation with each other. 
+
+The chances of making correct prediction increase with the number of uncorrelated decision trees. 
+
+To ensure that the behavior of each tree is not too correlated with the behavior of the other trees, the forest uses the bagging and feature randomness methods.
+
+Bagging occurs when each individual tree randomly chooses samples from the dataset with replacement, leading to different trees. Feature randomness occurs when each tree in a forest is only allowed to choose from a random subset of features, which forces more variation among the trees and lower correlation and more diversification across them. 
+
+
+
+### Support Vector Machine
 * Outputs an optimal hyperplane that categorizes data. It finds a hyper-plane 
 that separates data into two classes.
 * Input: Set of training pair samples
@@ -165,11 +163,6 @@ that separates data into two classes.
 specify which data points have influence over hyper-plane location (gamma paramter),
 and margins of hyperplane from other data points
 
-
-
-
-
-## Classifiers
 
 ### Naïve Bayes
 
