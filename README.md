@@ -154,6 +154,20 @@ dataset = SentimentDataset('path/to/csv/file')
 clf = Classifier()
 clf.validate(dataset, k_folds=5)
 ```
+## Classifers
+
+Support Vector Machine
+* Outputs an optimal hyperplane that categorizes data. It finds a hyper-plane 
+that separates data into two classes.
+* Input: Set of training pair samples
+* Output: set of weights, one for each feature
+* SVM can have parameters that determine accuracy (regularization), 
+specify which data points have influence over hyper-plane location (gamma paramter),
+and margins of hyperplane from other data points
+
+
+
+
 
 ## Classifiers
 
