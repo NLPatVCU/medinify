@@ -155,9 +155,21 @@ clf = Classifier()
 clf.validate(dataset, k_folds=5)
 ```
 
+## Classifiers
+
+### Naïve Bayes
+
+The naïve Bayes (NB) family of classifiers uses conditional probability to classify text.
+We input a vector containing independent variables, or _features_, that we want to classify into outcomes.
+The NB classifier assumes that each feature is independent, i.e. that they don't affect each other.
+This lets NB determine the conditional probability of each feature given a specific outcome.
+Using Bayes' theorem, NB then finds the probability of each outcome given the input vector containing the features.
+NB then selects the outcome with the highest probability and returns that outcome. 
+
+
 ## Contribution Checklist
 
-* Changes made/comitted/pushed in new branch
+* Changes made/committed/pushed in new branch
 * Changes not far behind develop
 * Added comments and documentation to code
 * Made sure styling matches Google style guide: <http://google.github.io/styleguide/pyguide.html>
@@ -192,13 +204,13 @@ clf.validate(dataset, k_folds=5)
     git commit -m "Description of changes made"
     ```
 
-5. After committitng, make sure everything looks good with:
+5. After committing, make sure everything looks good with:
 
     ```bash
     git status
     ```
 
-    and you will recieve an output similar to this:
+    and you will receive an output similar to this:
 
     ```bash
     On branch <new-branch-name>
