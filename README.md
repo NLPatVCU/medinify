@@ -137,9 +137,15 @@ clf = Classifier()
 clf.validate(dataset, k_folds=5)
 ```
 
+## Classifiers
+
+### Naïve Bayes
+
+ 
+
 ## Contribution Checklist
 
-* Changes made/comitted/pushed in new branch
+* Changes made/committed/pushed in new branch
 * Changes not far behind develop
 * Added comments and documentation to code
 * Made sure styling matches Google style guide: <http://google.github.io/styleguide/pyguide.html>
