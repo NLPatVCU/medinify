@@ -141,7 +141,13 @@ clf.validate(dataset, k_folds=5)
 
 ### Naïve Bayes
 
- 
+The naïve Bayes (NB) family of classifiers uses conditional probability to classify text.
+We input a vector containing independent variables, or _features_, that we want to classify into outcomes.
+The NB classifier assumes that each feature is independent, i.e. that they don't affect each other.
+This lets NB determine the conditional probability of each feature given a specific outcome.
+Using Bayes' theorem, NB then finds the probability of each outcome given the input vector containing the features.
+NB then selects the outcome with the highest probability and returns that outcome. 
+
 
 ## Contribution Checklist
 
