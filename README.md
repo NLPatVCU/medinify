@@ -104,8 +104,9 @@ clf.evaluate(eval_dataset, trained_model=model)
 classification_dataset = SentimentDataset('path/to/dataset')
 clf.classify(classification_dataset, output_file='output_file.txt', trained_model=model)
 ```
-###Classifier Descriptions
-####Random Forests
+### Classifier Descriptions
+
+#### Random Forests
 Random forests (or random decision forests) is an ensemble learning method for classification, regression, or other tasks. Each forest is a group of decision trees that work together. Each tree produces a class prediction and the class with the most votes becomes the entire model's prediction. 
 	
 For random forests to perform well, there would ideally be some actual signal in the features so that models built using them will do more than randomly guess and the predictions made by the trees need to have low correlation with each other. 
