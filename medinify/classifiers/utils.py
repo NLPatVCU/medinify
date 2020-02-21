@@ -66,9 +66,12 @@ def find_model(model):
 
 
 def check_for_models_directory():
-    if os.path.exists(Config.ROOT_DIR):
-        print("models folder doesn't exist. creating")
+    if os.path.exists(Config.ROOT_DIR+"/models"):
+        return
+    else:
+        print("Models folder doesn't exist. Creating...")
     try:
         os.mkdir(Config.ROOT_DIR+'/models')
     except:
         print("Error making models folder")
+    return
