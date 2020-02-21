@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import precision_score, recall_score, accuracy_score, f1_score, confusion_matrix
 from medinify.datasets import Dataset
+from medinify.classifiers.utils import check_for_model_directory
 from medinify.classifiers.utils import find_model
 from medinify.classifiers.utils import print_validation_metrics
 from medinify.classifiers.utils import print_evaluation_metrics
@@ -149,7 +150,9 @@ class Classifier:
         :param model: (Model) model to save
         :param path: (str) path to save model
         """
+        check_for_models_directory()
         model.save_model(Config.ROOT_DIR+"/models/"+path)
+
 
     def load(self, path):
         """

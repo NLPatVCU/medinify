@@ -63,3 +63,12 @@ def find_model(model):
     # If it doesn't find anything return None. (Maybe consider throwing an error here instead of returning None)
     # It would make debugging easier.
     return None
+
+
+def check_for_models_directory():
+    if os.path.exists(Config.ROOT_DIR):
+        print("models folder doesn't exist. creating")
+    try:
+        os.mkdir(Config.ROOT_DIR+'/models')
+    except:
+        print("Error making models folder")
