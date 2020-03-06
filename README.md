@@ -7,6 +7,7 @@ Medical text classification.
 ## Requirements
 
 * Python 3.6
+* Linux or Mac OS
 
 ## Getting Started
 ### Using Git Version Control to grab Medinify
