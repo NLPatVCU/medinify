@@ -2,7 +2,7 @@
 
 ![Test Image 1](readmeassets/nlplab.png)
 
-Medical text classification. 
+Medinify is a general tool for medical text classification that also includes functionality for collecting drug review sentiment datasets from multiple online drug forums.
 
 ## Requirements
 
@@ -25,9 +25,7 @@ source venv/bin/activate
 pip install -e .
 ```
 
-## Workflow
-
-Medinify is a general tool for medical text classification that also includes functionality for collecting drug review sentiment datasets from multiple online drug forums.
+### Workflow
 
 All datasets used with Medinify must be in .csv format, and have a text column (containing the text being labelled) and a label column (containing the text labels). 
 
@@ -207,7 +205,8 @@ Add a title, a description, and then press the “Create pull request” button.
 
 Navigate to the reviewers tab and request a reviewer to review the PR.
 
-##Reference
+## Reference
+```bibtex
 @article{gurdin2020analysis,
   title={Analysis of Inter-Domain and Cross-Domain Drug Review Polarity Classification},
   author={Gurdin, Gabrielle and Vargas, Jorge A and Maffey, Luke G and Olex, Amy L and Lewinski, Nastassja A and McInnes, Bridget T},
@@ -217,6 +216,7 @@ Navigate to the reviewers tab and request a reviewer to review the PR.
   year={2020},
   publisher={American Medical Informatics Association}
 }
+```
 
 ## Authors
 
