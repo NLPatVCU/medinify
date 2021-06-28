@@ -207,6 +207,17 @@ Add a title, a description, and then press the “Create pull request” button.
 
 Navigate to the reviewers tab and request a reviewer to review the PR.
 
+##Reference
+@article{gurdin2020analysis,
+  title={Analysis of Inter-Domain and Cross-Domain Drug Review Polarity Classification},
+  author={Gurdin, Gabrielle and Vargas, Jorge A and Maffey, Luke G and Olex, Amy L and Lewinski, Nastassja A and McInnes, Bridget T},
+  journal={AMIA Summits on Translational Science Proceedings},
+  volume={2020},
+  pages={201},
+  year={2020},
+  publisher={American Medical Informatics Association}
+}
+
 ## Authors
 
 Bridget McInnes, Jorge Vargas, Gabby Gurdin, Nathan West, Ishaan Thakur, Mark Groves
