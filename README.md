@@ -2,7 +2,12 @@
 
 ![Test Image 1](readmeassets/nlplab.png)
 
-Medical text classification. 
+Medinify is a general tool for medical text classification that also includes functionality for collecting drug review sentiment datasets from multiple online drug forums.
+
+All datasets used with Medinify must be in .csv format, and have a text column (containing the text being labelled) and a label column (containing the text labels). 
+
+If the data in the .csv file requires some extra processesing (i.e., if the labels are non-numeric, or if certain texts need to be removed) that functionality can be added by subclassing the Dataset class. SentimentDataset is an example of this, which is used for transforming star rating labels into sentiment labels.
+
 
 ## Requirements
 
@@ -24,14 +29,6 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -e .
 ```
-
-## Workflow
-
-Medinify is a general tool for medical text classification that also includes functionality for collecting drug review sentiment datasets from multiple online drug forums.
-
-All datasets used with Medinify must be in .csv format, and have a text column (containing the text being labelled) and a label column (containing the text labels). 
-
-If the data in the .csv file requires some extra processesing (i.e., if the labels are non-numeric, or if certain texts need to be removed) that functionality can be added by subclassing the Dataset class. SentimentDataset is an example of this, which is used for transforming star rating labels into sentiment labels.
 
 ### Collecting
 
