@@ -208,6 +208,7 @@ Add a title, a description, and then press the “Create pull request” button.
 Navigate to the reviewers tab and request a reviewer to review the PR.
 
 ##Reference
+```bibtex
 @article{gurdin2020analysis,
   title={Analysis of Inter-Domain and Cross-Domain Drug Review Polarity Classification},
   author={Gurdin, Gabrielle and Vargas, Jorge A and Maffey, Luke G and Olex, Amy L and Lewinski, Nastassja A and McInnes, Bridget T},
@@ -217,6 +218,7 @@ Navigate to the reviewers tab and request a reviewer to review the PR.
   year={2020},
   publisher={American Medical Informatics Association}
 }
+```
 
 ## Authors
 
